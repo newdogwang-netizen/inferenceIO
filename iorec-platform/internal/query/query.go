@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -23,6 +24,15 @@ import (
 
 // Service holds dependencies.
 type Service struct{ DB *store.DB }
+
+func pathParam(r *http.Request, name string) string {
+	raw := chi.URLParam(r, name)
+	decoded, err := url.PathUnescape(raw)
+	if err != nil {
+		return raw
+	}
+	return decoded
+}
 
 func limitParam(r *http.Request, def, max int) int {
 	if v, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && v > 0 {
@@ -163,7 +173,7 @@ func uiState(it map[string]any) string {
 
 func (s *Service) GetRecording(w http.ResponseWriter, r *http.Request) {
 	p := httpapi.Principal(r)
-	id := chi.URLParam(r, "id")
+	id := pathParam(r, "id")
 	if p.Kind == auth.KindCollector {
 		query := `select r.id, r.capture_run_id, r.segment_no, r.sequence_base, r.state, r.durable_seq, r.final_seq, r.updated_at
 			from recordings r join capture_runs c on c.id=r.capture_run_id
@@ -245,7 +255,7 @@ func (s *Service) Timeline(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	id := chi.URLParam(r, "id")
+	id := pathParam(r, "id")
 	var run string
 	var rev int64
 	var claim *string
@@ -269,7 +279,8 @@ func (s *Service) Timeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	infs, err := s.list(r.Context(), `select i.id, i.status, i.attempt_count, i.first_attempt_at, i.model, i.api_mode, i.task_id, i.session_id, i.turn_id, i.server_state, i.usage,
-			left(i.normalized->>'response_text', 200) as response_preview, i.normalized->>'finish_reason' as finish_reason, jsonb_array_length(coalesce(i.normalized->'messages','[]'::jsonb)) as message_count,
+			left(i.normalized->>'response_text', 200) as response_preview, i.normalized->>'finish_reason' as finish_reason,
+			case when jsonb_typeof(i.normalized->'messages')='array' then jsonb_array_length(i.normalized->'messages') else 0 end as message_count,
 			(select rel.confidence from relations rel where rel.from_id=i.id and rel.project_id=$2 and rel.type='belongs_to_turn' and rel.superseded_by is null order by rel.revision desc limit 1) as confidence,
 			(select rel.status from relations rel where rel.from_id=i.id and rel.project_id=$2 and rel.type='belongs_to_turn' and rel.superseded_by is null order by rel.revision desc limit 1) as relation_status,
 			(select coalesce(json_agg(json_build_object('id',a.id,'terminal_state',a.terminal_state,'status_code',a.status_code,'provider_host',a.provider_host,'started_at',a.started_at,'ended_at',a.ended_at,'sse_event_count',a.sse_event_count) order by a.started_at),'[]'::json) from model_attempts a where a.inference_id=i.id and a.project_id=$2) as attempts
@@ -318,7 +329,7 @@ func (s *Service) GetAttempt(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	id := chi.URLParam(r, "id")
+	id := pathParam(r, "id")
 	it, err := s.one(r.Context(), `select a.* from model_attempts a join capture_runs c on c.id=a.capture_run_id and c.project_id=a.project_id join recordings rec on rec.id=a.recording_id and rec.project_id=a.project_id where a.id=$1 and a.project_id=$2 and c.state='active' and rec.state not in ('deleting','deleted')`, id, p.ProjectID)
 	if err != nil {
 		httpapi.WriteError(w, r, err)
@@ -357,7 +368,7 @@ func (s *Service) GetInference(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	id := chi.URLParam(r, "id")
+	id := pathParam(r, "id")
 	it, err := s.one(r.Context(), `select i.* from model_inferences i join capture_runs c on c.id=i.capture_run_id and c.project_id=i.project_id join recordings rec on rec.id=i.recording_id and rec.project_id=i.project_id where i.id=$1 and i.project_id=$2 and c.state='active' and rec.state not in ('deleting','deleted')`, id, p.ProjectID)
 	if err != nil {
 		httpapi.WriteError(w, r, err)
@@ -388,7 +399,7 @@ func (s *Service) GetSession(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	id := chi.URLParam(r, "id")
+	id := pathParam(r, "id")
 	it, err := s.one(r.Context(), `select sess.* from sessions sess join capture_runs c on c.id=sess.capture_run_id and c.project_id=sess.project_id where sess.id=$1 and sess.project_id=$2 and c.state='active'`, id, p.ProjectID)
 	if err != nil {
 		httpapi.WriteError(w, r, err)
@@ -426,7 +437,7 @@ func (s *Service) ReviewFinding(w http.ResponseWriter, r *http.Request) {
 		httpapi.WriteError(w, r, err)
 		return
 	}
-	id := chi.URLParam(r, "id")
+	id := pathParam(r, "id")
 	var body struct {
 		Status string `json:"status"`
 		Note   string `json:"note"`
@@ -694,7 +705,7 @@ func (s *Service) Events(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	id := chi.URLParam(r, "id")
+	id := pathParam(r, "id")
 	var owner uuid.UUID
 	if err := s.DB.Pool.QueryRow(r.Context(), `select r.project_id from recordings r join capture_runs c on c.id=r.capture_run_id and c.project_id=r.project_id where r.id=$1 and c.state='active' and r.state not in ('deleting','deleted')`, id).Scan(&owner); err != nil || owner != p.ProjectID {
 		httpapi.WriteError(w, r, httpapi.E(404, "not_found", "unknown recording"))

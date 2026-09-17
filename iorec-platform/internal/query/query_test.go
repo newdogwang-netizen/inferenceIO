@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -50,6 +51,49 @@ func requestWithID(t *testing.T, principal auth.Principal, id string) *http.Requ
 	route.URLParams.Add("id", id)
 	ctx := context.WithValue(req.Context(), chi.RouteCtxKey, route)
 	return req.WithContext(auth.WithPrincipal(ctx, principal))
+}
+
+func TestEncodedInferenceIDAndScalarMessagesAreReadable(t *testing.T) {
+	db := queryTestDB(t)
+	service := &Service{DB: db}
+	principal := queryProject(t, db)
+	ctx := context.Background()
+	run := "run-query-real-" + uuid.NewString()[:8]
+	recording := run + "#0000"
+	inference := "inf:" + run + "~attempt-1"
+	if _, err := db.Pool.Exec(ctx, `insert into capture_runs(id,project_id) values($1,$2)`, run, principal.ProjectID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into recordings(id,project_id,capture_run_id,state,coverage) values($1,$2,$3,'sealed','{}')`, recording, principal.ProjectID, run); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into model_inferences(id,recording_id,capture_run_id,project_id,status,normalized,processor_version) values($1,$2,$3,$4,'inferred','{"messages":null}','test')`, inference, recording, run, principal.ProjectID); err != nil {
+		t.Fatal(err)
+	}
+
+	encodedRequest := requestWithID(t, principal, url.PathEscape(inference))
+	inferenceResponse := httptest.NewRecorder()
+	service.GetInference(inferenceResponse, encodedRequest)
+	if inferenceResponse.Code != http.StatusOK {
+		t.Fatalf("encoded inference status=%d body=%s", inferenceResponse.Code, inferenceResponse.Body.String())
+	}
+
+	timelineResponse := httptest.NewRecorder()
+	service.Timeline(timelineResponse, requestWithID(t, principal, recording))
+	if timelineResponse.Code != http.StatusOK {
+		t.Fatalf("scalar messages timeline status=%d body=%s", timelineResponse.Code, timelineResponse.Body.String())
+	}
+	var body struct {
+		Inferences []struct {
+			MessageCount int64 `json:"message_count"`
+		} `json:"inferences"`
+	}
+	if err := json.Unmarshal(timelineResponse.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Inferences) != 1 || body.Inferences[0].MessageCount != 0 {
+		t.Fatalf("unexpected scalar message count: %#v", body.Inferences)
+	}
 }
 
 func TestSessionDerivedQueriesRemainProjectScoped(t *testing.T) {
