@@ -1,0 +1,219 @@
+openapi: 3.1.0
+info:
+  title: iorec platform API
+  version: "1.0"
+  description: |
+    Data plane (collector → platform), control plane (collector ↔ platform) and console read API.
+    Auth: `Authorization: Bearer <token>`. Collector credentials are project tokens (`iorp_…`) or
+    collector session tokens (`iorc_…`); users authenticate with static tokens or OIDC. Tenant and
+    project scope always come from the credential. Errors use `{error:{code,message,retryable,details}}`.
+servers: [{ url: /v1 }]
+security: [{ bearer: [] }]
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          required: [code, message, retryable]
+          properties:
+            code: { type: string, examples: [batch_conflict, object_conflict, hash_mismatch, seq_discontinuity, storage_quota_exceeded, rate_limited, unauthorized] }
+            message: { type: string }
+            retryable: { type: boolean }
+            details: { type: object }
+    BatchAck:
+      type: object
+      required: [recording_id, durable_seq, state, missing_blobs]
+      properties:
+        recording_id: { type: string }
+        durable_seq: { type: integer, description: "Raw events sequence_base+1..durable_seq for this segment are durably stored. ACK never implies parsing or analysis." }
+        state: { type: string, enum: [open, sealed] }
+        missing_blobs: { type: array, items: { type: string } }
+        duplicate: { type: boolean }
+    Coverage:
+      type: object
+      description: Platform-recomputed coverage (platform/07 §5). Collector manifest is an input, not the verdict.
+      properties:
+        claim: { type: string, enum: [unknown, best-effort, transport-complete, client-complete, server-effective-complete] }
+        collector_claim: { type: string }
+        capture_sources: { type: array, items: { type: string } }
+        tls_surfaces: { type: array, items: {} }
+        unknown_tls_surfaces: { type: integer }
+        logical_inferences: { type: integer }
+        transport_attempts: { type: integer }
+        unattributed_attempts: { type: integer }
+        unparsed_connections: { type: integer }
+        capture_drops: { type: integer }
+        gap_events: { type: integer }
+        unknown_egress: { type: integer }
+        model_bypass_connections: { type: integer }
+        observed_egress_classes:
+          type: object
+          additionalProperties: { type: integer, minimum: 0 }
+        all_attempts_have_terminal_state: { type: boolean }
+        unresolved_server_state: { type: integer }
+        missing_blobs: { type: integer }
+        body_unavailable: { type: integer }
+        capabilities_known: { type: boolean }
+        platform_transport_proof_verified: { type: boolean, description: True only for an exact-version, platform-owned task-egress decode proof with payload agreement and zero gaps. }
+        platform_transport_proof_status: { type: string, enum: [unavailable, failed, incomplete, verified, invalid] }
+        platform_transport_proof_version: { type: string }
+        incomplete: { type: boolean }
+        known_gaps: { type: array, items: { type: string } }
+        relation_revision: { type: integer }
+        processor_version: { type: string }
+    Export:
+      type: object
+      required: [id, capture_run_id, format, state, filename, media_type, expires_at, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        capture_run_id: { type: string }
+        format: { type: string, enum: [normalized-jsonl] }
+        state: { type: string, enum: [pending, running, ready, failed, expired] }
+        filename: { type: string }
+        media_type: { type: string, const: application/x-ndjson }
+        sha256: { type: string, pattern: "^[a-f0-9]{64}$" }
+        byte_length: { type: integer, minimum: 0 }
+        expires_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time }
+        last_error: { type: string }
+paths:
+  /me: { get: { summary: Caller identity, responses: { "200": { description: ok } } } }
+  /overview: { get: { summary: Project counters, responses: { "200": { description: ok } } } }
+
+  /recordings:
+    post:
+      summary: Create (or idempotently re-declare) a recording and its capture run
+      requestBody: { content: { application/json: { schema: { type: object, required: [recording_id, capture_run_id], properties: { recording_id: { type: string }, capture_run_id: { type: string }, segment_no: { type: integer }, sequence_base: { type: integer, minimum: 0, description: Global event sequence immediately preceding this segment }, schema_version: { type: integer, const: 1 }, run: { type: object } } } } } }
+      responses: { "201": { description: created }, "409": { description: recording_conflict | segment_predecessor_missing | segment_sequence_conflict | capture_run_finalized, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } } }
+    get:
+      summary: List recordings (cursor paginated); deleting/deleted rows expose only tombstone-safe fields
+      parameters: [{ name: limit, in: query, schema: { type: integer } }, { name: cursor, in: query, schema: { type: string } }]
+      responses: { "200": { description: ok } }
+  /recordings/{id}:
+    get: { summary: Recording detail with four-state ui_state and batches; deletion-fenced rows return a minimal tombstone, parameters: [{ name: id, in: path, required: true, schema: { type: string } }], responses: { "200": { description: ok } } }
+    delete:
+      summary: "Admin: irreversibly erase the containing CaptureRun, preserve tombstones, and propagate delete_local"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [confirmation], properties: { confirmation: { type: string, description: Must exactly equal id }, reason: { type: string, maxLength: 2048 } } } } } }
+      responses: { "202": { description: durable deletion request accepted }, "400": { description: confirmation_mismatch }, "403": { description: admin required }, "404": { description: unknown recording } }
+  /recordings/{id}/batches:
+    post:
+      summary: Upload one fixed batch (idempotent by batch_id; contiguous durable_seq advancement)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: Idempotency-Key, in: header, schema: { type: string }, description: "= batch_id" }
+        - { name: X-Batch-SHA256, in: header, schema: { type: string } }
+      requestBody:
+        content:
+          application/vnd.iorec.batch+zstd:
+            schema: { type: string, format: binary, description: "First line: batch.v1 header JSON. Then zstd(ndjson of event.v1)." }
+      responses:
+        "200": { description: durably stored, content: { application/json: { schema: { $ref: "#/components/schemas/BatchAck" } } } }
+        "400": { description: malformed_batch | hash_mismatch | seq_discontinuity }
+        "404": { description: recording_not_found }
+        "409": { description: batch_conflict | batch_overlap | object_conflict | recording_sealed }
+        "413": { description: payload_too_large }
+        "429": { description: quota, headers: { Retry-After: { schema: { type: integer } } } }
+  /recordings/{id}:seal:
+    post: { summary: Seal recording and optionally finalize its capture run, parameters: [{ name: id, in: path, required: true, schema: { type: string } }], requestBody: { content: { application/json: { schema: { type: object, required: [final_seq], properties: { final_seq: { type: integer, minimum: 1, description: Global final sequence; must be greater than this segment's sequence_base }, manifest: { type: object }, manifest_sha256: { type: string, pattern: "^[a-f0-9]{64}$" }, incomplete: { type: boolean }, run_final: { type: boolean, description: False when sealing an intermediate active-run segment; omitted defaults to true. A previously intermediate-sealed highest segment may later be promoted idempotently. } } } } } }, responses: { "200": { description: sealed }, "409": { description: final_seq_conflict | manifest_conflict | final_segment_conflict }, "422": { description: manifest hash mismatch } } }
+  /recordings:import:
+    post: { summary: Offline import of a run/ directory tar(.gz) — re-batched server-side through the same ingest path, requestBody: { content: { application/x-tar: { schema: { type: string, format: binary } } } }, responses: { "201": { description: imported } } }
+  /recordings/{id}/timeline:
+    get: { summary: Run-scoped logical tasks (agent-task-or-session-v1), sessions, inferences, unattributed attempts, and lifecycle events with task_id across every active Recording segment, parameters: [{ name: id, in: path, required: true, schema: { type: string } }], responses: { "200": { description: ok }, "404": { description: unknown or deletion-fenced recording } } }
+  /recordings/{id}/coverage:
+    get: { summary: Platform-recomputed coverage for an active CaptureRun, parameters: [{ name: id, in: path, required: true, schema: { type: string } }], responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Coverage" } } } }, "404": { description: unknown or deletion-fenced recording } } }
+  /recordings/{id}/events:
+    get: { summary: Raw event range (evidence links) for an active CaptureRun, parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { name: from_seq, in: query, schema: { type: integer } }, { name: to_seq, in: query, schema: { type: integer } }], responses: { "200": { description: ok }, "404": { description: unknown or deletion-fenced recording } } }
+
+  /exports:
+    post:
+      summary: "Admin: enqueue a bounded normalized JSONL export of a finalized CaptureRun"
+      requestBody: { content: { application/json: { schema: { type: object, required: [capture_run_id, format], properties: { capture_run_id: { type: string }, format: { type: string, enum: [normalized-jsonl] } } } } } }
+      responses: { "202": { description: queued }, "403": { description: admin required }, "409": { description: capture run open or still processing } }
+    get:
+      summary: "Admin: list up to 500 export jobs"
+      responses: { "200": { description: ok } }
+  /exports/{id}:
+    get:
+      summary: "Admin: export status and integrity metadata"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Export" } } } } }
+  /exports/{id}/download:
+    get:
+      summary: "Admin: authenticated download of a ready, unexpired export"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses: { "200": { description: application/x-ndjson with Content-Length and SHA-256 Digest }, "404": { description: not ready, expired, unknown, or deletion-fenced } }
+
+  /blobs/{sha256}:
+    head: { summary: Blob exists in this project, parameters: [{ name: sha256, in: path, required: true, schema: { type: string } }], responses: { "200": { description: exists }, "404": { description: missing } } }
+    put: { summary: Upload content-addressed blob (digest and immutable published object verified), parameters: [{ name: sha256, in: path, required: true, schema: { type: string, pattern: "^[a-f0-9]{64}$" } }], requestBody: { content: { "*/*": { schema: { type: string, format: binary, maxLength: 268435456 } } } }, responses: { "201": { description: created }, "200": { description: already present }, "409": { description: object_conflict }, "422": { description: hash_mismatch }, "429": { description: storage_quota_exceeded or project request rate exceeded, headers: { Retry-After: { schema: { type: integer } } } } } }
+    get: { summary: Download blob, parameters: [{ name: sha256, in: path, required: true, schema: { type: string } }], responses: { "200": { description: ok } } }
+
+  /collectors:register:
+    post: { summary: Register or refresh a collector (returns session token, effective config), responses: { "200": { description: ok } } }
+  /collectors/{id}:heartbeat:
+    post: { summary: Health, effective config, capabilities, parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { "200": { description: ok } } }
+  /projects/current/collector-config:
+    put: { summary: "Operator: replace the project collector configuration and advance its global revision", requestBody: { required: true, content: { application/json: { schema: { type: object, required: [config], properties: { config: { type: object } } } } } }, responses: { "200": { description: updated }, "403": { description: operator required } } }
+  /projects/current/retention:
+    get: { summary: "Viewer: effective raw-evidence and metadata retention days", responses: { "200": { description: ok } } }
+    put:
+      summary: "Admin: replace retention policy; shorter deadlines also tighten existing active data, extensions apply only to new data"
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [raw_evidence_days, metadata_days], properties: { raw_evidence_days: { type: integer, minimum: 1, maximum: 3650 }, metadata_days: { type: integer, minimum: 1, maximum: 3650 } } } } } }
+      responses: { "200": { description: updated }, "400": { description: raw_evidence_days must not exceed metadata_days }, "403": { description: admin required } }
+  /collectors/{id}/config:
+    put: { summary: "Operator: replace a collector-scoped configuration override", parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { type: object, required: [config], properties: { config: { type: object } } } } } }, responses: { "200": { description: merged effective configuration }, "403": { description: operator required }, "404": { description: collector not in this project } } }
+    delete: { summary: "Operator: clear a collector-scoped override and advance its revision", parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { "200": { description: project configuration restored }, "403": { description: operator required }, "404": { description: collector not in this project } } }
+  /collectors:
+    get: { summary: List collectors with capabilities and health, responses: { "200": { description: ok } } }
+  /collector-requests:
+    get: { summary: "Collector: long-poll pending requests (?wait=30s). User: list requests.", parameters: [{ name: wait, in: query, schema: { type: string } }, { name: collector_id, in: query, schema: { type: string } }], responses: { "200": { description: ok } } }
+    post: { summary: "User (operator): create backfill/apply_config/pause/resume/flush/seal/upload_sensitive/delete_local; delete_local payload may select class body/pcap/tls_secrets", requestBody: { content: { application/json: { schema: { type: object, required: [collector_id, type], properties: { collector_id: { type: string, format: uuid }, type: { type: string, enum: [backfill, apply_config, pause, resume, flush, seal, upload_sensitive, delete_local] }, payload: { type: object }, expires_in_seconds: { type: integer, minimum: 60, maximum: 604800 } } } } } }, responses: { "201": { description: created }, "400": { description: malformed_request | approval_required }, "404": { description: recording_not_found }, "409": { description: collector_recording_conflict | recording_unavailable } } }
+  /collector-requests/{id}:result:
+    post: { summary: "Collector: idempotently report acked|done|rejected; terminal states cannot regress or be overwritten", parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { "200": { description: ok }, "409": { description: request_state_conflict } } }
+
+  /capture-runs: { get: { summary: List capture runs; deleting/deleted rows expose only tombstone-safe fields, responses: { "200": { description: ok } } } }
+  /capture-runs/{id}:
+    delete:
+      summary: "Admin: irreversibly erase one CaptureRun remotely and propagate delete_local"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [confirmation], properties: { confirmation: { type: string }, reason: { type: string, maxLength: 2048 } } } } } }
+      responses: { "202": { description: durable deletion request accepted }, "400": { description: confirmation_mismatch }, "403": { description: admin required }, "404": { description: unknown CaptureRun } }
+  /attempts:
+    get: { summary: List model attempts from active CaptureRuns, parameters: [{ name: recording_id, in: query, schema: { type: string } }, { name: capture_run_id, in: query, schema: { type: string } }, { name: inference_id, in: query, schema: { type: string } }], responses: { "200": { description: ok } } }
+  /attempts/{id}:
+    get: { summary: Attempt with raw events, normalized view, relations, parameters: [{ name: id, in: path, required: true, schema: { type: string } }, { name: view, in: query, schema: { type: string, enum: [raw, normalized, both] } }], responses: { "200": { description: ok }, "404": { description: unknown or deletion-fenced attempt } } }
+  /inferences/{id}:
+    get: { summary: Logical inference with attempts, relations and input_diff vs predecessor, parameters: [{ name: id, in: path, required: true, schema: { type: string } }], responses: { "200": { description: ok }, "404": { description: unknown or deletion-fenced inference } } }
+  /sessions/{id}:
+    get: { summary: Session (native or inferred) with turns, children, inferences, parameters: [{ name: id, in: path, required: true, schema: { type: string } }], responses: { "200": { description: ok }, "404": { description: unknown or deletion-fenced session } } }
+    delete:
+      summary: "Admin: erase the containing CaptureRun because immutable raw batches cannot prove narrower Session erasure"
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [confirmation], properties: { confirmation: { type: string }, reason: { type: string, maxLength: 2048 } } } } } }
+      responses: { "202": { description: durable deletion request accepted }, "400": { description: confirmation_mismatch }, "403": { description: admin required }, "404": { description: unknown Session } }
+  /deletions:
+    get: { summary: "Admin: list durable remote/local deletion requests and outcomes", responses: { "200": { description: ok }, "403": { description: admin required } } }
+  /deletions/{id}:
+    get: { summary: "Admin: inspect one deletion state machine", parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { "200": { description: ok }, "403": { description: admin required }, "404": { description: unknown deletion } } }
+  /deletions/{id}:retry-local:
+    post: { summary: "Admin: reissue delete_local after correcting a collector policy rejection", parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { "202": { description: local deletion reissued }, "409": { description: deletion_state_conflict } } }
+  /findings:
+    get: { summary: List findings from active CaptureRuns, parameters: [{ name: capture_run_id, in: query, schema: { type: string } }, { name: recording_id, in: query, schema: { type: string } }, { name: status, in: query, schema: { type: string, enum: [open, confirmed, dismissed] } }], responses: { "200": { description: ok } } }
+  /findings/{id}:review:
+    post: { summary: "Reviewer: confirm or dismiss", parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { content: { application/json: { schema: { type: object, properties: { status: { type: string, enum: [confirmed, dismissed, open] }, note: { type: string } } } } } }, responses: { "200": { description: ok } } }
+  /processing-jobs:
+    get: { summary: List jobs and per type/status stats, parameters: [{ name: status, in: query, schema: { type: string } }, { name: recording_id, in: query, schema: { type: string } }], responses: { "200": { description: ok } } }
+    post: { summary: "Operator: enqueue reprocessing (decode|resolve|transport_audit|coverage|rules)", responses: { "202": { description: accepted } } }
+  /processing-jobs/{id}:retry:
+    post: { summary: Reset a dead/failed job, parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { "200": { description: ok } } }
+  /notifications/stream:
+    get:
+      summary: SSE of entity.updated notifications (ids + versions only)
+      parameters: [{ name: cursor, in: query, schema: { type: integer } }, { name: Last-Event-ID, in: header, schema: { type: integer } }]
+      responses: { "200": { description: text/event-stream } }

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "upstream_path": "/usr/local/libexec/iorec/agentsight-v1.0.25",
+  "upstream_sha256": "sha256:b390e507765f5e042ed3aa913c41095a973efa2fb65117d3486744df804abc81",
+  "upstream_release": "v1.0.25",
+  "privilege_mode": "sudo-noninteractive",
+  "sudo_path": "/usr/bin/sudo",
+  "readiness_timeout_seconds": 8,
+  "shutdown_drain_seconds": 1,
+  "max_event_bytes": 524288
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "format": "iorec-core-soak-runtime-provenance-v1",
+  "captured_at": "2026-09-16T12:05:16Z",
+  "purpose": "Preserve non-qualifying provenance for an intentionally stopped exact-binary core soak without treating partial runtime as release evidence.",
+  "qualification_status": {
+    "qualified": false,
+    "service": "iorec-core5h-final.service",
+    "started_at": "2026-09-16T10:12:27Z",
+    "stop_requested_at": "2026-09-16T11:51:45Z",
+    "terminated_at": "2026-09-16T11:52:03Z",
+    "wall_seconds": 5976,
+    "required_measured_seconds": 18000,
+    "reason": "A deletion audit found that authenticated whole-run delete_local incorrectly required a fully acknowledged upload. An offline or partially uploaded run could therefore become permanently undeletable after the platform had already fenced and erased its remote copy.",
+    "work_dir_preserved_at": "/tmp/iorec-core5h-aborted-remote-delete-upload-gate-20260916T1152Z",
+    "report_written": false,
+    "supersedes_evidence": false,
+    "restart_required": true
+  },
+  "iorec": {
+    "path": "target/release/iorec",
+    "sha256": "b416dc616df451c3864549020cfcbc8993062f4e6f0c07080fc7984f848a89ec",
+    "candidate_invalidated_by_source_fix": true
+  },
+  "harness": {
+    "path": "tools/perf_harness.py",
+    "sha256": "3f96783f43f0648c3cf4f08ae0b598384d31275c12f40d2798808f2fb0b56259"
+  },
+  "partial_observation": {
+    "run_id": "run-01a0a9b4-19a9-72ff-85f2-67597fda259e",
+    "manifest_status_after_controlled_stop": "failed",
+    "observed_http_attempts": 5960,
+    "capture_drops": 0,
+    "all_attempts_have_terminal_state": true,
+    "events_file_bytes": 216513103,
+    "blob_files": 32000,
+    "verdict_scope": "Historical diagnostic observation only. Duration was short and the tested binary was invalidated; none of these counters qualify a release."
+  },
+  "secrets_included": false
+}

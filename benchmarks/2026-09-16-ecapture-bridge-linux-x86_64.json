@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-16T01:42:00Z",
+  "subject": "iorec eCapture privileged-probe bridge",
+  "status": "qualified_limited_matrix_cell",
+  "qualification_scope": {
+    "os": "Debian GNU/Linux 13.7 (trixie)",
+    "architecture": "x86_64",
+    "kernel": "6.12.94+deb13-cloud-amd64",
+    "tls_library": "OpenSSL 3.5.7",
+    "client": "curl 8.14.1",
+    "application_protocol": "HTTP/1.1",
+    "capture_filter": "cgroup-v2",
+    "upstream": "eCapture release v2.6.0",
+    "bridge_protocol": 2
+  },
+  "artifacts": {
+    "iorec": {
+      "version": "0.1.0",
+      "sha256": "0351499250b7ae034eba9012e0a9426f5b4a0f6730bb8af100f7e85532658236"
+    },
+    "bridge": {
+      "path": "tools/ecapture_bridge.py",
+      "helper_version": "1.0.0",
+      "sha256": "8cecefad7f794124d3b54a8ed69718baeda0845d8fd585894f5c677e2d2a27d0"
+    },
+    "upstream_release_archive": {
+      "name": "ecapture-v2.6.0-linux-amd64.tar.gz",
+      "sha256": "6fc5306f55aad0902e91df522f0bf4aab4bb6ff9a01a354d447178e18e471d3d"
+    },
+    "upstream_executable": {
+      "sha256": "a090565b6d989a6525289c98bfd19c36eba40c8519c6f371d372a09e3e91f1b9",
+      "source_tag": "v2.6.0",
+      "source_commit": "d1d3d3c789740829d54986620ecaa81d3ea06a42",
+      "reported_version_string": "os_arch:v2.0.0-20260101-develop:default_kernel"
+    }
+  },
+  "runtime_configuration": {
+    "mapsize_kib": 4096,
+    "perf_reorder_lag_ms": 10,
+    "readiness_timeout_seconds": 20,
+    "shutdown_drain_seconds": 2,
+    "max_payload_bytes": 524288,
+    "max_upstream_line_bytes": 4259840,
+    "max_hex_text_bytes_per_event": 3149824,
+    "upstream_queue_records": 1024,
+    "max_tracked_cgroup_pids": 1000000,
+    "max_tracked_connections": 1000000,
+    "cgroup_sample_milliseconds": 10,
+    "perf_event_paranoid": 3,
+    "file_capabilities": [
+      "CAP_DAC_OVERRIDE",
+      "CAP_NET_ADMIN",
+      "CAP_SYS_PTRACE",
+      "CAP_SYS_ADMIN",
+      "CAP_SYS_RESOURCE",
+      "CAP_PERFMON",
+      "CAP_BPF"
+    ],
+    "recorder_user": "unprivileged",
+    "target_user": "unprivileged",
+    "privileged_component": "root-owned eCapture executable only"
+  },
+  "automated_tests": {
+    "bridge_python_tests": 7,
+    "bridge_python_passed": 7,
+    "rust_probe_protocol_tests": 5,
+    "rust_probe_protocol_passed": 5,
+    "rust_library_tests": 175,
+    "rust_library_passed": 175,
+    "clippy_all_targets_all_features_warnings": 0
+  },
+  "live_runs": [
+    {
+      "name": "exact-request-response",
+      "run_id": "run-01a0a7df-090c-75bc-a884-d808f8e1581d",
+      "status": "finished",
+      "target_exit_code": 0,
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "capture_drops": 0,
+      "probe_records": 4,
+      "evidence_records": 2,
+      "probe_hits": 4,
+      "request_bytes": 116,
+      "request_exact_match": true,
+      "response_bytes": 5484,
+      "response_prefix_match": true,
+      "response_suffix_match": true,
+      "all_payload_hashes_match": true,
+      "final_complete": true
+    },
+    {
+      "name": "cgroup-isolation",
+      "run_id": "run-01a0a7df-73c0-721a-aba8-c976fe17c0c5",
+      "status": "finished",
+      "target_exit_code": 0,
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "capture_drops": 0,
+      "target_and_evidence_pid_differ": true,
+      "inside_marker_occurrences": 1,
+      "outside_marker_occurrences": 0,
+      "evidence_records": 2,
+      "probe_hits": 4,
+      "final_complete": true
+    },
+    {
+      "name": "four-connection-long-payload",
+      "run_id": "run-01a0a7df-da65-76e7-841f-055df1b37339",
+      "status": "finished",
+      "target_exit_code": 0,
+      "client_connections": 4,
+      "client_download_bytes_each": 262144,
+      "captured_connections": 4,
+      "unique_request_markers_expected": 4,
+      "unique_request_markers_captured": 4,
+      "request_headers_captured": 4,
+      "response_headers_captured": 4,
+      "captured_body_bytes": 1048576,
+      "expected_body_bytes": 1048576,
+      "captured_response_bytes_including_headers": 1048756,
+      "evidence_records": 72,
+      "probe_hits": 80,
+      "capture_drops": 0,
+      "unparsed_connections": 0,
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "all_payload_hashes_match": true,
+      "final_complete": true
+    }
+  ],
+  "fail_closed_evidence": {
+    "missing_capability_prevented_target_exec": true,
+    "readiness_timeout_test_passed": true,
+    "loss_signal_conversion_test_passed": true,
+    "payload_length_and_offset_rejection_test_passed": true,
+    "zero_probe_hits_degraded_capture_test_passed": true,
+    "out_of_cgroup_marker_absent_from_capture": true,
+    "zero_length_tls_calls_counted_as_probe_hits_not_payload_evidence": true
+  },
+  "observed_upstream_constraints": [
+    "The release archive and uncompressed executable digests are authoritative because the packaged executable reports a development-looking version string.",
+    "On this host the documented BPF/PERFMON/SYS_PTRACE file-capability set was insufficient: RLIMIT_MEMLOCK, /proc/self/mem feature detection, TC program loading, and perf probe attachment required the additional capabilities recorded above.",
+    "Stopping the entire helper process group immediately lost perf-buffer tail data without an upstream drop count. Graceful recorder stop now signals only the bridge, and the bridge waits two seconds before stopping eCapture; the recorder still kills the full group after its fixed ten-second deadline.",
+    "This evidence qualifies one OpenSSL/HTTP1/Linux matrix cell only; Go TLS, GnuTLS, NSS, BoringSSL, HTTP/2 interpretation, arm64, containers, and other kernels remain unqualified."
+  ]
+}

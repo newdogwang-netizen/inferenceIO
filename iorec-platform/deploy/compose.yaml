@@ -1,0 +1,83 @@
+# Production-minimal deployment (platform/11 §1). Bring your own PostgreSQL / S3 by
+# pointing DATABASE_URL and OBJECT_STORE_* at them and removing the bundled services.
+name: iorec
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  platform-api:
+    image: ${IOREC_IMAGE_API:-iorec/platform-api:0.1}
+    build: { context: .., dockerfile: deploy/Dockerfile.api }
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://iorec:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/iorec}
+      OBJECT_STORE_DIR: /data/objects
+      IOREC_AUTH_MODE: ${IOREC_AUTH_MODE:-token}
+      IOREC_USER_TOKENS: ${IOREC_USER_TOKENS:-}
+      IOREC_OIDC_ISSUER: ${IOREC_OIDC_ISSUER:-}
+      IOREC_OIDC_CLIENT_ID: ${IOREC_OIDC_CLIENT_ID:-}
+      IOREC_BOOTSTRAP_PROJECT_TOKEN: ${IOREC_BOOTSTRAP_PROJECT_TOKEN:?set a project token for collectors}
+      IOREC_AUTO_SEAL_AFTER: 24h
+      IOREC_PROJECT_REQUESTS_PER_MINUTE: ${IOREC_PROJECT_REQUESTS_PER_MINUTE:-6000}
+      IOREC_PROJECT_REQUEST_BURST: ${IOREC_PROJECT_REQUEST_BURST:-200}
+      IOREC_PROJECT_STORAGE_BYTES: ${IOREC_PROJECT_STORAGE_BYTES:-107374182400}
+    volumes: [objdata:/data]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging: *default-logging
+    depends_on: { postgres: { condition: service_healthy } }
+    restart: unless-stopped
+
+  pipeline-worker:
+    image: ${IOREC_IMAGE_WORKER:-iorec/pipeline-worker:0.1}
+    build: { context: .., dockerfile: deploy/Dockerfile.worker }
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://iorec:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/iorec}
+      OBJECT_STORE_DIR: /data/objects
+      WORKER_POOLS: "decode=4,assemble=4,normalize=2,resolve=2,transport_audit=1,coverage=1,rules=1,export=1"
+      IOREC_TSHARK_PATH: /usr/bin/tshark
+    volumes: [objdata:/data]
+    read_only: true
+    tmpfs: ["/tmp:rw,noexec,nosuid,nodev,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging: *default-logging
+    depends_on: { platform-api: { condition: service_started } }
+    deploy: { replicas: 2 }
+    restart: unless-stopped
+
+  web-console:
+    image: ${IOREC_IMAGE_WEB:-iorec/web-console:0.1}
+    build: { context: .., dockerfile: deploy/Dockerfile.web }
+    environment: { API_UPSTREAM: "platform-api:8080" }
+    ports: ["${IOREC_BIND_ADDR:-127.0.0.1}:${IOREC_HTTP_PORT:-8088}:8080"]
+    read_only: true
+    tmpfs:
+      - "/config:rw,noexec,nosuid,nodev,mode=0700,uid=65532,gid=65532"
+      - "/data:rw,noexec,nosuid,nodev,mode=0700,uid=65532,gid=65532"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck: { test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz"], interval: 10s, timeout: 3s, retries: 10 }
+    logging: *default-logging
+    depends_on: [platform-api]
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+    environment:
+      POSTGRES_USER: iorec
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: iorec
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U iorec"], interval: 5s, timeout: 3s, retries: 20 }
+    logging: *default-logging
+    restart: unless-stopped
+
+volumes:
+  pgdata: {}
+  objdata: {}

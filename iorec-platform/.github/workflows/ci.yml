@@ -1,0 +1,37 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+        env: { POSTGRES_USER: iorec, POSTGRES_PASSWORD: iorec, POSTGRES_DB: iorec_test }
+        ports: ["54329:5432"]
+        options: --health-cmd "pg_isready -U iorec" --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with: { go-version: "1.25.13" }
+      - run: go vet ./...
+      - run: go test ./... -count=1
+        env: { TEST_DATABASE_URL: "postgres://iorec:iorec@127.0.0.1:54329/iorec_test" }
+      - run: go test -race ./... -count=1
+        env: { TEST_DATABASE_URL: "postgres://iorec:iorec@127.0.0.1:54329/iorec_test" }
+      - name: schema files in sync
+        run: diff -r schemas internal/protocol/schemas --exclude=CHANGELOG.md && diff -r migrations internal/store/migrations
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
+      - name: production worker image contains a non-privileged trusted decoder
+        run: |
+          docker build -f deploy/Dockerfile.worker -t iorec/pipeline-worker:ci .
+          test "$(docker image inspect iorec/pipeline-worker:ci --format '{{.Config.User}}')" = "65532:65532"
+          docker run --rm --entrypoint /usr/bin/tshark iorec/pipeline-worker:ci --version
+          docker run --rm --user 0:0 --entrypoint /bin/sh iorec/pipeline-worker:ci -c 'test ! -e /usr/bin/dumpcap && test -z "$(find / -xdev -type f -perm /6000 -print -quit)"'
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: { node-version: "22.22.2" }
+      - run: cd web && npm ci --no-audit --no-fund && npm run build
+      - run: cd web && npm audit --omit=dev --audit-level=high

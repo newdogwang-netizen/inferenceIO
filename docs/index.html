@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#f3f2ed" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#17191b" media="(prefers-color-scheme: dark)">
+    <meta name="description" content="How iorec records, verifies, and audits AI agent inference traffic without overstating coverage.">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="iorec: an evidence layer for agent inference">
+    <meta property="og:description" content="A production-qualified, local flight recorder for AI agent inference I/O.">
+    <meta property="og:url" content="https://newdogwang-netizen.github.io/inferenceIO/">
+    <meta name="twitter:card" content="summary">
+    <link rel="canonical" href="https://newdogwang-netizen.github.io/inferenceIO/">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+    <title>iorec | Evidence for agent inference</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#article">Skip to article</a>
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="Primary navigation">
+        <a class="brand" href="./" aria-label="iorec home">io<span>rec</span></a>
+        <div class="nav-links">
+          <a href="#evidence">Evidence</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#boundaries">Boundaries</a>
+          <a class="nav-source" href="https://github.com/newdogwang-netizen/inferenceIO">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">Open source evidence recorder</p>
+          <h1 id="hero-title">Record every model call.</h1>
+          <p class="hero-deck">Capture inference traffic, preserve raw evidence, and report every gap without pretending certainty.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="https://github.com/newdogwang-netizen/inferenceIO">View source</a>
+            <a class="button button-secondary" href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/PRODUCTION_READINESS.md">Read the audit</a>
+          </div>
+        </div>
+
+        <figure class="flight-map" aria-labelledby="flight-map-caption">
+          <figcaption id="flight-map-caption">One inference, four evidence boundaries</figcaption>
+          <ol>
+            <li class="map-node node-agent">
+              <span class="node-index">Input</span>
+              <strong>Agent CLI</strong>
+              <small>Codex, Claude, Gemini, Hermes</small>
+            </li>
+            <li class="map-node node-boundary">
+              <span class="node-index">Observe</span>
+              <strong>Task boundary</strong>
+              <small>Process, network, lifecycle</small>
+            </li>
+            <li class="map-node node-recorder">
+              <span class="node-index">Persist</span>
+              <strong>Encrypted recorder</strong>
+              <small>Events, bodies, pcap, TLS keys</small>
+            </li>
+            <li class="map-node node-platform">
+              <span class="node-index">Verify</span>
+              <strong>Evidence platform</strong>
+              <small>Sequence, integrity, retention</small>
+            </li>
+          </ol>
+          <div class="signal-line" aria-hidden="true"></div>
+        </figure>
+      </section>
+
+      <dl class="metric-band" aria-label="Release qualification metrics">
+        <div><dt>Core soak</dt><dd>18,000 s</dd></div>
+        <div><dt>Recorded attempts</dt><dd>18,000</dd></div>
+        <div><dt>Evidence events</dt><dd>522,023</dd></div>
+        <div><dt>Capture drops</dt><dd>0</dd></div>
+      </dl>
+
+      <article id="article" class="article-shell">
+        <header class="article-header">
+          <p>Published September 17, 2026</p>
+          <h2>The capture problem is a boundary problem.</h2>
+          <p>Agent observability often starts with application logs and ends with an assumption: if the log looks complete, the traffic must be complete. That assumption fails when agents retry, fork subprocesses, switch protocols, or bypass the expected client.</p>
+        </header>
+
+        <section id="architecture" class="architecture-section" aria-labelledby="architecture-title">
+          <div class="section-copy">
+            <h2 id="architecture-title">Record first. Interpret second.</h2>
+            <p><code>iorec</code> keeps immutable transport and lifecycle evidence separate from later semantic reconstruction. Correlation can improve. The original bytes and sequence do not change.</p>
+          </div>
+          <div class="layer-stack" role="list" aria-label="Capture layers">
+            <div role="listitem">
+              <span>L1</span>
+              <div><strong>Transport evidence</strong><p>HTTP, SSE, WebSocket, task pcap, and bounded TLS key logs.</p></div>
+            </div>
+            <div role="listitem">
+              <span>L2</span>
+              <div><strong>Runtime evidence</strong><p>Agent hooks, SDK observers, sessions, retries, and model identifiers.</p></div>
+            </div>
+            <div role="listitem">
+              <span>L3</span>
+              <div><strong>Inference graph</strong><p>Tasks, turns, attempts, payload references, state, and confidence.</p></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="evidence" class="evidence-section" aria-labelledby="evidence-title">
+          <div class="evidence-primary">
+            <h2 id="evidence-title">Five hours without a silent gap.</h2>
+            <p>The frozen Linux x86-64 release completed every request and integrity check in its final steady-state qualification.</p>
+            <dl>
+              <div><dt>Encrypted blobs</dt><dd>216,000</dd></div>
+              <div><dt>Incomplete attempts</dt><dd>0</dd></div>
+              <div><dt>Missing or corrupt blobs</dt><dd>0</dd></div>
+            </dl>
+          </div>
+          <div class="connected-proof">
+            <h3>Connected platform gate</h3>
+            <p>Twenty persistent collectors ran for at least 18,000 seconds each.</p>
+            <ul>
+              <li><strong>6,000 / 6,000</strong> successful attempts</li>
+              <li><strong>1,137</strong> server recording segments</li>
+              <li><strong>900 s</strong> injected API outage</li>
+              <li><strong>Passed</strong> restart, drain, and deletion propagation</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="quickstart-section" aria-labelledby="quickstart-title">
+          <div>
+            <h2 id="quickstart-title">Start with one command.</h2>
+            <p>Encrypted recording is the default. The key stays with the operator.</p>
+          </div>
+          <pre><code><span>iorec keygen --output ./iorec.key</span>
+
+iorec run \
+  --key-file ./iorec.key \
+  --upstream https://api.openai.com \
+  --provider openai \
+  -- your-agent-command</code></pre>
+        </section>
+
+        <section class="integrity-section" aria-labelledby="integrity-title">
+          <h2 id="integrity-title">Evidence remains inspectable.</h2>
+          <p>Every stage exposes a bounded, machine-readable artifact. No successful exit silently upgrades the claim.</p>
+          <ol class="integrity-path">
+            <li><strong>Capture</strong><span>Append-only events and content-addressed blobs</span></li>
+            <li><strong>Authenticate</strong><span>Per-run keys and manifest integrity</span></li>
+            <li><strong>Verify</strong><span>Counts, terminals, payloads, and transport boundaries</span></li>
+            <li><strong>Retain</strong><span>Audited TTL, class erasure, and remote deletion</span></li>
+          </ol>
+        </section>
+
+        <section id="boundaries" class="boundary-section" aria-labelledby="boundary-title">
+          <div class="boundary-mark" aria-hidden="true">best-effort</div>
+          <div>
+            <h2 id="boundary-title">The honest claim is part of the product.</h2>
+            <p>The default manifest says <code>best-effort</code>. Narrow transport completeness is available only after a separate successful audit inside the isolated task-network boundary.</p>
+            <p>Public providers, macOS, Linux arm64, agent-in-container deployments, QUIC, and broad TLS matrices remain outside the qualified release boundary.</p>
+            <a class="text-link" href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/SUPPORT.md">Inspect the support matrix</a>
+          </div>
+        </section>
+      </article>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>iorec</strong>
+        <p>Auditable inference evidence for agent systems.</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/PERFORMANCE.md">Performance</a>
+        <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/SECURITY.md">Security</a>
+        <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/LICENSE-MIT">License</a>
+      </div>
+    </footer>
+  </body>
+</html>

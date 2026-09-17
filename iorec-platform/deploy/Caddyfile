@@ -1,0 +1,33 @@
+# Single unprivileged entry point: /v1 -> platform-api, everything else -> console.
+{
+	# Production TLS terminates at the managed ingress in front of this container.
+	auto_https off
+}
+
+:8080 {
+	encode zstd gzip
+	header {
+		-Server
+		Content-Security-Policy "default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Resource-Policy "same-origin"
+	}
+
+	@api path /v1/* /healthz
+	handle @api {
+		# SSE needs unbuffered streaming
+		reverse_proxy {$API_UPSTREAM:platform-api:8080} {
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

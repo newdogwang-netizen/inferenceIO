@@ -1,0 +1,1562 @@
+{
+  "configuration": {
+    "concurrency": 4,
+    "delay_ms": 5,
+    "max_event_storage_bytes": 4294967296,
+    "max_run_blob_storage_bytes": 2147483648,
+    "payload_bytes": 1024,
+    "requests": 400,
+    "response_chunk_bytes": 256,
+    "response_chunks": 3,
+    "rounds": 5,
+    "warmup": 20
+  },
+  "created_at": "2026-09-16T17:36:17.577510+00:00",
+  "direct": {
+    "cpu_ms_per_request": 0.5488075000000007,
+    "cpu_seconds": 1.0976150000000013,
+    "error_samples": [],
+    "errors": 0,
+    "measurement_seconds": 22.319659873843193,
+    "mib_per_second": 0.7158648289168175,
+    "outer_wall_seconds": 23.687981981784105,
+    "requests": 2000,
+    "requests_per_second": 89.60710025621114,
+    "response_bytes": 16754000,
+    "rounds": 5,
+    "successes": 2000,
+    "system_cpu_seconds": 0.2089569999999995,
+    "ttft_ms": {
+      "max": 48.475631,
+      "min": 0.395188,
+      "p50": 43.914671,
+      "p95": 47.957697350000004,
+      "p99": 48.23103861,
+      "samples": 2000
+    },
+    "user_cpu_seconds": 0.8886580000000018
+  },
+  "format": "iorec-performance-report-v1",
+  "iorec": {
+    "path": "/home/Admin/inferenceIO/target/release/iorec",
+    "sha256": "sha256:9844f977fc3f4b4f466dac8fb1ec8495d835da38e6aaa4aaeb083fb57e873869",
+    "version": "iorec 0.1.0"
+  },
+  "methodology": {
+    "baseline": "same stdlib HTTP/SSE client directly to built-in fake server",
+    "cpu": "waited child user+system CPU; fake-server CPU excluded from both paths",
+    "recorded": "same client through one encrypted full-body iorec run per round",
+    "round_order": "alternating direct-first and recorded-first",
+    "startup_in_cpu_and_outer_wall": true,
+    "ttft": "client monotonic time from request start through first response body byte"
+  },
+  "overhead": {
+    "cpu_per_request_percent": 1472.356882877874,
+    "throughput_percent": -5.016708098273237,
+    "ttft_p50_percent": 8.781301128272133,
+    "ttft_p95_percent": 0.13635496200485875
+  },
+  "passed": true,
+  "platform": {
+    "cpu_count": 16,
+    "machine": "x86_64",
+    "python": "3.13.5",
+    "release": "6.12.94+deb13-cloud-amd64",
+    "system": "Linux"
+  },
+  "recorded": {
+    "cpu_ms_per_request": 8.6292125,
+    "cpu_seconds": 17.258425,
+    "error_samples": [],
+    "errors": 0,
+    "measurement_seconds": 23.498511608690023,
+    "mib_per_second": 0.6799519800718575,
+    "outer_wall_seconds": 32.113265878520906,
+    "requests": 2000,
+    "requests_per_second": 85.11177360102998,
+    "response_bytes": 16754000,
+    "rounds": 5,
+    "successes": 2000,
+    "system_cpu_seconds": 7.7036050000000005,
+    "ttft_ms": {
+      "max": 51.882688,
+      "min": 42.462703,
+      "p50": 47.7709505,
+      "p95": 48.02309005,
+      "p99": 48.14733392,
+      "samples": 2000
+    },
+    "user_cpu_seconds": 9.55482
+  },
+  "run_validations": [
+    {
+      "attempt_count_matches": true,
+      "blob_storage_within_budget": true,
+      "client_workload_passed": true,
+      "corrupt_blobs": 0,
+      "discarded_tail_bytes": 0,
+      "event_storage_within_budget": true,
+      "expected_attempts": 420,
+      "integrity_verifier": {
+        "checks": [
+          {
+            "detail": "status=finished",
+            "name": "run_finalized",
+            "passed": true
+          },
+          {
+            "detail": "discarded_tail_bytes=0",
+            "name": "event_log_committed",
+            "passed": true
+          },
+          {
+            "detail": "missing=0",
+            "name": "referenced_blobs_present",
+            "passed": true
+          },
+          {
+            "detail": "corrupt=0",
+            "name": "blob_integrity",
+            "passed": true
+          },
+          {
+            "detail": "pending_classes=0 pending_blobs=0",
+            "name": "class_erasure_committed",
+            "passed": true
+          },
+          {
+            "detail": "authenticated=true",
+            "name": "manifest_authenticated",
+            "passed": true
+          }
+        ],
+        "manifest_claim": "best-effort",
+        "passed": true,
+        "profile": "integrity",
+        "run_id": "run-01a0ab49-7f92-7755-9a2c-271e754164be"
+      },
+      "manifest": {
+        "command": {
+          "argv": [
+            "/usr/bin/python3",
+            "[REDACTED_ARG]",
+            "[REDACTED_ARG]",
+            "--url-env",
+            "[REDACTED_ARG]",
+            "--requests",
+            "[REDACTED_ARG]",
+            "--warmup",
+            "[REDACTED_ARG]",
+            "--concurrency",
+            "[REDACTED_ARG]",
+            "--payload-bytes",
+            "[REDACTED_ARG]",
+            "--response-chunks",
+            "[REDACTED_ARG]",
+            "--response-chunk-bytes",
+            "[REDACTED_ARG]",
+            "--delay-ms",
+            "[REDACTED_ARG]"
+          ],
+          "cwd": "/home/Admin/inferenceIO",
+          "environment": {
+            "COLORTERM": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "SHELL": "/bin/bash",
+            "TERM": "xterm-256color"
+          },
+          "executable": "/usr/bin/python3.13",
+          "executable_sha256": "sha256:889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+          "runtime": "python"
+        },
+        "counts": {
+          "blob_bytes": 3801046,
+          "blob_storage_bytes": 4031782,
+          "blobs": 4807,
+          "completed_attempts": 420,
+          "errors": 0,
+          "event_storage_bytes": 15206854,
+          "events": 12220,
+          "incomplete_attempts": 0,
+          "input_tokens": 420,
+          "logical_inferences": 420,
+          "models": {
+            "iorec-perf-model": 420
+          },
+          "output_tokens": 420,
+          "transport_attempts": 420
+        },
+        "coverage": {
+          "all_attempts_have_terminal_state": true,
+          "capture_drops": 0,
+          "capture_sources": [
+            "adapter:none",
+            "collector:authenticated-hook",
+            "correlation",
+            "correlator:bounded-unique",
+            "process",
+            "proxy",
+            "runner"
+          ],
+          "captured_request_payloads_complete": true,
+          "captured_response_payloads_complete": true,
+          "claim": "best-effort",
+          "known_gaps": [
+            "1 process network observations had polling or permission gaps; independently captured wire boundaries may replace these attribution-only gaps",
+            "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+            "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+            "endpoint proxy is not independently cross-checked against decrypted upstream network traffic",
+            "model-bypass classification uses a launch-time upstream address snapshot; later DNS changes and unmatched provider addresses remain unknown",
+            "no agent-native lifecycle/model hook configured",
+            "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+            "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+            "the manifest remains best-effort; transport completeness is established only by a separate successful offline transport-audit"
+          ],
+          "observed_egress_classes": {
+            "model_recorder": 8
+          },
+          "observed_protocols": {
+            "http/1.1": 420,
+            "upstream:http/1.1": 420
+          },
+          "observed_tls_surfaces": {
+            "openssl-dynamic": 1
+          },
+          "process_network_scan_gaps": 1,
+          "unknown_egress": 0,
+          "unknown_tls_surfaces": 1,
+          "unparsed_connections": 0,
+          "unresolved_correlations": 420,
+          "unresolved_state_references": 0
+        },
+        "exit_code": 0,
+        "finished_at": "2026-09-16T17:35:22.278981333Z",
+        "policy": {
+          "allowed_paths": [],
+          "body_mode": "full",
+          "max_blob_bytes": 67108864,
+          "name": "default",
+          "redact_headers": [
+            "api-key",
+            "authentication",
+            "authentication-info",
+            "authorization",
+            "content-location",
+            "cookie",
+            "grpc-metadata-authorization",
+            "link",
+            "location",
+            "proxy-authentication-info",
+            "proxy-authorization",
+            "refresh",
+            "set-cookie",
+            "x-access-token",
+            "x-amz-security-token",
+            "x-api-key",
+            "x-auth-token",
+            "x-goog-api-key"
+          ]
+        },
+        "probe_plan": {
+          "candidates": [
+            {
+              "id": "endpoint_proxy",
+              "independent_observer": false,
+              "priority": 10,
+              "reason": "configured loopback endpoint proxy records application-visible HTTP, SSE, and WebSocket traffic",
+              "selected": true,
+              "status": "available"
+            },
+            {
+              "id": "python_runtime",
+              "independent_observer": false,
+              "priority": 20,
+              "reason": "Python target can use the sitecustomize OpenAI/httpx/requests observer",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "node_runtime",
+              "independent_observer": false,
+              "priority": 20,
+              "reason": "target was not passively identified as Node.js",
+              "selected": false,
+              "status": "not_applicable"
+            },
+            {
+              "id": "nss_tls_keylog",
+              "independent_observer": false,
+              "priority": 30,
+              "reason": "Python default TLS contexts can honor SSLKEYLOGFILE; custom contexts can bypass it",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "pcap_upstream_snapshot",
+              "independent_observer": true,
+              "priority": 40,
+              "reason": "requires a root-owned, non-writable tcpdump in a fixed system path plus root or CAP_NET_RAW",
+              "selected": false,
+              "status": "unavailable"
+            },
+            {
+              "id": "pcap_task_netns_proxy_only",
+              "independent_observer": true,
+              "priority": 45,
+              "reason": "trusted rootless user/net namespace, subordinate-ID mapping, slirp4netns sandbox/seccomp, nftables, sysctl, nsenter, setpriv, and task-local tcpdump prerequisites detected",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "transparent_task_netns_proxy",
+              "independent_observer": false,
+              "priority": 46,
+              "reason": "transparent model-socket interception was not selected",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "privileged_probe_helper",
+              "independent_observer": true,
+              "priority": 50,
+              "reason": "the protocol boundary is built in, but no qualified bridge executable was selected",
+              "selected": false,
+              "status": "bridge_required"
+            },
+            {
+              "id": "ecapture_bridge",
+              "independent_observer": true,
+              "priority": 60,
+              "reason": "eCapture, required kernel privilege, or a compatible TLS marker is absent",
+              "selected": false,
+              "status": "unavailable"
+            },
+            {
+              "id": "agentsight_bridge",
+              "independent_observer": true,
+              "priority": 70,
+              "reason": "AgentSight or required kernel privilege is absent",
+              "selected": false,
+              "status": "unavailable"
+            }
+          ],
+          "executable_tls_surfaces": [],
+          "independent_observer_selected": false,
+          "intended_protocols": [
+            "http/1.1-or-negotiated-http/2",
+            "sse",
+            "websocket"
+          ],
+          "limitations": [
+            "static executable inspection found no TLS marker; the active TLS surface must be learned after launch",
+            "no independent packet or privileged observer is selected; runtime/proxy agreement cannot rule out bypasses",
+            "protocol entries are intended preflight paths; observed protocols and active TLS libraries are finalized from run evidence"
+          ],
+          "phase": "preflight",
+          "runtime": "python",
+          "schema_version": 1,
+          "selected": [
+            "endpoint_proxy"
+          ]
+        },
+        "recorder_version": "0.1.0",
+        "run_id": "run-01a0ab49-7f92-7755-9a2c-271e754164be",
+        "schema_version": 1,
+        "started_at": "2026-09-16T17:35:15.880709780Z",
+        "status": "finished",
+        "storage": {
+          "blobs": "blobs/",
+          "durability": "sync-data-before-ack-concurrent-batch-v1",
+          "encryption": {
+            "algorithm": "XChaCha20-Poly1305",
+            "blob_key_management": "random-class-dek-wrapped-by-run-key-v1",
+            "key_derivation": "hkdf-sha256-run-id-v1",
+            "key_id": "10f70c79b8b0b02a78bbb0c8967e1eab24e512583e28bf964aeadf86fb8b5760",
+            "scope": [
+              "events",
+              "blobs"
+            ]
+          },
+          "events": "events.jsonl"
+        }
+      },
+      "missing_blobs": 0,
+      "run_dir": "/tmp/if9844perf/runs/run-01a0ab49-7f92-7755-9a2c-271e754164be"
+    },
+    {
+      "attempt_count_matches": true,
+      "blob_storage_within_budget": true,
+      "client_workload_passed": true,
+      "corrupt_blobs": 0,
+      "discarded_tail_bytes": 0,
+      "event_storage_within_budget": true,
+      "expected_attempts": 420,
+      "integrity_verifier": {
+        "checks": [
+          {
+            "detail": "status=finished",
+            "name": "run_finalized",
+            "passed": true
+          },
+          {
+            "detail": "discarded_tail_bytes=0",
+            "name": "event_log_committed",
+            "passed": true
+          },
+          {
+            "detail": "missing=0",
+            "name": "referenced_blobs_present",
+            "passed": true
+          },
+          {
+            "detail": "corrupt=0",
+            "name": "blob_integrity",
+            "passed": true
+          },
+          {
+            "detail": "pending_classes=0 pending_blobs=0",
+            "name": "class_erasure_committed",
+            "passed": true
+          },
+          {
+            "detail": "authenticated=true",
+            "name": "manifest_authenticated",
+            "passed": true
+          }
+        ],
+        "manifest_claim": "best-effort",
+        "passed": true,
+        "profile": "integrity",
+        "run_id": "run-01a0ab49-a162-7415-a058-50cfc1481b4d"
+      },
+      "manifest": {
+        "command": {
+          "argv": [
+            "/usr/bin/python3",
+            "[REDACTED_ARG]",
+            "[REDACTED_ARG]",
+            "--url-env",
+            "[REDACTED_ARG]",
+            "--requests",
+            "[REDACTED_ARG]",
+            "--warmup",
+            "[REDACTED_ARG]",
+            "--concurrency",
+            "[REDACTED_ARG]",
+            "--payload-bytes",
+            "[REDACTED_ARG]",
+            "--response-chunks",
+            "[REDACTED_ARG]",
+            "--response-chunk-bytes",
+            "[REDACTED_ARG]",
+            "--delay-ms",
+            "[REDACTED_ARG]"
+          ],
+          "cwd": "/home/Admin/inferenceIO",
+          "environment": {
+            "COLORTERM": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "SHELL": "/bin/bash",
+            "TERM": "xterm-256color"
+          },
+          "executable": "/usr/bin/python3.13",
+          "executable_sha256": "sha256:889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+          "runtime": "python"
+        },
+        "counts": {
+          "blob_bytes": 3802584,
+          "blob_storage_bytes": 4033368,
+          "blobs": 4808,
+          "completed_attempts": 420,
+          "errors": 0,
+          "event_storage_bytes": 15205733,
+          "events": 12218,
+          "incomplete_attempts": 0,
+          "input_tokens": 420,
+          "logical_inferences": 420,
+          "models": {
+            "iorec-perf-model": 420
+          },
+          "output_tokens": 420,
+          "transport_attempts": 420
+        },
+        "coverage": {
+          "all_attempts_have_terminal_state": true,
+          "capture_drops": 0,
+          "capture_sources": [
+            "adapter:none",
+            "collector:authenticated-hook",
+            "correlation",
+            "correlator:bounded-unique",
+            "process",
+            "proxy",
+            "runner"
+          ],
+          "captured_request_payloads_complete": true,
+          "captured_response_payloads_complete": true,
+          "claim": "best-effort",
+          "known_gaps": [
+            "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+            "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+            "endpoint proxy is not independently cross-checked against decrypted upstream network traffic",
+            "model-bypass classification uses a launch-time upstream address snapshot; later DNS changes and unmatched provider addresses remain unknown",
+            "no agent-native lifecycle/model hook configured",
+            "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+            "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+            "the manifest remains best-effort; transport completeness is established only by a separate successful offline transport-audit"
+          ],
+          "observed_egress_classes": {
+            "model_recorder": 8
+          },
+          "observed_protocols": {
+            "http/1.1": 420,
+            "upstream:http/1.1": 420
+          },
+          "observed_tls_surfaces": {
+            "openssl-dynamic": 1
+          },
+          "unknown_egress": 0,
+          "unknown_tls_surfaces": 1,
+          "unparsed_connections": 0,
+          "unresolved_correlations": 420,
+          "unresolved_state_references": 0
+        },
+        "exit_code": 0,
+        "finished_at": "2026-09-16T17:35:31.018216173Z",
+        "policy": {
+          "allowed_paths": [],
+          "body_mode": "full",
+          "max_blob_bytes": 67108864,
+          "name": "default",
+          "redact_headers": [
+            "api-key",
+            "authentication",
+            "authentication-info",
+            "authorization",
+            "content-location",
+            "cookie",
+            "grpc-metadata-authorization",
+            "link",
+            "location",
+            "proxy-authentication-info",
+            "proxy-authorization",
+            "refresh",
+            "set-cookie",
+            "x-access-token",
+            "x-amz-security-token",
+            "x-api-key",
+            "x-auth-token",
+            "x-goog-api-key"
+          ]
+        },
+        "probe_plan": {
+          "candidates": [
+            {
+              "id": "endpoint_proxy",
+              "independent_observer": false,
+              "priority": 10,
+              "reason": "configured loopback endpoint proxy records application-visible HTTP, SSE, and WebSocket traffic",
+              "selected": true,
+              "status": "available"
+            },
+            {
+              "id": "python_runtime",
+              "independent_observer": false,
+              "priority": 20,
+              "reason": "Python target can use the sitecustomize OpenAI/httpx/requests observer",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "node_runtime",
+              "independent_observer": false,
+              "priority": 20,
+              "reason": "target was not passively identified as Node.js",
+              "selected": false,
+              "status": "not_applicable"
+            },
+            {
+              "id": "nss_tls_keylog",
+              "independent_observer": false,
+              "priority": 30,
+              "reason": "Python default TLS contexts can honor SSLKEYLOGFILE; custom contexts can bypass it",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "pcap_upstream_snapshot",
+              "independent_observer": true,
+              "priority": 40,
+              "reason": "requires a root-owned, non-writable tcpdump in a fixed system path plus root or CAP_NET_RAW",
+              "selected": false,
+              "status": "unavailable"
+            },
+            {
+              "id": "pcap_task_netns_proxy_only",
+              "independent_observer": true,
+              "priority": 45,
+              "reason": "trusted rootless user/net namespace, subordinate-ID mapping, slirp4netns sandbox/seccomp, nftables, sysctl, nsenter, setpriv, and task-local tcpdump prerequisites detected",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "transparent_task_netns_proxy",
+              "independent_observer": false,
+              "priority": 46,
+              "reason": "transparent model-socket interception was not selected",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "privileged_probe_helper",
+              "independent_observer": true,
+              "priority": 50,
+              "reason": "the protocol boundary is built in, but no qualified bridge executable was selected",
+              "selected": false,
+              "status": "bridge_required"
+            },
+            {
+              "id": "ecapture_bridge",
+              "independent_observer": true,
+              "priority": 60,
+              "reason": "eCapture, required kernel privilege, or a compatible TLS marker is absent",
+              "selected": false,
+              "status": "unavailable"
+            },
+            {
+              "id": "agentsight_bridge",
+              "independent_observer": true,
+              "priority": 70,
+              "reason": "AgentSight or required kernel privilege is absent",
+              "selected": false,
+              "status": "unavailable"
+            }
+          ],
+          "executable_tls_surfaces": [],
+          "independent_observer_selected": false,
+          "intended_protocols": [
+            "http/1.1-or-negotiated-http/2",
+            "sse",
+            "websocket"
+          ],
+          "limitations": [
+            "static executable inspection found no TLS marker; the active TLS surface must be learned after launch",
+            "no independent packet or privileged observer is selected; runtime/proxy agreement cannot rule out bypasses",
+            "protocol entries are intended preflight paths; observed protocols and active TLS libraries are finalized from run evidence"
+          ],
+          "phase": "preflight",
+          "runtime": "python",
+          "schema_version": 1,
+          "selected": [
+            "endpoint_proxy"
+          ]
+        },
+        "recorder_version": "0.1.0",
+        "run_id": "run-01a0ab49-a162-7415-a058-50cfc1481b4d",
+        "schema_version": 1,
+        "started_at": "2026-09-16T17:35:24.537356174Z",
+        "status": "finished",
+        "storage": {
+          "blobs": "blobs/",
+          "durability": "sync-data-before-ack-concurrent-batch-v1",
+          "encryption": {
+            "algorithm": "XChaCha20-Poly1305",
+            "blob_key_management": "random-class-dek-wrapped-by-run-key-v1",
+            "key_derivation": "hkdf-sha256-run-id-v1",
+            "key_id": "10f70c79b8b0b02a78bbb0c8967e1eab24e512583e28bf964aeadf86fb8b5760",
+            "scope": [
+              "events",
+              "blobs"
+            ]
+          },
+          "events": "events.jsonl"
+        }
+      },
+      "missing_blobs": 0,
+      "run_dir": "/tmp/if9844perf/runs/run-01a0ab49-a162-7415-a058-50cfc1481b4d"
+    },
+    {
+      "attempt_count_matches": true,
+      "blob_storage_within_budget": true,
+      "client_workload_passed": true,
+      "corrupt_blobs": 0,
+      "discarded_tail_bytes": 0,
+      "event_storage_within_budget": true,
+      "expected_attempts": 420,
+      "integrity_verifier": {
+        "checks": [
+          {
+            "detail": "status=finished",
+            "name": "run_finalized",
+            "passed": true
+          },
+          {
+            "detail": "discarded_tail_bytes=0",
+            "name": "event_log_committed",
+            "passed": true
+          },
+          {
+            "detail": "missing=0",
+            "name": "referenced_blobs_present",
+            "passed": true
+          },
+          {
+            "detail": "corrupt=0",
+            "name": "blob_integrity",
+            "passed": true
+          },
+          {
+            "detail": "pending_classes=0 pending_blobs=0",
+            "name": "class_erasure_committed",
+            "passed": true
+          },
+          {
+            "detail": "authenticated=true",
+            "name": "manifest_authenticated",
+            "passed": true
+          }
+        ],
+        "manifest_claim": "best-effort",
+        "passed": true,
+        "profile": "integrity",
+        "run_id": "run-01a0ab49-e7ef-7378-bb2d-774a2448ea76"
+      },
+      "manifest": {
+        "command": {
+          "argv": [
+            "/usr/bin/python3",
+            "[REDACTED_ARG]",
+            "[REDACTED_ARG]",
+            "--url-env",
+            "[REDACTED_ARG]",
+            "--requests",
+            "[REDACTED_ARG]",
+            "--warmup",
+            "[REDACTED_ARG]",
+            "--concurrency",
+            "[REDACTED_ARG]",
+            "--payload-bytes",
+            "[REDACTED_ARG]",
+            "--response-chunks",
+            "[REDACTED_ARG]",
+            "--response-chunk-bytes",
+            "[REDACTED_ARG]",
+            "--delay-ms",
+            "[REDACTED_ARG]"
+          ],
+          "cwd": "/home/Admin/inferenceIO",
+          "environment": {
+            "COLORTERM": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "SHELL": "/bin/bash",
+            "TERM": "xterm-256color"
+          },
+          "executable": "/usr/bin/python3.13",
+          "executable_sha256": "sha256:889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+          "runtime": "python"
+        },
+        "counts": {
+          "blob_bytes": 3801046,
+          "blob_storage_bytes": 4031782,
+          "blobs": 4807,
+          "completed_attempts": 420,
+          "errors": 0,
+          "event_storage_bytes": 15204575,
+          "events": 12217,
+          "incomplete_attempts": 0,
+          "input_tokens": 420,
+          "logical_inferences": 420,
+          "models": {
+            "iorec-perf-model": 420
+          },
+          "output_tokens": 420,
+          "transport_attempts": 420
+        },
+        "coverage": {
+          "all_attempts_have_terminal_state": true,
+          "capture_drops": 0,
+          "capture_sources": [
+            "adapter:none",
+            "collector:authenticated-hook",
+            "correlation",
+            "correlator:bounded-unique",
+            "process",
+            "proxy",
+            "runner"
+          ],
+          "captured_request_payloads_complete": true,
+          "captured_response_payloads_complete": true,
+          "claim": "best-effort",
+          "known_gaps": [
+            "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+            "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+            "endpoint proxy is not independently cross-checked against decrypted upstream network traffic",
+            "model-bypass classification uses a launch-time upstream address snapshot; later DNS changes and unmatched provider addresses remain unknown",
+            "no agent-native lifecycle/model hook configured",
+            "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+            "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+            "the manifest remains best-effort; transport completeness is established only by a separate successful offline transport-audit"
+          ],
+          "observed_egress_classes": {
+            "model_recorder": 8
+          },
+          "observed_protocols": {
+            "http/1.1": 420,
+            "upstream:http/1.1": 420
+          },
+          "observed_tls_surfaces": {
+            "openssl-dynamic": 1
+          },
+          "unknown_egress": 0,
+          "unknown_tls_surfaces": 1,
+          "unparsed_connections": 0,
+          "unresolved_correlations": 420,
+          "unresolved_state_references": 0
+        },
+        "exit_code": 0,
+        "finished_at": "2026-09-16T17:35:48.945257912Z",
+        "policy": {
+          "allowed_paths": [],
+          "body_mode": "full",
+          "max_blob_bytes": 67108864,
+          "name": "default",
+          "redact_headers": [
+            "api-key",
+            "authentication",
+            "authentication-info",
+            "authorization",
+            "content-location",
+            "cookie",
+            "grpc-metadata-authorization",
+            "link",
+            "location",
+            "proxy-authentication-info",
+            "proxy-authorization",
+            "refresh",
+            "set-cookie",
+            "x-access-token",
+            "x-amz-security-token",
+            "x-api-key",
+            "x-auth-token",
+            "x-goog-api-key"
+          ]
+        },
+        "probe_plan": {
+          "candidates": [
+            {
+              "id": "endpoint_proxy",
+              "independent_observer": false,
+              "priority": 10,
+              "reason": "configured loopback endpoint proxy records application-visible HTTP, SSE, and WebSocket traffic",
+              "selected": true,
+              "status": "available"
+            },
+            {
+              "id": "python_runtime",
+              "independent_observer": false,
+              "priority": 20,
+              "reason": "Python target can use the sitecustomize OpenAI/httpx/requests observer",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "node_runtime",
+              "independent_observer": false,
+              "priority": 20,
+              "reason": "target was not passively identified as Node.js",
+              "selected": false,
+              "status": "not_applicable"
+            },
+            {
+              "id": "nss_tls_keylog",
+              "independent_observer": false,
+              "priority": 30,
+              "reason": "Python default TLS contexts can honor SSLKEYLOGFILE; custom contexts can bypass it",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "pcap_upstream_snapshot",
+              "independent_observer": true,
+              "priority": 40,
+              "reason": "requires a root-owned, non-writable tcpdump in a fixed system path plus root or CAP_NET_RAW",
+              "selected": false,
+              "status": "unavailable"
+            },
+            {
+              "id": "pcap_task_netns_proxy_only",
+              "independent_observer": true,
+              "priority": 45,
+              "reason": "trusted rootless user/net namespace, subordinate-ID mapping, slirp4netns sandbox/seccomp, nftables, sysctl, nsenter, setpriv, and task-local tcpdump prerequisites detected",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "transparent_task_netns_proxy",
+              "independent_observer": false,
+              "priority": 46,
+              "reason": "transparent model-socket interception was not selected",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "privileged_probe_helper",
+              "independent_observer": true,
+              "priority": 50,
+              "reason": "the protocol boundary is built in, but no qualified bridge executable was selected",
+              "selected": false,
+              "status": "bridge_required"
+            },
+            {
+              "id": "ecapture_bridge",
+              "independent_observer": true,
+              "priority": 60,
+              "reason": "eCapture, required kernel privilege, or a compatible TLS marker is absent",
+              "selected": false,
+              "status": "unavailable"
+            },
+            {
+              "id": "agentsight_bridge",
+              "independent_observer": true,
+              "priority": 70,
+              "reason": "AgentSight or required kernel privilege is absent",
+              "selected": false,
+              "status": "unavailable"
+            }
+          ],
+          "executable_tls_surfaces": [],
+          "independent_observer_selected": false,
+          "intended_protocols": [
+            "http/1.1-or-negotiated-http/2",
+            "sse",
+            "websocket"
+          ],
+          "limitations": [
+            "static executable inspection found no TLS marker; the active TLS surface must be learned after launch",
+            "no independent packet or privileged observer is selected; runtime/proxy agreement cannot rule out bypasses",
+            "protocol entries are intended preflight paths; observed protocols and active TLS libraries are finalized from run evidence"
+          ],
+          "phase": "preflight",
+          "runtime": "python",
+          "schema_version": 1,
+          "selected": [
+            "endpoint_proxy"
+          ]
+        },
+        "recorder_version": "0.1.0",
+        "run_id": "run-01a0ab49-e7ef-7378-bb2d-774a2448ea76",
+        "schema_version": 1,
+        "started_at": "2026-09-16T17:35:42.596552099Z",
+        "status": "finished",
+        "storage": {
+          "blobs": "blobs/",
+          "durability": "sync-data-before-ack-concurrent-batch-v1",
+          "encryption": {
+            "algorithm": "XChaCha20-Poly1305",
+            "blob_key_management": "random-class-dek-wrapped-by-run-key-v1",
+            "key_derivation": "hkdf-sha256-run-id-v1",
+            "key_id": "10f70c79b8b0b02a78bbb0c8967e1eab24e512583e28bf964aeadf86fb8b5760",
+            "scope": [
+              "events",
+              "blobs"
+            ]
+          },
+          "events": "events.jsonl"
+        }
+      },
+      "missing_blobs": 0,
+      "run_dir": "/tmp/if9844perf/runs/run-01a0ab49-e7ef-7378-bb2d-774a2448ea76"
+    },
+    {
+      "attempt_count_matches": true,
+      "blob_storage_within_budget": true,
+      "client_workload_passed": true,
+      "corrupt_blobs": 0,
+      "discarded_tail_bytes": 0,
+      "event_storage_within_budget": true,
+      "expected_attempts": 420,
+      "integrity_verifier": {
+        "checks": [
+          {
+            "detail": "status=finished",
+            "name": "run_finalized",
+            "passed": true
+          },
+          {
+            "detail": "discarded_tail_bytes=0",
+            "name": "event_log_committed",
+            "passed": true
+          },
+          {
+            "detail": "missing=0",
+            "name": "referenced_blobs_present",
+            "passed": true
+          },
+          {
+            "detail": "corrupt=0",
+            "name": "blob_integrity",
+            "passed": true
+          },
+          {
+            "detail": "pending_classes=0 pending_blobs=0",
+            "name": "class_erasure_committed",
+            "passed": true
+          },
+          {
+            "detail": "authenticated=true",
+            "name": "manifest_authenticated",
+            "passed": true
+          }
+        ],
+        "manifest_claim": "best-effort",
+        "passed": true,
+        "profile": "integrity",
+        "run_id": "run-01a0ab4a-0923-7560-a88a-9489db8ea95d"
+      },
+      "manifest": {
+        "command": {
+          "argv": [
+            "/usr/bin/python3",
+            "[REDACTED_ARG]",
+            "[REDACTED_ARG]",
+            "--url-env",
+            "[REDACTED_ARG]",
+            "--requests",
+            "[REDACTED_ARG]",
+            "--warmup",
+            "[REDACTED_ARG]",
+            "--concurrency",
+            "[REDACTED_ARG]",
+            "--payload-bytes",
+            "[REDACTED_ARG]",
+            "--response-chunks",
+            "[REDACTED_ARG]",
+            "--response-chunk-bytes",
+            "[REDACTED_ARG]",
+            "--delay-ms",
+            "[REDACTED_ARG]"
+          ],
+          "cwd": "/home/Admin/inferenceIO",
+          "environment": {
+            "COLORTERM": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "SHELL": "/bin/bash",
+            "TERM": "xterm-256color"
+          },
+          "executable": "/usr/bin/python3.13",
+          "executable_sha256": "sha256:889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+          "runtime": "python"
+        },
+        "counts": {
+          "blob_bytes": 3801046,
+          "blob_storage_bytes": 4031782,
+          "blobs": 4807,
+          "completed_attempts": 420,
+          "errors": 0,
+          "event_storage_bytes": 15204562,
+          "events": 12217,
+          "incomplete_attempts": 0,
+          "input_tokens": 420,
+          "logical_inferences": 420,
+          "models": {
+            "iorec-perf-model": 420
+          },
+          "output_tokens": 420,
+          "transport_attempts": 420
+        },
+        "coverage": {
+          "all_attempts_have_terminal_state": true,
+          "capture_drops": 0,
+          "capture_sources": [
+            "adapter:none",
+            "collector:authenticated-hook",
+            "correlation",
+            "correlator:bounded-unique",
+            "process",
+            "proxy",
+            "runner"
+          ],
+          "captured_request_payloads_complete": true,
+          "captured_response_payloads_complete": true,
+          "claim": "best-effort",
+          "known_gaps": [
+            "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+            "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+            "endpoint proxy is not independently cross-checked against decrypted upstream network traffic",
+            "model-bypass classification uses a launch-time upstream address snapshot; later DNS changes and unmatched provider addresses remain unknown",
+            "no agent-native lifecycle/model hook configured",
+            "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+            "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+            "the manifest remains best-effort; transport completeness is established only by a separate successful offline transport-audit"
+          ],
+          "observed_egress_classes": {
+            "model_recorder": 8
+          },
+          "observed_protocols": {
+            "http/1.1": 420,
+            "upstream:http/1.1": 420
+          },
+          "observed_tls_surfaces": {
+            "openssl-dynamic": 1
+          },
+          "unknown_egress": 0,
+          "unknown_tls_surfaces": 1,
+          "unparsed_connections": 0,
+          "unresolved_correlations": 420,
+          "unresolved_state_references": 0
+        },
+        "exit_code": 0,
+        "finished_at": "2026-09-16T17:35:57.459580030Z",
+        "policy": {
+          "allowed_paths": [],
+          "body_mode": "full",
+          "max_blob_bytes": 67108864,
+          "name": "default",
+          "redact_headers": [
+            "api-key",
+            "authentication",
+            "authentication-info",
+            "authorization",
+            "content-location",
+            "cookie",
+            "grpc-metadata-authorization",
+            "link",
+            "location",
+            "proxy-authentication-info",
+            "proxy-authorization",
+            "refresh",
+            "set-cookie",
+            "x-access-token",
+            "x-amz-security-token",
+            "x-api-key",
+            "x-auth-token",
+            "x-goog-api-key"
+          ]
+        },
+        "probe_plan": {
+          "candidates": [
+            {
+              "id": "endpoint_proxy",
+              "independent_observer": false,
+              "priority": 10,
+              "reason": "configured loopback endpoint proxy records application-visible HTTP, SSE, and WebSocket traffic",
+              "selected": true,
+              "status": "available"
+            },
+            {
+              "id": "python_runtime",
+              "independent_observer": false,
+              "priority": 20,
+              "reason": "Python target can use the sitecustomize OpenAI/httpx/requests observer",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "node_runtime",
+              "independent_observer": false,
+              "priority": 20,
+              "reason": "target was not passively identified as Node.js",
+              "selected": false,
+              "status": "not_applicable"
+            },
+            {
+              "id": "nss_tls_keylog",
+              "independent_observer": false,
+              "priority": 30,
+              "reason": "Python default TLS contexts can honor SSLKEYLOGFILE; custom contexts can bypass it",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "pcap_upstream_snapshot",
+              "independent_observer": true,
+              "priority": 40,
+              "reason": "requires a root-owned, non-writable tcpdump in a fixed system path plus root or CAP_NET_RAW",
+              "selected": false,
+              "status": "unavailable"
+            },
+            {
+              "id": "pcap_task_netns_proxy_only",
+              "independent_observer": true,
+              "priority": 45,
+              "reason": "trusted rootless user/net namespace, subordinate-ID mapping, slirp4netns sandbox/seccomp, nftables, sysctl, nsenter, setpriv, and task-local tcpdump prerequisites detected",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "transparent_task_netns_proxy",
+              "independent_observer": false,
+              "priority": 46,
+              "reason": "transparent model-socket interception was not selected",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "privileged_probe_helper",
+              "independent_observer": true,
+              "priority": 50,
+              "reason": "the protocol boundary is built in, but no qualified bridge executable was selected",
+              "selected": false,
+              "status": "bridge_required"
+            },
+            {
+              "id": "ecapture_bridge",
+              "independent_observer": true,
+              "priority": 60,
+              "reason": "eCapture, required kernel privilege, or a compatible TLS marker is absent",
+              "selected": false,
+              "status": "unavailable"
+            },
+            {
+              "id": "agentsight_bridge",
+              "independent_observer": true,
+              "priority": 70,
+              "reason": "AgentSight or required kernel privilege is absent",
+              "selected": false,
+              "status": "unavailable"
+            }
+          ],
+          "executable_tls_surfaces": [],
+          "independent_observer_selected": false,
+          "intended_protocols": [
+            "http/1.1-or-negotiated-http/2",
+            "sse",
+            "websocket"
+          ],
+          "limitations": [
+            "static executable inspection found no TLS marker; the active TLS surface must be learned after launch",
+            "no independent packet or privileged observer is selected; runtime/proxy agreement cannot rule out bypasses",
+            "protocol entries are intended preflight paths; observed protocols and active TLS libraries are finalized from run evidence"
+          ],
+          "phase": "preflight",
+          "runtime": "python",
+          "schema_version": 1,
+          "selected": [
+            "endpoint_proxy"
+          ]
+        },
+        "recorder_version": "0.1.0",
+        "run_id": "run-01a0ab4a-0923-7560-a88a-9489db8ea95d",
+        "schema_version": 1,
+        "started_at": "2026-09-16T17:35:51.095402675Z",
+        "status": "finished",
+        "storage": {
+          "blobs": "blobs/",
+          "durability": "sync-data-before-ack-concurrent-batch-v1",
+          "encryption": {
+            "algorithm": "XChaCha20-Poly1305",
+            "blob_key_management": "random-class-dek-wrapped-by-run-key-v1",
+            "key_derivation": "hkdf-sha256-run-id-v1",
+            "key_id": "10f70c79b8b0b02a78bbb0c8967e1eab24e512583e28bf964aeadf86fb8b5760",
+            "scope": [
+              "events",
+              "blobs"
+            ]
+          },
+          "events": "events.jsonl"
+        }
+      },
+      "missing_blobs": 0,
+      "run_dir": "/tmp/if9844perf/runs/run-01a0ab4a-0923-7560-a88a-9489db8ea95d"
+    },
+    {
+      "attempt_count_matches": true,
+      "blob_storage_within_budget": true,
+      "client_workload_passed": true,
+      "corrupt_blobs": 0,
+      "discarded_tail_bytes": 0,
+      "event_storage_within_budget": true,
+      "expected_attempts": 420,
+      "integrity_verifier": {
+        "checks": [
+          {
+            "detail": "status=finished",
+            "name": "run_finalized",
+            "passed": true
+          },
+          {
+            "detail": "discarded_tail_bytes=0",
+            "name": "event_log_committed",
+            "passed": true
+          },
+          {
+            "detail": "missing=0",
+            "name": "referenced_blobs_present",
+            "passed": true
+          },
+          {
+            "detail": "corrupt=0",
+            "name": "blob_integrity",
+            "passed": true
+          },
+          {
+            "detail": "pending_classes=0 pending_blobs=0",
+            "name": "class_erasure_committed",
+            "passed": true
+          },
+          {
+            "detail": "authenticated=true",
+            "name": "manifest_authenticated",
+            "passed": true
+          }
+        ],
+        "manifest_claim": "best-effort",
+        "passed": true,
+        "profile": "integrity",
+        "run_id": "run-01a0ab4a-4f5b-766f-a91d-155eecbd8905"
+      },
+      "manifest": {
+        "command": {
+          "argv": [
+            "/usr/bin/python3",
+            "[REDACTED_ARG]",
+            "[REDACTED_ARG]",
+            "--url-env",
+            "[REDACTED_ARG]",
+            "--requests",
+            "[REDACTED_ARG]",
+            "--warmup",
+            "[REDACTED_ARG]",
+            "--concurrency",
+            "[REDACTED_ARG]",
+            "--payload-bytes",
+            "[REDACTED_ARG]",
+            "--response-chunks",
+            "[REDACTED_ARG]",
+            "--response-chunk-bytes",
+            "[REDACTED_ARG]",
+            "--delay-ms",
+            "[REDACTED_ARG]"
+          ],
+          "cwd": "/home/Admin/inferenceIO",
+          "environment": {
+            "COLORTERM": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "SHELL": "/bin/bash",
+            "TERM": "xterm-256color"
+          },
+          "executable": "/usr/bin/python3.13",
+          "executable_sha256": "sha256:889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+          "runtime": "python"
+        },
+        "counts": {
+          "blob_bytes": 3801046,
+          "blob_storage_bytes": 4031782,
+          "blobs": 4807,
+          "completed_attempts": 420,
+          "errors": 0,
+          "event_storage_bytes": 15204605,
+          "events": 12217,
+          "incomplete_attempts": 0,
+          "input_tokens": 420,
+          "logical_inferences": 420,
+          "models": {
+            "iorec-perf-model": 420
+          },
+          "output_tokens": 420,
+          "transport_attempts": 420
+        },
+        "coverage": {
+          "all_attempts_have_terminal_state": true,
+          "capture_drops": 0,
+          "capture_sources": [
+            "adapter:none",
+            "collector:authenticated-hook",
+            "correlation",
+            "correlator:bounded-unique",
+            "process",
+            "proxy",
+            "runner"
+          ],
+          "captured_request_payloads_complete": true,
+          "captured_response_payloads_complete": true,
+          "claim": "best-effort",
+          "known_gaps": [
+            "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+            "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+            "endpoint proxy is not independently cross-checked against decrypted upstream network traffic",
+            "model-bypass classification uses a launch-time upstream address snapshot; later DNS changes and unmatched provider addresses remain unknown",
+            "no agent-native lifecycle/model hook configured",
+            "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+            "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+            "the manifest remains best-effort; transport completeness is established only by a separate successful offline transport-audit"
+          ],
+          "observed_egress_classes": {
+            "model_recorder": 8
+          },
+          "observed_protocols": {
+            "http/1.1": 420,
+            "upstream:http/1.1": 420
+          },
+          "observed_tls_surfaces": {
+            "openssl-dynamic": 1
+          },
+          "unknown_egress": 0,
+          "unknown_tls_surfaces": 1,
+          "unparsed_connections": 0,
+          "unresolved_correlations": 420,
+          "unresolved_state_references": 0
+        },
+        "exit_code": 0,
+        "finished_at": "2026-09-16T17:36:15.461549374Z",
+        "policy": {
+          "allowed_paths": [],
+          "body_mode": "full",
+          "max_blob_bytes": 67108864,
+          "name": "default",
+          "redact_headers": [
+            "api-key",
+            "authentication",
+            "authentication-info",
+            "authorization",
+            "content-location",
+            "cookie",
+            "grpc-metadata-authorization",
+            "link",
+            "location",
+            "proxy-authentication-info",
+            "proxy-authorization",
+            "refresh",
+            "set-cookie",
+            "x-access-token",
+            "x-amz-security-token",
+            "x-api-key",
+            "x-auth-token",
+            "x-goog-api-key"
+          ]
+        },
+        "probe_plan": {
+          "candidates": [
+            {
+              "id": "endpoint_proxy",
+              "independent_observer": false,
+              "priority": 10,
+              "reason": "configured loopback endpoint proxy records application-visible HTTP, SSE, and WebSocket traffic",
+              "selected": true,
+              "status": "available"
+            },
+            {
+              "id": "python_runtime",
+              "independent_observer": false,
+              "priority": 20,
+              "reason": "Python target can use the sitecustomize OpenAI/httpx/requests observer",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "node_runtime",
+              "independent_observer": false,
+              "priority": 20,
+              "reason": "target was not passively identified as Node.js",
+              "selected": false,
+              "status": "not_applicable"
+            },
+            {
+              "id": "nss_tls_keylog",
+              "independent_observer": false,
+              "priority": 30,
+              "reason": "Python default TLS contexts can honor SSLKEYLOGFILE; custom contexts can bypass it",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "pcap_upstream_snapshot",
+              "independent_observer": true,
+              "priority": 40,
+              "reason": "requires a root-owned, non-writable tcpdump in a fixed system path plus root or CAP_NET_RAW",
+              "selected": false,
+              "status": "unavailable"
+            },
+            {
+              "id": "pcap_task_netns_proxy_only",
+              "independent_observer": true,
+              "priority": 45,
+              "reason": "trusted rootless user/net namespace, subordinate-ID mapping, slirp4netns sandbox/seccomp, nftables, sysctl, nsenter, setpriv, and task-local tcpdump prerequisites detected",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "transparent_task_netns_proxy",
+              "independent_observer": false,
+              "priority": 46,
+              "reason": "transparent model-socket interception was not selected",
+              "selected": false,
+              "status": "experimental"
+            },
+            {
+              "id": "privileged_probe_helper",
+              "independent_observer": true,
+              "priority": 50,
+              "reason": "the protocol boundary is built in, but no qualified bridge executable was selected",
+              "selected": false,
+              "status": "bridge_required"
+            },
+            {
+              "id": "ecapture_bridge",
+              "independent_observer": true,
+              "priority": 60,
+              "reason": "eCapture, required kernel privilege, or a compatible TLS marker is absent",
+              "selected": false,
+              "status": "unavailable"
+            },
+            {
+              "id": "agentsight_bridge",
+              "independent_observer": true,
+              "priority": 70,
+              "reason": "AgentSight or required kernel privilege is absent",
+              "selected": false,
+              "status": "unavailable"
+            }
+          ],
+          "executable_tls_surfaces": [],
+          "independent_observer_selected": false,
+          "intended_protocols": [
+            "http/1.1-or-negotiated-http/2",
+            "sse",
+            "websocket"
+          ],
+          "limitations": [
+            "static executable inspection found no TLS marker; the active TLS surface must be learned after launch",
+            "no independent packet or privileged observer is selected; runtime/proxy agreement cannot rule out bypasses",
+            "protocol entries are intended preflight paths; observed protocols and active TLS libraries are finalized from run evidence"
+          ],
+          "phase": "preflight",
+          "runtime": "python",
+          "schema_version": 1,
+          "selected": [
+            "endpoint_proxy"
+          ]
+        },
+        "recorder_version": "0.1.0",
+        "run_id": "run-01a0ab4a-4f5b-766f-a91d-155eecbd8905",
+        "schema_version": 1,
+        "started_at": "2026-09-16T17:36:09.072575566Z",
+        "status": "finished",
+        "storage": {
+          "blobs": "blobs/",
+          "durability": "sync-data-before-ack-concurrent-batch-v1",
+          "encryption": {
+            "algorithm": "XChaCha20-Poly1305",
+            "blob_key_management": "random-class-dek-wrapped-by-run-key-v1",
+            "key_derivation": "hkdf-sha256-run-id-v1",
+            "key_id": "10f70c79b8b0b02a78bbb0c8967e1eab24e512583e28bf964aeadf86fb8b5760",
+            "scope": [
+              "events",
+              "blobs"
+            ]
+          },
+          "events": "events.jsonl"
+        }
+      },
+      "missing_blobs": 0,
+      "run_dir": "/tmp/if9844perf/runs/run-01a0ab4a-4f5b-766f-a91d-155eecbd8905"
+    }
+  ],
+  "schema_version": 1,
+  "work_dir": "/tmp/if9844perf"
+}

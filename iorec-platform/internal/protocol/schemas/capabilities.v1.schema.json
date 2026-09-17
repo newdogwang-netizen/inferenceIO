@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iorec.dev/schemas/capabilities.v1.schema.json",
+  "title": "iorec collector capabilities v1",
+  "type": "object",
+  "required": ["schema", "transport", "sources"],
+  "properties": {
+    "schema": { "const": "iorec.capabilities.v1" },
+    "transport": {
+      "type": "object",
+      "properties": {
+        "http_body": { "enum": ["visible", "headers_only", "absent"] },
+        "sse": { "enum": ["visible", "absent"] },
+        "websocket": { "enum": ["visible", "absent"] },
+        "http2_decode": { "enum": ["native", "via_keylog", "absent"] },
+        "http3": { "enum": ["decode", "detect_only", "absent"] }
+      }
+    },
+    "sources": { "type": "object" },
+    "runtime_inventory": {
+      "type": "object",
+      "properties": {
+        "agents_detected": { "type": "array" },
+        "tls_surfaces": { "type": "array" },
+        "unknown_tls_surfaces": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "limits": { "type": "object" },
+    "retention": {
+      "type": "object",
+      "properties": {
+        "whole_run_delete": { "type": "boolean" },
+        "class_keyed_encryption": { "type": "boolean" },
+        "independent_class_ttl": { "type": "boolean" },
+        "class_delete_request": { "type": "boolean" },
+        "classes": {
+          "type": "array",
+          "items": { "enum": ["body", "pcap", "tls_secrets"] },
+          "uniqueItems": true,
+          "maxItems": 3
+        }
+      }
+    },
+    "privilege": { "type": "object" }
+  }
+}

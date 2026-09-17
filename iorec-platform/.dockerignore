@@ -1,0 +1,14 @@
+.git
+.github
+bin
+data
+web/node_modules
+web/dist
+**/.env
+**/.env.*
+!deploy/.env.example
+*.log
+**/*.pem
+**/*.key
+**/*.crt
+**/*.p12

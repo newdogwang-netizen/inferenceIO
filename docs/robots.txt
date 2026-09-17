@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://newdogwang-netizen.github.io/inferenceIO/sitemap.xml

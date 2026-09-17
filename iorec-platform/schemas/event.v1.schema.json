@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iorec.dev/schemas/event.v1.schema.json",
+  "title": "iorec event envelope v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "sequence",
+    "run_id",
+    "source",
+    "event",
+    "monotonic_ns",
+    "wall_time",
+    "redaction"
+  ],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "event_id": { "type": "string", "format": "uuid" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "run_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "task_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "session_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "turn_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "inference_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "attempt_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "connection_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "parent_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "pid": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+    "container_id": { "type": "string", "minLength": 1, "maxLength": 1024 },
+    "source": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "event": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "monotonic_ns": { "type": "integer", "minimum": 0 },
+    "wall_time": { "type": "string", "format": "date-time" },
+    "raw": {
+      "type": "object",
+      "required": ["sha256", "size"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "size": { "type": "integer", "minimum": 0 },
+        "media_type": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "truncated": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "normalized": {},
+    "redaction": {
+      "type": "object",
+      "required": ["policy"],
+      "properties": {
+        "policy": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "fields": {
+          "type": "array",
+          "maxItems": 1024,
+          "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+        },
+        "omitted": {
+          "type": "array",
+          "maxItems": 1024,
+          "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+        }
+      },
+      "additionalProperties": false
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "evidence": {
+      "type": "array",
+      "maxItems": 256,
+      "items": { "type": "string", "minLength": 1, "maxLength": 1024 }
+    },
+    "terminal_state": {
+      "type": "string",
+      "enum": ["complete", "error", "cancelled", "incomplete"]
+    }
+  },
+  "additionalProperties": false
+}

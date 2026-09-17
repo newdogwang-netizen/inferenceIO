@@ -1,0 +1,248 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-16T07:29:25Z",
+  "subject": "iorec platform-owned task-egress transport audit",
+  "status": "qualified_current_schema_v3_positive_and_bypass_fail_closed",
+  "qualification_scope": {
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "architecture": "x86_64",
+    "kernel": "6.12.94+deb13-cloud-amd64",
+    "collector_network_backend": "rootless-user-netns-slirp4netns-nftables-v2",
+    "collector_transport_audit_schema": 3,
+    "platform_transport_proof_schema": 1,
+    "platform_transport_processor": "transport-audit-v1",
+    "platform_coverage_processor": "coverage-v3",
+    "completeness_boundary": "target-network-namespace-ip-transport",
+    "protocol": "cleartext HTTP/1.1 on the isolated target-to-recorder-proxy leg",
+    "upstream": "controlled loopback iorec fake server",
+    "ingest": "authenticated platform tar import through the production API image",
+    "processing": "production Worker image with platform-owned TShark reconstruction"
+  },
+  "artifacts": {
+    "collector": {
+      "version": "0.1.0",
+      "release_sha256": "0d5a7ab1f6a2f60641234ed34d11d5c4cd8599de84345778b436c5ba17f8183a",
+      "source_tree_sha256": "c63f6fb307511fc76915a6c9afaeaa9371430534b9babf13ef88dc0ae9edcfda",
+      "source_tree_digest_input": "sorted sha256sum lines for Cargo.toml, Cargo.lock, src, schemas, and tests",
+      "source_files": {
+        "src/task_netns.rs": "274df9d65d9a1733ae81b3471174c3b440216ebe54f5c5757929e892bcf1acd0",
+        "src/pcap.rs": "0bfaa76fdb04bff86d6a35219b4c75f7ad34f30894ebd3839c405f778f406b23",
+        "src/runner.rs": "0573844f0972a4be4d517e23f330df92a5c49701a0e5b5014ad8989ab8365d35",
+        "src/inspect.rs": "946de41edb42bdd81a629ace64247b8320af858f75f3630b04ff2a39cde4b46c",
+        "src/transport_audit.rs": "6e0528c2a049b530fc4ca3967fd4ead9a0e4f808f27a4c726e456ecd40ec0e8e",
+        "src/platform_export.rs": "c41d98ebdb1de74fa020ad27e83c5856c99a6aca7e6cffb1092ee2493614d8ec",
+        "src/main.rs": "f9abb0afb43559063440fad1a3c7c2b8594a133bf47bf6c6a1c078703e92c803",
+        "Cargo.toml": "225d7017931327185d7960499491edd0791b8b6dd1415cc20cfbbeb712f4ad49",
+        "Cargo.lock": "163f8e38bf184ff0360d769f3aafb04f5f6a09d0347a822ae5c4bddd030e79fb"
+      }
+    },
+    "platform": {
+      "source_tree_sha256": "7f94bf0371af1610054a6c1e442051aa16cfdab3fe6f56c11b67f51b82837569",
+      "source_tree_digest_input": "sorted sha256sum lines for go.mod, go.sum, cmd, internal, migrations, schemas, api, and deploy",
+      "source_files": {
+        "internal/pipeline/transport_audit.go": "2b838b4c0ea17cd3e2479cd5d6a729fd1f7e2948ef9711ed34400e3d23fa85f6",
+        "internal/pipeline/coverage.go": "5029f4dd1dddc96b724bd8703d1503a98d1eb4f786a429e500b556a742545e91",
+        "deploy/Dockerfile.worker": "7e715642452734283c736450a76ff3eec450da9ccb7fb807d8c343465bdedaf5",
+        "deploy/Dockerfile.api": "16d98bf478b5d01b7cecdbd7a30636b380287011781067ea5e9feeaed49d83e5",
+        "migrations/0007_platform_transport_proof.sql": "a1aec27f3e87ec9b3450dba218b44f9f09ba46b103e1884d8b653b1a593c2f30",
+        "internal/store/migrations/0007_platform_transport_proof.sql": "a1aec27f3e87ec9b3450dba218b44f9f09ba46b103e1884d8b653b1a593c2f30"
+      }
+    },
+    "worker_image": {
+      "content_id": "sha256:76402d26d31d8c596867b5aac480915c7d0b17abb5e8c981324a710be6e7bda5",
+      "binary_sha256": "fb3aa82de31df79cadbf3aa08e2513ba2a2f52cb63f5747c87b45645519158ba",
+      "configured_user": "65532:65532",
+      "runtime": "debian:13.2-slim",
+      "tshark_version": "4.4.18",
+      "tshark_sha256": "261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074"
+    },
+    "api_image": {
+      "content_id": "sha256:4dba522f2f6f1d2b720592f2ac5a7268a1069dcbcaacaac8c0289a20c001e358",
+      "binary_sha256": "7d098119589868fa448bebfffbcd63fe96ba6fc5ec2335f6dbcd81226976c6ae",
+      "configured_user": "nonroot"
+    },
+    "current_bundles": {
+      "positive": {
+        "sha256": "cb7688146120ebe9fdf8bcb1390d9c466efa25b8b30ff4b9928d4448a096db3b",
+        "bytes": 49152,
+        "mode": "0600"
+      },
+      "blocked_bypass": {
+        "sha256": "9ec28e6df37fe9c44cff638c47af78b397e03e654215c78e6c22ab487551431c",
+        "bytes": 58880,
+        "mode": "0600"
+      }
+    },
+    "local_audit_reports": {
+      "positive_sha256": "b91a6da2b193a0bd9a6632d9f0cadfbefd7a1a04ef47f25babccdca5c9c68503",
+      "blocked_bypass_sha256": "84c0d6c2f02281799a6c9827c6581342a9c44bc9d6a7cbdf4033b4c87b13d452",
+      "mode": "0600"
+    }
+  },
+  "runtime_hardening": {
+    "worker_effective_uid": 65532,
+    "worker_effective_gid": 65532,
+    "read_only_root_filesystem": true,
+    "capabilities_dropped": ["ALL"],
+    "no_new_privileges": true,
+    "tmpfs": "/tmp:rw,noexec,nosuid,nodev,mode=1777",
+    "dumpcap_absent": true,
+    "setuid_or_setgid_files_absent": true,
+    "tshark_executed_as_non_root": true
+  },
+  "local_results": {
+    "positive": {
+      "run_id": "run-01a0a91c-f854-71fa-a867-617c474f9b57",
+      "target_exit_code": 0,
+      "manifest_status": "finished",
+      "events": 40,
+      "blobs": 12,
+      "capture_drops": 0,
+      "unknown_egress": 0,
+      "unparsed_connections": 0,
+      "unknown_tls_surfaces": 0,
+      "all_attempts_have_terminal_state": true,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "pcap_records": 7,
+      "pcap_bytes": 2352,
+      "decoded_rows": 2,
+      "decoded_streams": 1,
+      "proxy_attempts": 1,
+      "matched_attempts": 1,
+      "missing_from_wire": 0,
+      "extra_on_wire": 0,
+      "ambiguous_signature_groups": 0,
+      "payload_diff_passed": true,
+      "transport_complete": true,
+      "transport_audit_exit_status": 0,
+      "gaps": []
+    },
+    "blocked_bypass": {
+      "run_id": "run-01a0a91d-3ca5-7221-ab44-8c63a3faf451",
+      "target_exit_code": 0,
+      "manifest_status": "finished",
+      "events": 56,
+      "blobs": 14,
+      "capture_drops": 0,
+      "unknown_egress": 2,
+      "unparsed_connections": 0,
+      "unknown_tls_surfaces": 0,
+      "all_attempts_have_terminal_state": true,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "pcap_records": 9,
+      "pcap_bytes": 2275,
+      "decoded_rows": 2,
+      "decoded_streams": 1,
+      "proxy_attempts": 1,
+      "matched_attempts": 1,
+      "missing_from_wire": 0,
+      "extra_on_wire": 0,
+      "ambiguous_signature_groups": 0,
+      "payload_diff_passed": true,
+      "transport_complete": false,
+      "transport_audit_exit_status": 3,
+      "gaps": [
+        {
+          "reason": "unknown_egress",
+          "occurrences": 2
+        }
+      ]
+    }
+  },
+  "platform_results": {
+    "positive": {
+      "run_id": "run-01a0a91c-f854-71fa-a867-617c474f9b57",
+      "imported_events": 40,
+      "imported_blobs": 12,
+      "proof_revision": 1,
+      "proof_status": "verified",
+      "proof_verified": true,
+      "source_boundary_verified": true,
+      "payload_diff_passed": true,
+      "proof_gaps": [],
+      "pcap_records": 7,
+      "pcap_bytes": 2352,
+      "decoded_rows": 2,
+      "decoded_streams": 1,
+      "proxy_attempts": 1,
+      "proxy_attempts_eligible": 1,
+      "matched_attempts": 1,
+      "missing_from_wire": 0,
+      "extra_on_wire": 0,
+      "ambiguous_signature_groups": 0,
+      "coverage_revision": 2,
+      "coverage_claim": "client-complete",
+      "coverage_unknown_egress": 0,
+      "coverage_proof_verified": true
+    },
+    "blocked_bypass": {
+      "run_id": "run-01a0a91d-3ca5-7221-ab44-8c63a3faf451",
+      "imported_events": 56,
+      "imported_blobs": 14,
+      "proof_revision": 1,
+      "proof_status": "verified",
+      "proof_verified": true,
+      "source_boundary_verified": true,
+      "payload_diff_passed": true,
+      "proof_gaps": [],
+      "pcap_records": 9,
+      "pcap_bytes": 2275,
+      "decoded_rows": 2,
+      "decoded_streams": 1,
+      "proxy_attempts": 1,
+      "proxy_attempts_eligible": 1,
+      "matched_attempts": 1,
+      "missing_from_wire": 0,
+      "extra_on_wire": 0,
+      "ambiguous_signature_groups": 0,
+      "coverage_revision": 2,
+      "coverage_claim": "best-effort",
+      "coverage_unknown_egress": 2,
+      "coverage_proof_verified": true
+    }
+  },
+  "processing_jobs": {
+    "assemble_done": 2,
+    "coverage_done": 4,
+    "decode_done": 2,
+    "normalize_done": 2,
+    "resolve_done": 2,
+    "rules_done": 2,
+    "transport_audit_done": 2,
+    "pending": 0,
+    "leased": 0,
+    "failed": 0,
+    "dead": 0
+  },
+  "historical_schema_v2_fail_closed_check": {
+    "positive_bundle_sha256": "73c86a12afd23fea49ce6198dfc78c7b8b92eac537957b2369f959fe3b08042c",
+    "blocked_bypass_bundle_sha256": "948a34e0d3d094c41ea85fb339f51706381b55f817b15fe333e39625ba474479",
+    "proof_status": "incomplete",
+    "proof_verified": false,
+    "gaps": [
+      "pcap_policy_mode_mismatch",
+      "task_egress_policy_not_fail_closed",
+      "task_egress_shutdown_not_verified"
+    ]
+  },
+  "verdict_semantics": {
+    "transport_proof": "Verifies platform-owned pcap reconstruction, exact proxy/wire body agreement, and the task-egress boundary lifecycle. It is not the final completeness claim.",
+    "coverage": "Applies the independent proof together with drop, unknown-egress, model-bypass, parser, terminal-state, and missing-blob gates. The blocked bypass therefore remains best-effort even though its allowed model payload matches exactly.",
+    "positive_result": "The current schema-v3 bundle reached client-complete only after the platform generated and validated its own proof.",
+    "negative_result": "A denied direct-IP attempt remained observable and forced best-effort; payload agreement alone could not promote coverage."
+  },
+  "verification": {
+    "go_1_25_13_test_all_count_1": "passed",
+    "go_1_25_13_vet_all": "passed",
+    "artifact_json_validation": "passed",
+    "documentation_link_and_format_checks": "passed"
+  },
+  "limitations": [
+    "This qualifies one Debian 13 Linux x86-64, rootless proxy-only, cleartext HTTP/1.1 task-egress cell. It does not qualify broad provider, Agent, kernel, architecture, container, transparent TLS, HTTP/2, or WebSocket matrices.",
+    "The platform image identifiers are local content-addressed image IDs, not registry publication digests or signatures.",
+    "The platform transport proof is intentionally narrower than the final coverage claim; consumers must use recordings.coverage for completeness decisions.",
+    "The operator-approved current-tree five-hour core and 20-collector connected steady-state gates have not run; this qualification does not replace them."
+  ]
+}

@@ -1,0 +1,12 @@
+/target/
+/runs/
+*.key
+*.pcap
+tls.keys
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+.DS_Store
+/.tmp-*

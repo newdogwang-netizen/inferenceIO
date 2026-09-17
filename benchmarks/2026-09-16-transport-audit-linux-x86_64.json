@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-16T02:35:29Z",
+  "subject": "iorec offline pcap and TLS key-log transport audit",
+  "status": "payload_agreement_qualified_transport_incomplete",
+  "qualification_scope": {
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "architecture": "x86_64",
+    "kernel": "6.12.94+deb13-cloud-amd64",
+    "capture_source": "classic pcap filtered to a launch-time numeric upstream-address snapshot",
+    "tls_key_source": "iorec rustls upstream client through the encrypted TLS FIFO",
+    "tls_peer_validation": "private qualification CA with a distinct signed server leaf; normal rustls platform verification remained enabled",
+    "application_protocols": [
+      "HTTP/1.1 over TLS",
+      "HTTP/2 over TLS with ALPN, concurrent streams, and padded frames"
+    ],
+    "decoder": "TShark fields-mode offline dissection",
+    "comparison": "multiset comparison of exact request/response body byte lengths and SHA-256 digests"
+  },
+  "artifacts": {
+    "iorec_release": {
+      "version": "0.1.0",
+      "sha256": "4ff22ca62d805da20f067c7f6cd7738764e2fc61c37908050f3139578258e65e"
+    },
+    "source_files": {
+      "src/transport_audit.rs": "f6692eb6135456aa4deedb9535e0d96da0fd92449cad9b58af19f765ffc87371",
+      "src/pcap.rs": "b59baf9777515704790fc4819e500bd554ffaabbfcf85441dd6bd84d021dcc61",
+      "src/tls_keylog.rs": "a6d53f1c42c75f974b035498e8b8c2421a739a96d5eb6328ddf389b098063ee4",
+      "src/proxy.rs": "bc4c027c47a12d18a06febb0562eb4ba584cd818185a25ee510b3f91bf90f2ca",
+      "src/runner.rs": "64e945bdf6692d7a290cea223129f2332a4aa56f1fd83a69cab68cefc17f62d7",
+      "src/inspect.rs": "b39191634da1e168a830f6be6b966fab2aed1eeef4b01847495d8a2d0b479d46",
+      "src/probe_plan.rs": "61464f18c051d41394dbc5387541377b15e93d9f7f9467b0f8f8205f75a7b430",
+      "src/main.rs": "7f515fda0124017d23c5a9cf3206c0ed2559d82964790c5a4d6d8126ab31ea44",
+      "Cargo.toml": "4dc08d6cd66fedf68ffcc78f32b05f075e60eeda2f2343becf3215636606729a",
+      "Cargo.lock": "8d185c50f5fe348fa88b5211bdf8cf1b621bb3db56fc191320470d63b4ff763d"
+    },
+    "tshark": {
+      "version": "4.4.18",
+      "path": "/usr/bin/tshark",
+      "owner": "root",
+      "mode": "0755",
+      "sha256": "261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074"
+    },
+    "tcpdump": {
+      "version": "4.99.5",
+      "path": "/usr/bin/tcpdump",
+      "owner": "root",
+      "mode": "0755",
+      "sha256": "0d426e2571a22de0d30996fd01bb44c1f267f33065023abea092c88bad16d2d2"
+    },
+    "nghttpd": {
+      "version": "nghttp2/1.64.0",
+      "path": "/usr/sbin/nghttpd",
+      "owner": "root",
+      "mode": "0755",
+      "sha256": "3a8e875e70cc0327221db5b9089873b39d4bb85dcdca1dc1988cdfb0abc633e9"
+    },
+    "audit_reports": {
+      "http1_sha256": "c63adc17ea38bf888bffbe68dde8a6843520460a48e3c02d2e3526a7c33c1c1c",
+      "http2_sha256": "0d85e72b1577f0e7d558c57f62fb258461b8701fbd88ebc63d362583480a7cef",
+      "mode": "0600"
+    }
+  },
+  "decoder_bounds": {
+    "tshark_timeout_seconds_default": 300,
+    "tshark_timeout_seconds_maximum": 3600,
+    "private_temporary_directory_mode": "0700",
+    "published_report_mode": "0600",
+    "report_publication": "atomic no-overwrite",
+    "tshark_environment": "cleared with private HOME, XDG_CONFIG_HOME, and temporary directory",
+    "stdout_stderr_and_row_bounds": true,
+    "stream_and_line_cardinality_bounds": true,
+    "report_contains_body_plaintext": false,
+    "report_contains_query_values": false
+  },
+  "automated_tests": {
+    "rust_library_tests": 183,
+    "rust_library_passed": 183,
+    "cli_tests": 3,
+    "cli_passed": 3,
+    "proxy_integration_tests": 11,
+    "proxy_integration_passed": 11,
+    "runner_integration_tests": 20,
+    "runner_integration_passed": 20,
+    "transport_audit_unit_tests": 7,
+    "transport_audit_unit_passed": 7,
+    "clippy_all_targets_all_features_warnings": 0,
+    "rust_1_89_all_targets_all_features_check_passed": true,
+    "release_build_passed": true,
+    "cargo_package_passed": true,
+    "cargo_package_files": 78,
+    "cargo_package_compressed_kib": 353.5
+  },
+  "live_runs": [
+    {
+      "name": "certificate-validated-tls-http1",
+      "run_id": "run-01a0a808-a2ae-74fb-8918-f513d0721156",
+      "target_exit_code": 0,
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "pcap_records": 2,
+      "pcap_bytes": 6778,
+      "tls_key_records": 5,
+      "tls_key_bytes": 938,
+      "decoded_rows": 2,
+      "decoded_streams": 1,
+      "tls_decrypted_streams": 1,
+      "http1_streams": 1,
+      "http2_streams": 0,
+      "proxy_attempts": 1,
+      "matched_attempts": 1,
+      "missing_from_wire": 0,
+      "extra_on_wire": 0,
+      "ambiguous_signature_groups": 0,
+      "manifest_capture_drops": 0,
+      "request_bytes": 64,
+      "request_sha256": "25142c5ebf4922061f65b8f7c04a803684d2908e1154ff6b8039902e834f5044",
+      "response_bytes": 26,
+      "response_sha256": "ab4beb7c349ba8c4b63672a795132d04d168c7c2d6f7a4b6d090c3724bee369f",
+      "payload_diff_passed": true,
+      "transport_complete": false,
+      "expected_exit_status": 3,
+      "gaps": {
+        "packet_capture_scope_not_task_egress": 1,
+        "unknown_tls_surface": 2,
+        "unresolved_transport_correlation": 1
+      }
+    },
+    {
+      "name": "certificate-validated-tls-http2-concurrent-padded",
+      "run_id": "run-01a0a809-7a37-709d-9396-d72787e47556",
+      "target_exit_code": 0,
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "pcap_records": 2,
+      "pcap_bytes": 4708,
+      "tls_key_records": 5,
+      "tls_key_bytes": 938,
+      "decoded_rows": 6,
+      "decoded_streams": 2,
+      "tls_decrypted_streams": 2,
+      "http1_streams": 0,
+      "http2_streams": 2,
+      "http2_stream_ids": [
+        1,
+        3
+      ],
+      "proxy_attempts": 2,
+      "matched_attempts": 2,
+      "missing_from_wire": 0,
+      "extra_on_wire": 0,
+      "ambiguous_signature_groups": 0,
+      "manifest_capture_drops": 0,
+      "streams": [
+        {
+          "http2_stream_id": 1,
+          "request_bytes": 52,
+          "request_sha256": "75c2388baf5734923727b8af5373335b6a1c0b0a8a55ea9ebaa7a244b5ae5a6a",
+          "response_bytes": 52,
+          "response_sha256": "75c2388baf5734923727b8af5373335b6a1c0b0a8a55ea9ebaa7a244b5ae5a6a"
+        },
+        {
+          "http2_stream_id": 3,
+          "request_bytes": 53,
+          "request_sha256": "ade6e890a192238324e525a2edecbc01f4a6a7cdd1ad7a0ae5d0098aee67817a",
+          "response_bytes": 53,
+          "response_sha256": "ade6e890a192238324e525a2edecbc01f4a6a7cdd1ad7a0ae5d0098aee67817a"
+        }
+      ],
+      "padded_headers_and_data_observed": true,
+      "multiplexing_observed": true,
+      "payload_diff_passed": true,
+      "transport_complete": false,
+      "expected_exit_status": 3,
+      "gaps": {
+        "packet_capture_scope_not_task_egress": 1,
+        "unknown_tls_surface": 4,
+        "unresolved_transport_correlation": 2
+      }
+    }
+  ],
+  "security_and_fail_closed_evidence": {
+    "self_signed_ca_used_as_server_leaf_was_rejected": true,
+    "distinct_ca_signed_leaf_was_accepted": true,
+    "certificate_verification_was_not_disabled": true,
+    "plaintext_listener_capture_cannot_satisfy_tls_decryption_gate": true,
+    "upstream_address_snapshot_cannot_satisfy_task_egress_gate": true,
+    "useful_payload_diff_with_coverage_gaps_writes_report_and_returns_status_3": true,
+    "capture_and_key_exports_were_mode_0600": true,
+    "audit_reports_were_mode_0600": true,
+    "temporary_tcpdump_cap_net_raw_removed_after_live_capture": true,
+    "tcpdump_security_capability_xattr_present_after_qualification": false,
+    "runs_root_audit_chain_valid": true,
+    "runs_root_audit_chain_records": 96,
+    "runs_root_audit_chain_last_sha256": "166658c52754acdbda41fa95826406060cff7a13597872394b090dea04387c36"
+  },
+  "limitations": [
+    "The pcap filter is a launch-time upstream-address snapshot, not a target cgroup or network-namespace egress boundary. It may include unrelated host traffic to shared endpoints and miss DNS changes or alternate endpoints.",
+    "The audit intentionally separates payload_diff_passed from complete. Neither live run is a transport-completeness qualification.",
+    "Executable TLS-surface accounting and transport correlation remained conservative in these synthetic shell-client runs.",
+    "Only local Debian 13 x86-64, TShark 4.4.18, HTTP/1.1, and HTTP/2 qualification cells are covered. WebSocket, HTTP/3/QUIC, provider, operating-system, architecture, and wider decoder-version matrices remain unqualified.",
+    "The current-tree final five-hour steady-state gate has not run; this qualification does not replace it."
+  ]
+}

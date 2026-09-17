@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://iorec.dev/schemas/batch.v1.schema.json",
+  "title": "iorec batch header v1",
+  "type": "object",
+  "required": ["batch_id", "recording_id", "schema_version", "first_seq", "last_seq", "event_count", "byte_length", "sha256", "encoding", "created_at"],
+  "properties": {
+    "batch_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "recording_id": { "type": "string", "minLength": 1, "maxLength": 240 },
+    "schema_version": { "type": "integer", "const": 1 },
+    "first_seq": { "type": "integer", "minimum": 1 },
+    "last_seq": { "type": "integer", "minimum": 1 },
+    "event_count": { "type": "integer", "minimum": 1, "maximum": 10000 },
+    "byte_length": { "type": "integer", "minimum": 1, "maximum": 67108864 },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "prev_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "encoding": { "type": "string", "enum": ["ndjson+zstd", "ndjson"] },
+    "blobs": { "type": "array", "maxItems": 10000, "items": { "type": "object", "required": ["sha256", "size"], "properties": { "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }, "size": { "type": "integer", "minimum": 0 } }, "additionalProperties": false } },
+    "created_at": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

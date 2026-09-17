@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
+FROM golang:1.25.13-alpine@sha256:1e0126852075c9c60731c8ba49088448b91f63e2aed97ca9d1a9791622a05946 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+ARG TARGETOS TARGETARCH
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -trimpath -ldflags="-s -w" -o /out/pipeline-worker ./cmd/pipeline-worker
+RUN mkdir -p /out/data/objects
+
+FROM debian:13.2-slim@sha256:4bcb9db66237237d03b55b969271728dd3d955eaaa254b9db8a3db94550b1885
+ARG TSHARK_VERSION=4.4.18-0+deb13u1
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates "tshark=${TSHARK_VERSION}" \
+    && rm -f /usr/bin/dumpcap \
+    && find / -xdev -type f -perm /6000 -exec chmod a-s {} + \
+    && test -x /usr/bin/tshark \
+    && test "$(dpkg-query -W -f='${Version}' tshark)" = "${TSHARK_VERSION}" \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /out/pipeline-worker /pipeline-worker
+COPY --from=build --chown=65532:65532 /out/data /data
+ENV IOREC_TSHARK_PATH=/usr/bin/tshark
+USER 65532:65532
+ENTRYPOINT ["/pipeline-worker"]

@@ -1,0 +1,5 @@
+# Local-only exposure for the destructive connected-recorder qualification.
+# Never use this override as an internet-facing deployment file.
+services:
+  platform-api:
+    ports: ["127.0.0.1:${IOREC_QUALIFY_API_PORT:-48090}:8080"]

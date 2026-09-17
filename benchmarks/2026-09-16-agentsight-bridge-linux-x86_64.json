@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-16T01:58:01Z",
+  "subject": "iorec AgentSight privileged-probe bridge",
+  "status": "qualified_experimental_incomplete_by_design",
+  "qualification_scope": {
+    "os": "Debian GNU/Linux 13.7 (trixie)",
+    "architecture": "x86_64",
+    "kernel": "6.12.94+deb13-cloud-amd64",
+    "capture_surfaces": [
+      "process_lifecycle",
+      "file_activity",
+      "network_activity",
+      "process_coordination",
+      "memory_activity"
+    ],
+    "capture_filter": "cgroup-v2",
+    "upstream": "AgentSight release v1.0.25",
+    "bridge_protocol": 2
+  },
+  "artifacts": {
+    "iorec": {
+      "version": "0.1.0",
+      "sha256": "0351499250b7ae034eba9012e0a9426f5b4a0f6730bb8af100f7e85532658236"
+    },
+    "bridge": {
+      "path": "tools/agentsight_bridge.py",
+      "helper_version": "1.0.0",
+      "sha256": "f2d34a4a745d6b14634887eeefe6d7308d791a2f5762f24a7d602c6a1a7fee83"
+    },
+    "upstream_release_asset": {
+      "name": "agentsight-v1.0.25-x86_64",
+      "sha256": "b390e507765f5e042ed3aa913c41095a973efa2fb65117d3486744df804abc81",
+      "source_tag": "v1.0.25",
+      "source_commit": "0080545f7c6b110ec2d4a4af5100b58f514c84d5",
+      "reported_version": "agentsight 1.0.25"
+    }
+  },
+  "runtime_configuration": {
+    "readiness_timeout_seconds": 8,
+    "shutdown_drain_seconds": 1,
+    "max_event_bytes": 524288,
+    "max_diagnostic_bytes": 65536,
+    "upstream_queue_records": 1024,
+    "max_tracked_cgroup_pids": 1000000,
+    "max_evidence_events": 10000000,
+    "cgroup_sample_milliseconds": 10,
+    "recorder_user": "unprivileged",
+    "target_user": "unprivileged",
+    "privileged_component": "root-owned AgentSight executable invoked through noninteractive sudo"
+  },
+  "automated_tests": {
+    "bridge_python_tests": 8,
+    "bridge_python_passed": 8,
+    "rust_probe_protocol_tests": 5,
+    "rust_probe_protocol_passed": 5,
+    "rust_library_tests": 175,
+    "rust_library_passed": 175,
+    "clippy_all_targets_all_features_warnings": 0
+  },
+  "live_runs": [
+    {
+      "name": "process-file-network-functional",
+      "run_id": "run-01a0a7ed-f254-720d-b8c1-b441cbb72b51",
+      "status": "finished",
+      "target_exit_code": 0,
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "probe_records": 347,
+      "evidence_records": 342,
+      "process_lifecycle_records": 21,
+      "file_activity_records": 309,
+      "network_activity_records": 2,
+      "process_coordination_records": 1,
+      "memory_activity_records": 9,
+      "evidence_pids": 10,
+      "probe_hits": 348,
+      "reported_dropped_events": 3,
+      "manifest_capture_drops": 5,
+      "final_complete": false,
+      "expected_gap_reasons": [
+        "upstream_ring_buffer_loss_unobservable",
+        "upstream_file_rate_limit",
+        "upstream_end_anchor_missing"
+      ]
+    },
+    {
+      "name": "cgroup-isolation",
+      "run_id": "run-01a0a7ef-00b4-7773-aa03-d55988725c1d",
+      "status": "finished",
+      "target_exit_code": 0,
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "probe_records": 279,
+      "evidence_records": 274,
+      "evidence_pids": 8,
+      "inside_marker_occurrences": 7,
+      "outside_marker_occurrences": 0,
+      "outside_pid_present": false,
+      "probe_hits": 278,
+      "reported_dropped_events": 3,
+      "manifest_capture_drops": 5,
+      "final_complete": false,
+      "expected_gap_reasons": [
+        "upstream_ring_buffer_loss_unobservable",
+        "upstream_file_rate_limit",
+        "upstream_end_anchor_missing"
+      ]
+    }
+  ],
+  "fail_closed_evidence": {
+    "banner_cannot_precede_ready_regression_test_passed": true,
+    "target_digest_and_cgroup_binding_tested": true,
+    "outside_cgroup_marker_absent_from_capture": true,
+    "split_stderr_failure_marker_tested": true,
+    "schema_drift_becomes_gap": true,
+    "end_before_start_does_not_establish_readiness": true,
+    "aggregate_overflow_becomes_gap": true,
+    "unobservable_ring_buffer_loss_always_becomes_gap": true,
+    "both_live_finals_remained_incomplete": true
+  },
+  "observed_upstream_constraints": [
+    "AgentSight v1.0.25 process.bpf.c returns silently when bpf_ringbuf_reserve fails and exposes no loss counter. The bridge therefore emits upstream_ring_buffer_loss_unobservable immediately after readiness and can never claim complete coverage for this upstream build.",
+    "The high-level debug process shutdown path did not deliver the raw process collector's CLOCK_SYNC end record in either live run. The bridge reports upstream_end_anchor_missing instead of treating process exit as a drained source.",
+    "AgentSight reported its own per-process file-open rate limit during both workloads. That warning is preserved as an explicit gap.",
+    "This cell validates process/file/network evidence and cgroup isolation only. It does not qualify AgentSight SSL capture, TLS plaintext, LLM protocol semantics, other kernels, arm64, containers, or a completeness claim.",
+    "The qualification host used noninteractive sudo. Production privilege policy must constrain the root-owned upstream executable independently; the bridge, recorder, and target remain unprivileged."
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "format": "iorec-soak-report-v1",
+  "created_at": "2026-09-15T19:47:25Z",
+  "candidate": {
+    "stage": "intermediate",
+    "qualified_as_final_release_gate": false,
+    "reason": "The recorder binary predates the final platform and uploader hardening changes. This report proves the intermediate recorder's five-hour steady-state behavior only."
+  },
+  "passed": true,
+  "configuration": {
+    "required_duration_seconds": 18000,
+    "observed_uninterrupted_duration_seconds": 18000,
+    "configured_harness_duration_seconds": 86400,
+    "rate": 0.5,
+    "concurrency": 4,
+    "payload_bytes": 1024,
+    "response_chunks": 3,
+    "response_chunk_bytes": 256,
+    "delay_ms": 5,
+    "max_event_storage_bytes": 4294967296,
+    "max_run_blob_storage_bytes": 2147483648
+  },
+  "iorec": {
+    "path": "/tmp/iorec-final-target/release/iorec",
+    "sha256": "sha256:ddcf0c69df023d0d4bc7361c92cf6f9aff23b9d7fc924195d5daca01549ab6c9",
+    "version": "iorec 0.1.0"
+  },
+  "platform": {
+    "system": "Linux",
+    "release": "6.12.94+deb13-cloud-amd64",
+    "machine": "x86_64",
+    "cpu_count": 16,
+    "cpu_model": "INTEL(R) XEON(R) PLATINUM 8581C CPU @ 2.10GHz",
+    "memory_total_kib": 65847884
+  },
+  "methodology": {
+    "duration": "Recorder process elapsed time was sampled from /proc through ps etimes. The stop monitor sent SIGINT at exactly 18000 seconds.",
+    "termination": "The synthetic Python target did not exit after forwarded SIGINT. SIGTERM was sent to the recorder 25 seconds later and forwarded to the target; the run finalized 37.402 seconds after the five-hour threshold with exit code 143.",
+    "resource_observation": "Recorder RSS and lifetime-average CPU percentage were sampled from /proc through ps. No exact peak-RSS or CPU-time series was retained by the interrupted 24-hour harness.",
+    "integrity": "The finalized run was independently checked with inspect --verify-blobs and verify --profile integrity using the run encryption key."
+  },
+  "recorded": {
+    "run_id": "run-01a0a588-bd73-7274-84c0-3f28096e68de",
+    "started_at": "2026-09-15T14:46:37.194202664Z",
+    "threshold_reached_at": "2026-09-15T19:46:37Z",
+    "finished_at": "2026-09-15T19:47:14.596483188Z",
+    "requests": 9012,
+    "completed_attempts": 9012,
+    "incomplete_attempts": 0,
+    "observed_requests_per_second": 0.5006666666666667,
+    "events": 135204,
+    "event_storage_bytes": 159636877,
+    "blobs": 36049,
+    "blob_bytes": 21462158,
+    "blob_storage_bytes": 23192510,
+    "capture_drops": 0,
+    "manifest_error_events": 2,
+    "recorder_rss_kib_at_threshold": 17936,
+    "recorder_lifetime_average_cpu_percent_at_threshold": 10.5
+  },
+  "run_validation": {
+    "run_dir": "/tmp/iorec-perf-ja1cytzk/runs/run-01a0a588-bd73-7274-84c0-3f28096e68de",
+    "manifest_status": "failed",
+    "manifest_exit_code": 143,
+    "controlled_termination": true,
+    "manifest_authenticated": true,
+    "valid_events": 135204,
+    "last_sequence": 135204,
+    "discarded_tail_bytes": 0,
+    "blob_files": 36049,
+    "missing_blobs": 0,
+    "corrupt_blobs": 0,
+    "all_attempts_have_terminal_state": true,
+    "captured_request_payloads_complete": true,
+    "captured_response_payloads_complete": true,
+    "integrity_verifier": {
+      "run_id": "run-01a0a588-bd73-7274-84c0-3f28096e68de",
+      "manifest_claim": "best-effort",
+      "profile": "integrity",
+      "passed": true,
+      "checks": [
+        {
+          "name": "run_finalized",
+          "passed": true,
+          "detail": "status=failed"
+        },
+        {
+          "name": "event_log_committed",
+          "passed": true,
+          "detail": "discarded_tail_bytes=0"
+        },
+        {
+          "name": "referenced_blobs_present",
+          "passed": true,
+          "detail": "missing=0"
+        },
+        {
+          "name": "blob_integrity",
+          "passed": true,
+          "detail": "corrupt=0"
+        },
+        {
+          "name": "manifest_authenticated",
+          "passed": true,
+          "detail": "authenticated=true"
+        }
+      ]
+    }
+  },
+  "acceptance": {
+    "duration_met": true,
+    "process_survived_until_threshold": true,
+    "zero_capture_drops": true,
+    "zero_incomplete_attempts": true,
+    "zero_discarded_tail_bytes": true,
+    "zero_missing_blobs": true,
+    "zero_corrupt_blobs": true,
+    "manifest_authenticated": true,
+    "integrity_profile_passed": true
+  }
+}

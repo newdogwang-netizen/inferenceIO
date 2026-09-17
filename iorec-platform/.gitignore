@@ -1,0 +1,6 @@
+bin/
+data/
+web/node_modules/
+web/dist/
+deploy/.env
+*.log

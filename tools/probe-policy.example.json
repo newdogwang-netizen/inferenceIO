@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "rules": [
+    {
+      "id": "linux-x86_64-openssl-ecapture",
+      "priority": 10,
+      "helper_kind": "ecapture",
+      "helper_path": "/usr/local/libexec/iorec/ecapture-bridge",
+      "helper_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "os": "linux",
+      "architecture": "x86_64",
+      "runtime": "python",
+      "any_tls_surfaces": [
+        "openssl-dynamic-dependency",
+        "openssl-binary-marker"
+      ],
+      "require_ebpf": true,
+      "require_task_cgroup": true
+    }
+  ]
+}

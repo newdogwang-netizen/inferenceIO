@@ -1,0 +1,84 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  recorder:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+        with:
+          toolchain: 1.89.0
+          components: rustfmt, clippy
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --all-features --all-targets -- -D warnings
+      - run: cargo test --locked --all-features --all-targets
+      - name: qualification and bridge harness unit tests
+        run: PYTHONPATH=tools python3 -m unittest -v tools/test_*.py
+      - run: cargo package --locked
+      - run: cargo install cargo-audit --version 0.22.2 --locked
+      - run: cargo audit
+
+  platform:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73
+        env:
+          POSTGRES_USER: iorec
+          POSTGRES_PASSWORD: iorec
+          POSTGRES_DB: iorec_test
+        ports: ["54329:5432"]
+        options: >-
+          --health-cmd "pg_isready -U iorec"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    defaults:
+      run:
+        working-directory: iorec-platform
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version: "1.25.13"
+      - name: shared contracts are byte-identical
+        run: |
+          diff ../schemas/event.v1.schema.json schemas/event.v1.schema.json
+          diff ../schemas/batch.v1.schema.json schemas/batch.v1.schema.json
+          diff -r schemas internal/protocol/schemas --exclude=CHANGELOG.md
+          diff -r migrations internal/store/migrations
+      - run: go vet ./...
+      - run: go test ./... -count=1
+        env:
+          TEST_DATABASE_URL: postgres://iorec:iorec@127.0.0.1:54329/iorec_test
+      - run: go test -race ./... -count=1
+        env:
+          TEST_DATABASE_URL: postgres://iorec:iorec@127.0.0.1:54329/iorec_test
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iorec-platform/web
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22.22.2"
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+
+  container-builds:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: iorec-platform
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: docker build -f deploy/Dockerfile.api .
+      - run: docker build -f deploy/Dockerfile.worker .
+      - run: docker build -f deploy/Dockerfile.web .

@@ -1,0 +1,1096 @@
+{
+  "checks": {
+    "application_binaries_nonempty": true,
+    "connected_compose_config_matches_current": true,
+    "connected_compose_files_match_current": true,
+    "connected_gate_passed": true,
+    "connected_gate_qualified": true,
+    "connected_images_match_current_runtime": true,
+    "connected_runtime_provenance_passed": true,
+    "current_runtime_hardened": true,
+    "generator_inputs_unchanged": true,
+    "recorder_hash_matches": true,
+    "source_inventory_nonempty": true,
+    "source_mirrors_match": true,
+    "worker_has_no_dumpcap": true,
+    "worker_tools_nonempty": true,
+    "worker_tshark_pinned": true
+  },
+  "connected_gate": {
+    "path": "/home/Admin/inferenceIO/benchmarks/2026-09-16-connected-soak-5h-final-9844f977-linux-x86_64.json",
+    "sha256": "sha256:4ae2969d9ae0c78209d48c9a75488b9391597cf524b193a9957045c816899352"
+  },
+  "container_binaries": {
+    "pipeline-worker": {
+      "bytes": 13082808,
+      "path": "/pipeline-worker",
+      "sha256": "sha256:661f538a2013949adaa22b023599590a15f2967253f41059ac79f3bedb7e934c"
+    },
+    "platform-api": {
+      "bytes": 14782648,
+      "path": "/platform-api",
+      "sha256": "sha256:2571ed3e533eb6342720ab95946af8183d2d3d5877de2deb179ad625fa6ddd81"
+    }
+  },
+  "created_at": "2026-09-16T17:32:29.816290+00:00",
+  "format": "iorec-platform-release-provenance-v1",
+  "generator_sources": {
+    "connected_soak.py": "sha256:90b646bace7ccbe019151d97549ebdc5795059e2836a91912e9e1f161338c8fa",
+    "perf_harness.py": "sha256:2629a866ef5154b082a05183d2623290399cb5e1d5abd99e1333151d77ed230a",
+    "platform_release_provenance.py": "sha256:714efea35eea149ecec82a0e57a52081a920a34bc798e32dde3f8ba56106fd28"
+  },
+  "passed": true,
+  "platform_source": {
+    "algorithm": "sha256(path-NUL-digest-NUL-mode-NUL-size-LF)",
+    "bytes": 852200,
+    "file_count": 117,
+    "files": [
+      {
+        "bytes": 129,
+        "mode": "0664",
+        "path": ".dockerignore",
+        "sha256": "sha256:078521e70352dcfbab7bcc8b87105e6a4226513e5426cbd84682385dc5cc7149"
+      },
+      {
+        "bytes": 2100,
+        "mode": "0664",
+        "path": ".github/workflows/ci.yml",
+        "sha256": "sha256:99a2c78337937bdd43fa4f8f2045e5c4baab2fe72b07c9155e0be6daa4dc735d"
+      },
+      {
+        "bytes": 57,
+        "mode": "0664",
+        "path": ".gitignore",
+        "sha256": "sha256:e3cd17bc4a8c8bfb51abd34e185bb0570b469b4bb7db41844cb1eb7e9a74958d"
+      },
+      {
+        "bytes": 1738,
+        "mode": "0664",
+        "path": "Makefile",
+        "sha256": "sha256:cfd8c3d53cd324086c05e486ae50cd3a8657241ba07a3e30e071366c5de80594"
+      },
+      {
+        "bytes": 15598,
+        "mode": "0664",
+        "path": "README.md",
+        "sha256": "sha256:c6c00248e66312dd23e6042ff25bc1445f12d2eb6c0930137c2a7c7d859eb9b1"
+      },
+      {
+        "bytes": 21426,
+        "mode": "0664",
+        "path": "api/openapi.yaml",
+        "sha256": "sha256:dec2d9391f2c977b4cb612a03b681af53aa4db881558d36bbf5794920a437a04"
+      },
+      {
+        "bytes": 22624,
+        "mode": "0664",
+        "path": "cmd/fake-collector/main.go",
+        "sha256": "sha256:6c7b83885f7d28c752c37fba0341d956ae0060f11f2a9c4e243f0bc22bbe4958"
+      },
+      {
+        "bytes": 3936,
+        "mode": "0664",
+        "path": "cmd/pipeline-worker/main.go",
+        "sha256": "sha256:55445e0e18f9e04933838112bc4fec5eb07eae61111fdc8ba748857bab6120e7"
+      },
+      {
+        "bytes": 19091,
+        "mode": "0664",
+        "path": "cmd/platform-api/main.go",
+        "sha256": "sha256:cbec2ea82920e3a4e30aef5acde5132eff9c990ec98a90caa78e9b5374a6abc3"
+      },
+      {
+        "bytes": 884,
+        "mode": "0664",
+        "path": "deploy/.env.example",
+        "sha256": "sha256:471300ed0ba35cb663d382ff2d811198c8a2c1d00c99afcc4465fed3ae21b24e"
+      },
+      {
+        "bytes": 952,
+        "mode": "0664",
+        "path": "deploy/Caddyfile",
+        "sha256": "sha256:7544e5f0768961d240ed28c2d93a4f759d1b1f14c8a502601d920b241de8d235"
+      },
+      {
+        "bytes": 734,
+        "mode": "0664",
+        "path": "deploy/Dockerfile.api",
+        "sha256": "sha256:16d98bf478b5d01b7cecdbd7a30636b380287011781067ea5e9feeaed49d83e5"
+      },
+      {
+        "bytes": 620,
+        "mode": "0664",
+        "path": "deploy/Dockerfile.web",
+        "sha256": "sha256:451add4f926bd30f08e39357950cfd514b779eb776fafcf6827c7f54235312e1"
+      },
+      {
+        "bytes": 1182,
+        "mode": "0664",
+        "path": "deploy/Dockerfile.worker",
+        "sha256": "sha256:7e715642452734283c736450a76ff3eec450da9ccb7fb807d8c343465bdedaf5"
+      },
+      {
+        "bytes": 362,
+        "mode": "0664",
+        "path": "deploy/compose.dev.yaml",
+        "sha256": "sha256:63e78daf85d38685c3992d41d8fe9bbbb6652ca9079973178ed3ed4c68afb99b"
+      },
+      {
+        "bytes": 230,
+        "mode": "0664",
+        "path": "deploy/compose.qualify.yaml",
+        "sha256": "sha256:6f1ef74aa35a7e248ba737a2de8f1151ec53a7d2f87518ccb5bc634a185328e3"
+      },
+      {
+        "bytes": 3475,
+        "mode": "0664",
+        "path": "deploy/compose.yaml",
+        "sha256": "sha256:72feec835387240808445121ed36c2bded41df566daf3e4b84b2f6a8c16e2691"
+      },
+      {
+        "bytes": 1337,
+        "mode": "0664",
+        "path": "go.mod",
+        "sha256": "sha256:337cfe3c588e36f04387f5cb76c9773fa19c9adc60eec24272e5358065236f95"
+      },
+      {
+        "bytes": 7115,
+        "mode": "0664",
+        "path": "go.sum",
+        "sha256": "sha256:fb5caeff7907ab53e1fe3eda4b323af71272b1adc0b02df49dd7112e1b00b9fc"
+      },
+      {
+        "bytes": 7074,
+        "mode": "0664",
+        "path": "internal/auth/auth.go",
+        "sha256": "sha256:9bd6acd097a1e372505a8be67266710f6e8ba789fc0f9136f9d8de173efb0728"
+      },
+      {
+        "bytes": 902,
+        "mode": "0664",
+        "path": "internal/auth/oidc.go",
+        "sha256": "sha256:66ee17c2db6cb8f139aa1fa30c7c45e843667cab4503c37489b890558a4d9d6e"
+      },
+      {
+        "bytes": 31032,
+        "mode": "0664",
+        "path": "internal/control/control.go",
+        "sha256": "sha256:a9b1b1aeaf421f36c12de35db98988125be92aaaba12cfcdcb45b774323b3de7"
+      },
+      {
+        "bytes": 15474,
+        "mode": "0664",
+        "path": "internal/control/control_test.go",
+        "sha256": "sha256:dc1a5e64e6446b124621eada34807e258b22237489b54d0032236775db4291bf"
+      },
+      {
+        "bytes": 18495,
+        "mode": "0664",
+        "path": "internal/exporter/exporter.go",
+        "sha256": "sha256:c247b8fe51e4c9db8878c4d5f945e07110dae4725c3f6d1f8293e6b1b141ba86"
+      },
+      {
+        "bytes": 10822,
+        "mode": "0664",
+        "path": "internal/exporter/exporter_test.go",
+        "sha256": "sha256:188078440d8d358afe534a9765678a0b915393745495fbbdaba53358512bab11"
+      },
+      {
+        "bytes": 5459,
+        "mode": "0664",
+        "path": "internal/httpapi/httpapi.go",
+        "sha256": "sha256:703b6348b89736c1afaa9ba56bc27a25ed3ec6a97d5af8b27a01e8ca510d36df"
+      },
+      {
+        "bytes": 2395,
+        "mode": "0664",
+        "path": "internal/httpapi/httpapi_test.go",
+        "sha256": "sha256:5e5a1edcd5d5c54472346a07ab188adfc08f15084ec7ba52e41b630e779c3617"
+      },
+      {
+        "bytes": 2850,
+        "mode": "0664",
+        "path": "internal/httpapi/ratelimit.go",
+        "sha256": "sha256:01f3b298f63188460c51ca2d93965e7c7eed0a90e7a9a41f10c77323ce1889ea"
+      },
+      {
+        "bytes": 1500,
+        "mode": "0664",
+        "path": "internal/httpapi/ratelimit_test.go",
+        "sha256": "sha256:ad673fdd18da1b7b9b389c741dc643ff18a313e87713d38eddef133db50ae556"
+      },
+      {
+        "bytes": 14281,
+        "mode": "0664",
+        "path": "internal/ingest/import.go",
+        "sha256": "sha256:fa02e3c349f50b45f34f98099a782a61294429008cf3489101171c3cd72cd5bc"
+      },
+      {
+        "bytes": 9576,
+        "mode": "0664",
+        "path": "internal/ingest/import_test.go",
+        "sha256": "sha256:aece28d22f7806cc4064c9b2bb9a3df547f161993cc53590962598acefa829a6"
+      },
+      {
+        "bytes": 34643,
+        "mode": "0664",
+        "path": "internal/ingest/ingest.go",
+        "sha256": "sha256:5fbe240c71191fe3360eb2283c545c65ef5f761e4d4d0937a06f6760c3c62d0d"
+      },
+      {
+        "bytes": 23236,
+        "mode": "0664",
+        "path": "internal/ingest/ingest_test.go",
+        "sha256": "sha256:6eb97ff7893dc8512715d89072903c297135e1a07f97e1081f3bef8e8734dd56"
+      },
+      {
+        "bytes": 5131,
+        "mode": "0664",
+        "path": "internal/jobs/jobs.go",
+        "sha256": "sha256:e72e0c5d57babbf85adcd81121fd0b502864439c65a791abbc30ee0ba263befc"
+      },
+      {
+        "bytes": 3555,
+        "mode": "0664",
+        "path": "internal/notify/notify.go",
+        "sha256": "sha256:2c707640335b53f4b9e21d549494c3bf11a1df43dd6dc858795bf403bc35d843"
+      },
+      {
+        "bytes": 4130,
+        "mode": "0664",
+        "path": "internal/objstore/fs.go",
+        "sha256": "sha256:ab82b5d5886df9ec8505d6981d2bc71db8bd6d6c799d7faf4a4c7d3380ae6790"
+      },
+      {
+        "bytes": 4251,
+        "mode": "0664",
+        "path": "internal/objstore/fs_test.go",
+        "sha256": "sha256:902ecbaaa8b76ac1b90a8742168709d0e6523134993bff05d2a108e7039cd51d"
+      },
+      {
+        "bytes": 626,
+        "mode": "0664",
+        "path": "internal/objstore/keys.go",
+        "sha256": "sha256:a0d4ceefe0e4e2c49dee51f7cd089205541998dcd8ceb4f628e1026319a3a7de"
+      },
+      {
+        "bytes": 535,
+        "mode": "0664",
+        "path": "internal/objstore/keys_test.go",
+        "sha256": "sha256:26bf30a591eb091d1f7636f4e8ef7f1e7350d118ab9617a891d5198c731552bc"
+      },
+      {
+        "bytes": 1090,
+        "mode": "0664",
+        "path": "internal/objstore/objstore.go",
+        "sha256": "sha256:61f66c5d57cb788b0194afec554ce4fe778d17300b180a448483e0cf1deeed94"
+      },
+      {
+        "bytes": 3367,
+        "mode": "0664",
+        "path": "internal/objstore/s3.go",
+        "sha256": "sha256:32b4cecd5f2de7e7ab2b3b3b14d3cbf232b32cef5a09c982bc54c1fdfcdf5846"
+      },
+      {
+        "bytes": 18924,
+        "mode": "0664",
+        "path": "internal/pipeline/assemble.go",
+        "sha256": "sha256:f164bc0d8f4a4cef13600aaf8abbbf4d8a89b866e87c83ae7072f9bcadbd076d"
+      },
+      {
+        "bytes": 12493,
+        "mode": "0664",
+        "path": "internal/pipeline/coverage.go",
+        "sha256": "sha256:5029f4dd1dddc96b724bd8703d1503a98d1eb4f786a429e500b556a742545e91"
+      },
+      {
+        "bytes": 7987,
+        "mode": "0664",
+        "path": "internal/pipeline/decode.go",
+        "sha256": "sha256:e11a91feab87a6efb7d100d0c10b8698ccf1a545ac6fc6136fccdcaa33e21279"
+      },
+      {
+        "bytes": 3778,
+        "mode": "0664",
+        "path": "internal/pipeline/diff.go",
+        "sha256": "sha256:12756b48f87fe75c9f67a011bf78d0ae2c03180d0c75d5dfaa3e58ef68c01d0e"
+      },
+      {
+        "bytes": 29423,
+        "mode": "0664",
+        "path": "internal/pipeline/normalize.go",
+        "sha256": "sha256:b2c8b24334326a113d5b0ef1a73061084616822ba6a4d71638febf35fbd75ded"
+      },
+      {
+        "bytes": 4858,
+        "mode": "0664",
+        "path": "internal/pipeline/pipeline.go",
+        "sha256": "sha256:5bd13bf329723f6869dece9fcb16219f22868279b0d01d7034bfe2bb1037a83f"
+      },
+      {
+        "bytes": 17984,
+        "mode": "0664",
+        "path": "internal/pipeline/pipeline_test.go",
+        "sha256": "sha256:915b9d725be08d0f230f47a6d10a62b9e36a5b2666a0a7d10e8c45d15e71d7d7"
+      },
+      {
+        "bytes": 23240,
+        "mode": "0664",
+        "path": "internal/pipeline/resolve.go",
+        "sha256": "sha256:8f4ce5e34f19adbd55d4d3fac0b472f8df0ec0746cb20d8db6086b81c3c63a0e"
+      },
+      {
+        "bytes": 9660,
+        "mode": "0664",
+        "path": "internal/pipeline/rules.go",
+        "sha256": "sha256:c92ac532d4896e65dca67c9a4bc500863354480c0931312cf80d17928f86d3a0"
+      },
+      {
+        "bytes": 60651,
+        "mode": "0664",
+        "path": "internal/pipeline/transport_audit.go",
+        "sha256": "sha256:2b838b4c0ea17cd3e2479cd5d6a729fd1f7e2948ef9711ed34400e3d23fa85f6"
+      },
+      {
+        "bytes": 23149,
+        "mode": "0664",
+        "path": "internal/pipeline/transport_audit_test.go",
+        "sha256": "sha256:43a6616e617357572e96c934428acb346e015abd23aa91573af92befabd2dcd8"
+      },
+      {
+        "bytes": 12508,
+        "mode": "0664",
+        "path": "internal/protocol/codec.go",
+        "sha256": "sha256:b24618f1c9478765ccd0201dd0a0374c82b23ce0c4679a89f3952ae3856313db"
+      },
+      {
+        "bytes": 6359,
+        "mode": "0664",
+        "path": "internal/protocol/codec_test.go",
+        "sha256": "sha256:34e6f206501ffa577c3b536dcbb6c11575b4e1bbbcd03cfc8f53df9395c67c52"
+      },
+      {
+        "bytes": 1392,
+        "mode": "0664",
+        "path": "internal/protocol/schemas/batch.v1.schema.json",
+        "sha256": "sha256:f36c5c5a49b5321772395f47f56a75c0d82af6fea36690841d1d0e1c621058ed"
+      },
+      {
+        "bytes": 1552,
+        "mode": "0664",
+        "path": "internal/protocol/schemas/capabilities.v1.schema.json",
+        "sha256": "sha256:d4a109a0f016c43725deac4e0396f4b9355c5883f2b633d1139e3e107505b946"
+      },
+      {
+        "bytes": 2863,
+        "mode": "0664",
+        "path": "internal/protocol/schemas/event.v1.schema.json",
+        "sha256": "sha256:8d8703c5eda133c2f7b5a12b4fc7cd04ef5dcf862beb6ab111d8f46f99625c07"
+      },
+      {
+        "bytes": 1577,
+        "mode": "0664",
+        "path": "internal/protocol/schemas.go",
+        "sha256": "sha256:a983e11c5b052d75d451222707d6ba1e9b752e1de88fdd268957259f9a94360f"
+      },
+      {
+        "bytes": 753,
+        "mode": "0664",
+        "path": "internal/protocol/testdata/rust-event-v1.json",
+        "sha256": "sha256:56a00efb6135821b8ef3a991e745ff71a5cb11c1dfa8ab382ebe8a17a86acb6f"
+      },
+      {
+        "bytes": 5197,
+        "mode": "0664",
+        "path": "internal/protocol/types.go",
+        "sha256": "sha256:9afca482ceb496350fb8a9c53ad10463c8e5e5147cc5928c3f3716c45a46827f"
+      },
+      {
+        "bytes": 35170,
+        "mode": "0664",
+        "path": "internal/query/query.go",
+        "sha256": "sha256:e891bbb7be1a282b2f6265931f3a3a23618bb5ad76ca87d14a137188b85f7d4f"
+      },
+      {
+        "bytes": 10601,
+        "mode": "0664",
+        "path": "internal/query/query_test.go",
+        "sha256": "sha256:307776b89f3bfd8eb139cc65375033bcd5fb7a8f1b46392c14c27f57c3093714"
+      },
+      {
+        "bytes": 48411,
+        "mode": "0664",
+        "path": "internal/retention/retention.go",
+        "sha256": "sha256:d7525af03c60eed2b351bc926893a9466184e38c26d6fccd820286ee63ecfce0"
+      },
+      {
+        "bytes": 27982,
+        "mode": "0664",
+        "path": "internal/retention/retention_test.go",
+        "sha256": "sha256:3207fe1a46be9eb7ce04ee0a43d73fb4444205af9678647e44510b935ac82742"
+      },
+      {
+        "bytes": 12486,
+        "mode": "0664",
+        "path": "internal/store/migrations/0001_init.sql",
+        "sha256": "sha256:449ade1c9fcf6b51322eb012c051950b2cb7a6a9f176bc834de20a9d86a2f3ca"
+      },
+      {
+        "bytes": 276,
+        "mode": "0664",
+        "path": "internal/store/migrations/0002_collector_request_delivery_lease.sql",
+        "sha256": "sha256:c4cd986460091c73796ebed254889c295980641f1fe18627a24f250d0c2ab5e7"
+      },
+      {
+        "bytes": 735,
+        "mode": "0664",
+        "path": "internal/store/migrations/0002_event_envelope.sql",
+        "sha256": "sha256:7cd44ce16536ef62c95f927d25e6a27faa12fb38a51d2988e50c179e4d3da5a8"
+      },
+      {
+        "bytes": 76,
+        "mode": "0664",
+        "path": "internal/store/migrations/0003_manifest_integrity.sql",
+        "sha256": "sha256:2d2c8b0c514678da260ae70b7106fb4dab199cafbbcde14ed090c3d6c0f78394"
+      },
+      {
+        "bytes": 264,
+        "mode": "0664",
+        "path": "internal/store/migrations/0004_recording_sequence_base.sql",
+        "sha256": "sha256:b097c9c1532bbfe8a32516629178733fa76f362679dafbcb83a8c4d65f927a61"
+      },
+      {
+        "bytes": 1020,
+        "mode": "0664",
+        "path": "internal/store/migrations/0005_run_scoped_streams.sql",
+        "sha256": "sha256:35331fb81ce5351a89fa4b4c08295d05e0bd0d2e6c4c21fc8edf7ca12978f68b"
+      },
+      {
+        "bytes": 1172,
+        "mode": "0664",
+        "path": "internal/store/migrations/0006_task_boundaries.sql",
+        "sha256": "sha256:520aa9a2fd95fd4ae61571132c8ac4e8d137251bc2198c0a16f86b03f2dc4d3f"
+      },
+      {
+        "bytes": 155,
+        "mode": "0664",
+        "path": "internal/store/migrations/0007_platform_transport_proof.sql",
+        "sha256": "sha256:a1aec27f3e87ec9b3450dba218b44f9f09ba46b103e1884d8b653b1a593c2f30"
+      },
+      {
+        "bytes": 851,
+        "mode": "0664",
+        "path": "internal/store/migrations/0008_exports.sql",
+        "sha256": "sha256:c5ddd84b01e2574d6c20fc70e42526e35f199d92b15a822c67faca03c7dd6020"
+      },
+      {
+        "bytes": 192,
+        "mode": "0664",
+        "path": "internal/store/migrations/0009_collector_config_overrides.sql",
+        "sha256": "sha256:ac3ac357ac52014bb9b25ac2a6b8afabdfdb838f2ed265bb76276aaa797ce77b"
+      },
+      {
+        "bytes": 5483,
+        "mode": "0664",
+        "path": "internal/store/migrations/0010_retention_deletion.sql",
+        "sha256": "sha256:ad6cc55dd7a2b2327196541d5df1b57f42d24cb1538453f052b5649ec4a767cd"
+      },
+      {
+        "bytes": 428,
+        "mode": "0664",
+        "path": "internal/store/migrations/0011_blob_upload_intents.sql",
+        "sha256": "sha256:d0f249001fce3633d6373db0ca1e35c15706cfe87035559714f59c106d577b30"
+      },
+      {
+        "bytes": 1343,
+        "mode": "0664",
+        "path": "internal/store/migrations_mirror_test.go",
+        "sha256": "sha256:18f1ebd61aaa16776d53611dd01b3376b6bdd036839f8f4860df5e53c929d720"
+      },
+      {
+        "bytes": 2823,
+        "mode": "0664",
+        "path": "internal/store/store.go",
+        "sha256": "sha256:eddfb8194f4b40ac92de49c9889615379c17eb27563798779ee961aae41b1046"
+      },
+      {
+        "bytes": 12486,
+        "mode": "0664",
+        "path": "migrations/0001_init.sql",
+        "sha256": "sha256:449ade1c9fcf6b51322eb012c051950b2cb7a6a9f176bc834de20a9d86a2f3ca"
+      },
+      {
+        "bytes": 276,
+        "mode": "0664",
+        "path": "migrations/0002_collector_request_delivery_lease.sql",
+        "sha256": "sha256:c4cd986460091c73796ebed254889c295980641f1fe18627a24f250d0c2ab5e7"
+      },
+      {
+        "bytes": 735,
+        "mode": "0664",
+        "path": "migrations/0002_event_envelope.sql",
+        "sha256": "sha256:7cd44ce16536ef62c95f927d25e6a27faa12fb38a51d2988e50c179e4d3da5a8"
+      },
+      {
+        "bytes": 76,
+        "mode": "0664",
+        "path": "migrations/0003_manifest_integrity.sql",
+        "sha256": "sha256:2d2c8b0c514678da260ae70b7106fb4dab199cafbbcde14ed090c3d6c0f78394"
+      },
+      {
+        "bytes": 264,
+        "mode": "0664",
+        "path": "migrations/0004_recording_sequence_base.sql",
+        "sha256": "sha256:b097c9c1532bbfe8a32516629178733fa76f362679dafbcb83a8c4d65f927a61"
+      },
+      {
+        "bytes": 1020,
+        "mode": "0664",
+        "path": "migrations/0005_run_scoped_streams.sql",
+        "sha256": "sha256:35331fb81ce5351a89fa4b4c08295d05e0bd0d2e6c4c21fc8edf7ca12978f68b"
+      },
+      {
+        "bytes": 1172,
+        "mode": "0664",
+        "path": "migrations/0006_task_boundaries.sql",
+        "sha256": "sha256:520aa9a2fd95fd4ae61571132c8ac4e8d137251bc2198c0a16f86b03f2dc4d3f"
+      },
+      {
+        "bytes": 155,
+        "mode": "0664",
+        "path": "migrations/0007_platform_transport_proof.sql",
+        "sha256": "sha256:a1aec27f3e87ec9b3450dba218b44f9f09ba46b103e1884d8b653b1a593c2f30"
+      },
+      {
+        "bytes": 851,
+        "mode": "0664",
+        "path": "migrations/0008_exports.sql",
+        "sha256": "sha256:c5ddd84b01e2574d6c20fc70e42526e35f199d92b15a822c67faca03c7dd6020"
+      },
+      {
+        "bytes": 192,
+        "mode": "0664",
+        "path": "migrations/0009_collector_config_overrides.sql",
+        "sha256": "sha256:ac3ac357ac52014bb9b25ac2a6b8afabdfdb838f2ed265bb76276aaa797ce77b"
+      },
+      {
+        "bytes": 5483,
+        "mode": "0664",
+        "path": "migrations/0010_retention_deletion.sql",
+        "sha256": "sha256:ad6cc55dd7a2b2327196541d5df1b57f42d24cb1538453f052b5649ec4a767cd"
+      },
+      {
+        "bytes": 428,
+        "mode": "0664",
+        "path": "migrations/0011_blob_upload_intents.sql",
+        "sha256": "sha256:d0f249001fce3633d6373db0ca1e35c15706cfe87035559714f59c106d577b30"
+      },
+      {
+        "bytes": 330,
+        "mode": "0664",
+        "path": "schemas/CHANGELOG.md",
+        "sha256": "sha256:1fccf966546ab25f9434f98bf6fa1aac5c331be820828ec7f3a6216e05d69157"
+      },
+      {
+        "bytes": 1392,
+        "mode": "0664",
+        "path": "schemas/batch.v1.schema.json",
+        "sha256": "sha256:f36c5c5a49b5321772395f47f56a75c0d82af6fea36690841d1d0e1c621058ed"
+      },
+      {
+        "bytes": 1552,
+        "mode": "0664",
+        "path": "schemas/capabilities.v1.schema.json",
+        "sha256": "sha256:d4a109a0f016c43725deac4e0396f4b9355c5883f2b633d1139e3e107505b946"
+      },
+      {
+        "bytes": 2863,
+        "mode": "0664",
+        "path": "schemas/event.v1.schema.json",
+        "sha256": "sha256:8d8703c5eda133c2f7b5a12b4fc7cd04ef5dcf862beb6ab111d8f46f99625c07"
+      },
+      {
+        "bytes": 303,
+        "mode": "0664",
+        "path": "web/index.html",
+        "sha256": "sha256:5208779b70751cd4c31b9c17d82ca8803aa361a2357190022cf0d3ee3cbfe72b"
+      },
+      {
+        "bytes": 64219,
+        "mode": "0664",
+        "path": "web/package-lock.json",
+        "sha256": "sha256:51b7dd9af024b2ca29035a4561fbf62819346b5e81c50c57185098f7b8601cac"
+      },
+      {
+        "bytes": 538,
+        "mode": "0664",
+        "path": "web/package.json",
+        "sha256": "sha256:aeabfe2864fd0f6339ad09426e2412407b2e00ecc20e4a7ad351d86344747093"
+      },
+      {
+        "bytes": 2510,
+        "mode": "0664",
+        "path": "web/src/App.tsx",
+        "sha256": "sha256:702331b0399354e284363ef4a29b11361dfb365b17fbbb3a08e008ad9c198be2"
+      },
+      {
+        "bytes": 1907,
+        "mode": "0664",
+        "path": "web/src/DeletionAction.tsx",
+        "sha256": "sha256:4ecacca347b86c7656e7e5dfdb765e53dd4f355754d30ad0fe16132bda317944"
+      },
+      {
+        "bytes": 1834,
+        "mode": "0664",
+        "path": "web/src/api.ts",
+        "sha256": "sha256:4b77424a0370e79fabe3e16fbd6699acb74ff5f5ed59389e2bc9a1ababe2d6de"
+      },
+      {
+        "bytes": 2671,
+        "mode": "0664",
+        "path": "web/src/components.tsx",
+        "sha256": "sha256:7b24d6c00e3ab943c27c154d7d9c0b9aedd6056fb8158d08c72d679e71bf0e96"
+      },
+      {
+        "bytes": 595,
+        "mode": "0664",
+        "path": "web/src/main.tsx",
+        "sha256": "sha256:58fdb0a32d09eccc9592b01b90c7c0e10c2a1a46ffa56842c95c461ad5aebccc"
+      },
+      {
+        "bytes": 3918,
+        "mode": "0664",
+        "path": "web/src/pages/AttemptDetail.tsx",
+        "sha256": "sha256:063eed08c73db792a980eb7361252157ebc45638a330efcbc2561b3adf675064"
+      },
+      {
+        "bytes": 3343,
+        "mode": "0664",
+        "path": "web/src/pages/Collectors.tsx",
+        "sha256": "sha256:223e01c4e59550ed9d6651350dc130001e0344a2777a5e209391ef3786376b52"
+      },
+      {
+        "bytes": 3533,
+        "mode": "0664",
+        "path": "web/src/pages/Deletions.tsx",
+        "sha256": "sha256:6a2a2f7ce07c7e773d26d500c962d9804d60eca0f09d4e2871b240ae9e027658"
+      },
+      {
+        "bytes": 3189,
+        "mode": "0664",
+        "path": "web/src/pages/Exports.tsx",
+        "sha256": "sha256:565fdd1ce41e813ed58656111ba7c252ea45e1b4c8d62ea5fafb0267f69be725"
+      },
+      {
+        "bytes": 2559,
+        "mode": "0664",
+        "path": "web/src/pages/Findings.tsx",
+        "sha256": "sha256:360dc6c77f794c427d2de250bc61064ff274137ae7cc3a2d458cc57d2595a75c"
+      },
+      {
+        "bytes": 6055,
+        "mode": "0664",
+        "path": "web/src/pages/InferenceDetail.tsx",
+        "sha256": "sha256:e0a9207e4b510c685ea6d6c189df44c917bde400bc60ad563dd41dfce5f68c22"
+      },
+      {
+        "bytes": 2411,
+        "mode": "0664",
+        "path": "web/src/pages/Jobs.tsx",
+        "sha256": "sha256:1d74388c6ad969f3a3c482ab275c8b0437425f0cc53b7dc063506c5fa02dbada"
+      },
+      {
+        "bytes": 2163,
+        "mode": "0664",
+        "path": "web/src/pages/Overview.tsx",
+        "sha256": "sha256:a1be94a8a6fa4f43b51a180e920e465b26cf34b373b0b35f912b555fcea49f25"
+      },
+      {
+        "bytes": 11701,
+        "mode": "0664",
+        "path": "web/src/pages/RecordingDetail.tsx",
+        "sha256": "sha256:efcdbe083d8f67f8fd630108c496c98ad975c60973904b43299304ae4e7caba1"
+      },
+      {
+        "bytes": 2247,
+        "mode": "0664",
+        "path": "web/src/pages/Recordings.tsx",
+        "sha256": "sha256:66ed05c32f7f9e0451c7fa558e0b887c2c9e0d980858945ee7d9faa1835eb26b"
+      },
+      {
+        "bytes": 2441,
+        "mode": "0664",
+        "path": "web/src/pages/SessionDetail.tsx",
+        "sha256": "sha256:d1be1e40b89a6c6afc2ec92ee632a97b43176eaf1c4262ef47bf9478bed4f389"
+      },
+      {
+        "bytes": 2175,
+        "mode": "0664",
+        "path": "web/src/sse.ts",
+        "sha256": "sha256:341eb652050dd763ab2a988a04cc827d0215ccb41727a6c46e4f7412bf4a520b"
+      },
+      {
+        "bytes": 4088,
+        "mode": "0664",
+        "path": "web/src/styles.css",
+        "sha256": "sha256:93a60aa90a34fbed8a72845711efdab0926b8b13cc5e42420878d08df0e33f28"
+      },
+      {
+        "bytes": 361,
+        "mode": "0664",
+        "path": "web/tsconfig.json",
+        "sha256": "sha256:5b909018d5dac14474550939927ff49ec5067b2f0a21051c44966ba76cfd3b39"
+      },
+      {
+        "bytes": 334,
+        "mode": "0664",
+        "path": "web/vite.config.ts",
+        "sha256": "sha256:ed924f321eaa305857ff4fe2dad881477caeff5347ff00fcde309576cc820cc4"
+      }
+    ],
+    "tree_sha256": "sha256:0c9efcde1703be35daf9a26f7f333204b854de98afb6935a3ac8b4cd4c43b043"
+  },
+  "recorder": {
+    "bytes": 16838320,
+    "path": "/home/Admin/inferenceIO/target/release/iorec",
+    "sha256": "sha256:9844f977fc3f4b4f466dac8fb1ec8495d835da38e6aaa4aaeb083fb57e873869"
+  },
+  "runtime": {
+    "checks": {
+      "all_containers_running_at_end": true,
+      "all_containers_running_at_start": true,
+      "application_hardening_at_end": true,
+      "application_hardening_at_start": true,
+      "compose_configuration_unchanged": true,
+      "compose_files_unchanged": true,
+      "expected_service_counts_at_end": true,
+      "expected_service_counts_at_start": true,
+      "image_ids_unchanged": true,
+      "published_ports_loopback_at_end": true,
+      "published_ports_loopback_at_start": true,
+      "web_healthy_at_end": true,
+      "web_healthy_at_start": true
+    },
+    "end": {
+      "captured_at": "2026-09-16T17:32:29.351760+00:00",
+      "compose_config_sha256": "sha256:ca4906c77382ef6677c0c64b179cb4ab30c206248594a655e9eaf86be852e045",
+      "compose_files": [
+        {
+          "path": "/home/Admin/inferenceIO/iorec-platform/deploy/compose.yaml",
+          "sha256": "sha256:72feec835387240808445121ed36c2bded41df566daf3e4b84b2f6a8c16e2691"
+        },
+        {
+          "path": "/home/Admin/inferenceIO/iorec-platform/deploy/compose.qualify.yaml",
+          "sha256": "sha256:6f1ef74aa35a7e248ba737a2de8f1151ec53a7d2f87518ccb5bc634a185328e3"
+        }
+      ],
+      "containers": [
+        {
+          "cap_drop": [
+            "ALL"
+          ],
+          "container_id": "05347935c7050f83436ce50c30632850fa919e6beacf1d6a292e70f9d9f1aa28",
+          "health": null,
+          "image_id": "sha256:90f1b0e0d0086eed6662958014375d909b561bbb06d65e971ad9ab3e29c05085",
+          "image_reference": "iorec/pipeline-worker:final-20260916-retention",
+          "logging": {
+            "driver": "json-file",
+            "max_file": "5",
+            "max_size": "20m"
+          },
+          "name": "iorec-final-retention-pipeline-worker-1",
+          "port_bindings": [],
+          "read_only_rootfs": true,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "service": "pipeline-worker",
+          "state": "running",
+          "user": "65532:65532"
+        },
+        {
+          "cap_drop": [
+            "ALL"
+          ],
+          "container_id": "a5a7e6b7161aa20912e8fe42a9230611c9abbcbc67e6dd442422fc6420866a8c",
+          "health": null,
+          "image_id": "sha256:90f1b0e0d0086eed6662958014375d909b561bbb06d65e971ad9ab3e29c05085",
+          "image_reference": "iorec/pipeline-worker:final-20260916-retention",
+          "logging": {
+            "driver": "json-file",
+            "max_file": "5",
+            "max_size": "20m"
+          },
+          "name": "iorec-final-retention-pipeline-worker-2",
+          "port_bindings": [],
+          "read_only_rootfs": true,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "service": "pipeline-worker",
+          "state": "running",
+          "user": "65532:65532"
+        },
+        {
+          "cap_drop": [
+            "ALL"
+          ],
+          "container_id": "9fb94a3b06ed286a0c2e35f49a16f3d27e13f156ecf3c619b0badaab082d8d2a",
+          "health": null,
+          "image_id": "sha256:d48ad596a7de3be4071bcc3df6a0164372a3bd96eded744dae5bc3d8bd18082a",
+          "image_reference": "iorec/platform-api:final-20260916-retention",
+          "logging": {
+            "driver": "json-file",
+            "max_file": "5",
+            "max_size": "20m"
+          },
+          "name": "iorec-final-retention-platform-api-1",
+          "port_bindings": [
+            {
+              "container_port": "8080/tcp",
+              "host_ips": [
+                "127.0.0.1"
+              ]
+            }
+          ],
+          "read_only_rootfs": true,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "service": "platform-api",
+          "state": "running",
+          "user": "nonroot"
+        },
+        {
+          "cap_drop": [],
+          "container_id": "6d75bcdabc1b86bc8e8065754990cbed26e5c6f0c42740a9961fa375d9670003",
+          "health": "healthy",
+          "image_id": "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+          "image_reference": "postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+          "logging": {
+            "driver": "json-file",
+            "max_file": "5",
+            "max_size": "20m"
+          },
+          "name": "iorec-final-retention-postgres-1",
+          "port_bindings": [],
+          "read_only_rootfs": false,
+          "security_opt": [],
+          "service": "postgres",
+          "state": "running",
+          "user": ""
+        },
+        {
+          "cap_drop": [
+            "ALL"
+          ],
+          "container_id": "6065bdd716bab03e57a03220354ade43c087f130e5c86b1b0d145d719d27ff52",
+          "health": "healthy",
+          "image_id": "sha256:c9d43056d8cf8445a77eb7a4684bd0c2cb9f12fe2a3724e66683607c6d2c00ce",
+          "image_reference": "iorec/web-console:final-20260916-retention",
+          "logging": {
+            "driver": "json-file",
+            "max_file": "5",
+            "max_size": "20m"
+          },
+          "name": "iorec-final-retention-web-console-1",
+          "port_bindings": [
+            {
+              "container_port": "8080/tcp",
+              "host_ips": [
+                "127.0.0.1"
+              ]
+            }
+          ],
+          "read_only_rootfs": true,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "service": "web-console",
+          "state": "running",
+          "user": "65532:65532"
+        }
+      ]
+    },
+    "image_ids": {
+      "pipeline-worker": [
+        "sha256:90f1b0e0d0086eed6662958014375d909b561bbb06d65e971ad9ab3e29c05085"
+      ],
+      "platform-api": [
+        "sha256:d48ad596a7de3be4071bcc3df6a0164372a3bd96eded744dae5bc3d8bd18082a"
+      ],
+      "postgres": [
+        "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73"
+      ],
+      "web-console": [
+        "sha256:c9d43056d8cf8445a77eb7a4684bd0c2cb9f12fe2a3724e66683607c6d2c00ce"
+      ]
+    },
+    "passed": true,
+    "start": {
+      "captured_at": "2026-09-16T17:32:29.351760+00:00",
+      "compose_config_sha256": "sha256:ca4906c77382ef6677c0c64b179cb4ab30c206248594a655e9eaf86be852e045",
+      "compose_files": [
+        {
+          "path": "/home/Admin/inferenceIO/iorec-platform/deploy/compose.yaml",
+          "sha256": "sha256:72feec835387240808445121ed36c2bded41df566daf3e4b84b2f6a8c16e2691"
+        },
+        {
+          "path": "/home/Admin/inferenceIO/iorec-platform/deploy/compose.qualify.yaml",
+          "sha256": "sha256:6f1ef74aa35a7e248ba737a2de8f1151ec53a7d2f87518ccb5bc634a185328e3"
+        }
+      ],
+      "containers": [
+        {
+          "cap_drop": [
+            "ALL"
+          ],
+          "container_id": "05347935c7050f83436ce50c30632850fa919e6beacf1d6a292e70f9d9f1aa28",
+          "health": null,
+          "image_id": "sha256:90f1b0e0d0086eed6662958014375d909b561bbb06d65e971ad9ab3e29c05085",
+          "image_reference": "iorec/pipeline-worker:final-20260916-retention",
+          "logging": {
+            "driver": "json-file",
+            "max_file": "5",
+            "max_size": "20m"
+          },
+          "name": "iorec-final-retention-pipeline-worker-1",
+          "port_bindings": [],
+          "read_only_rootfs": true,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "service": "pipeline-worker",
+          "state": "running",
+          "user": "65532:65532"
+        },
+        {
+          "cap_drop": [
+            "ALL"
+          ],
+          "container_id": "a5a7e6b7161aa20912e8fe42a9230611c9abbcbc67e6dd442422fc6420866a8c",
+          "health": null,
+          "image_id": "sha256:90f1b0e0d0086eed6662958014375d909b561bbb06d65e971ad9ab3e29c05085",
+          "image_reference": "iorec/pipeline-worker:final-20260916-retention",
+          "logging": {
+            "driver": "json-file",
+            "max_file": "5",
+            "max_size": "20m"
+          },
+          "name": "iorec-final-retention-pipeline-worker-2",
+          "port_bindings": [],
+          "read_only_rootfs": true,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "service": "pipeline-worker",
+          "state": "running",
+          "user": "65532:65532"
+        },
+        {
+          "cap_drop": [
+            "ALL"
+          ],
+          "container_id": "9fb94a3b06ed286a0c2e35f49a16f3d27e13f156ecf3c619b0badaab082d8d2a",
+          "health": null,
+          "image_id": "sha256:d48ad596a7de3be4071bcc3df6a0164372a3bd96eded744dae5bc3d8bd18082a",
+          "image_reference": "iorec/platform-api:final-20260916-retention",
+          "logging": {
+            "driver": "json-file",
+            "max_file": "5",
+            "max_size": "20m"
+          },
+          "name": "iorec-final-retention-platform-api-1",
+          "port_bindings": [
+            {
+              "container_port": "8080/tcp",
+              "host_ips": [
+                "127.0.0.1"
+              ]
+            }
+          ],
+          "read_only_rootfs": true,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "service": "platform-api",
+          "state": "running",
+          "user": "nonroot"
+        },
+        {
+          "cap_drop": [],
+          "container_id": "6d75bcdabc1b86bc8e8065754990cbed26e5c6f0c42740a9961fa375d9670003",
+          "health": "healthy",
+          "image_id": "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+          "image_reference": "postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+          "logging": {
+            "driver": "json-file",
+            "max_file": "5",
+            "max_size": "20m"
+          },
+          "name": "iorec-final-retention-postgres-1",
+          "port_bindings": [],
+          "read_only_rootfs": false,
+          "security_opt": [],
+          "service": "postgres",
+          "state": "running",
+          "user": ""
+        },
+        {
+          "cap_drop": [
+            "ALL"
+          ],
+          "container_id": "6065bdd716bab03e57a03220354ade43c087f130e5c86b1b0d145d719d27ff52",
+          "health": "healthy",
+          "image_id": "sha256:c9d43056d8cf8445a77eb7a4684bd0c2cb9f12fe2a3724e66683607c6d2c00ce",
+          "image_reference": "iorec/web-console:final-20260916-retention",
+          "logging": {
+            "driver": "json-file",
+            "max_file": "5",
+            "max_size": "20m"
+          },
+          "name": "iorec-final-retention-web-console-1",
+          "port_bindings": [
+            {
+              "container_port": "8080/tcp",
+              "host_ips": [
+                "127.0.0.1"
+              ]
+            }
+          ],
+          "read_only_rootfs": true,
+          "security_opt": [
+            "no-new-privileges:true"
+          ],
+          "service": "web-console",
+          "state": "running",
+          "user": "65532:65532"
+        }
+      ]
+    }
+  },
+  "schema_version": 1,
+  "source_mirror_checks": {
+    "migration_bytes_match": true,
+    "migration_sets_match": true,
+    "schema_bytes_match": true,
+    "schema_sets_match": true
+  },
+  "worker": {
+    "dumpcap_present": false,
+    "dumpcap_probe_exit_code": 1,
+    "tools": {
+      "file_test": {
+        "bytes": 47528,
+        "path": "/usr/bin/test",
+        "sha256": "sha256:a5ec8b3018ac45d0f5bb9bde5e56a02f02f1b796bc0a1b4671cae5155e709279"
+      },
+      "tshark": {
+        "bytes": 356048,
+        "path": "/usr/bin/tshark",
+        "sha256": "sha256:261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074"
+      }
+    },
+    "tshark_version": "TShark (Wireshark) 4.4.18."
+  }
+}

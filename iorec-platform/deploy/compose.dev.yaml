@@ -1,0 +1,10 @@
+# Dev overrides: docker compose -f deploy/compose.yaml -f deploy/compose.dev.yaml up
+services:
+  platform-api:
+    environment:
+      IOREC_AUTH_MODE: dev
+      IOREC_BOOTSTRAP_PROJECT_TOKEN: iorp_devtoken0000000000000000
+    ports: ["8080:8080"]
+  postgres:
+    ports: ["54329:5432"]
+    command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off"]

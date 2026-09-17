@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-16T06:22:42Z",
+  "subject": "iorec eCapture GoTLS bridge",
+  "status": "qualified_limited_matrix_cells",
+  "qualification_scope": {
+    "os": "Debian GNU/Linux 13.7 (trixie)",
+    "architecture": "x86_64",
+    "kernel": "6.12.94+deb13-cloud-amd64",
+    "go_versions": ["go1.24.13", "go1.25.13"],
+    "tls_library": "Go standard library crypto/tls",
+    "application_protocol": "HTTP/1.1",
+    "capture_filter": "cgroup-v2",
+    "upstream": "eCapture release v2.6.0",
+    "bridge_protocol": 2,
+    "tls_peer_validation": "private qualification certificate trusted explicitly by the client; DNS localhost SAN verification remained enabled"
+  },
+  "artifacts": {
+    "iorec": {
+      "version": "0.1.0",
+      "sha256": "23f72b5ac081effa94fe3e155bd5ad18789497aa183e83b9bc751940a7829352"
+    },
+    "bridge": {
+      "path": "tools/ecapture_bridge.py",
+      "helper_version": "1.1.0",
+      "sha256": "a0c6b283b14573b90291bb55f91b640d067f03b0229a27b1b5f2640de02f7d07"
+    },
+    "qualification_client_source": {
+      "path": "tools/fixtures/gotls_https_client.go",
+      "sha256": "e68832d24846af8049cd630a50114d3f6ec1b9fe42a2bf21f6fa5b09e9e9cda1"
+    },
+    "qualification_server_source": {
+      "path": "tools/fixtures/gotls_https_server.py",
+      "sha256": "13659da4dd84a9afdba436b171bb7221297ed584aa3eab650a6205d983c813a3"
+    },
+    "qualification_verifier": {
+      "path": "tools/verify_ecapture_gotls_export.py",
+      "sha256": "56cf80c030b0aa8cf67df41555ab3be80a71e20bcb0399c1b5e9c93b479e5bda"
+    },
+    "upstream_release_archive": {
+      "name": "ecapture-v2.6.0-linux-amd64.tar.gz",
+      "sha256": "6fc5306f55aad0902e91df522f0bf4aab4bb6ff9a01a354d447178e18e471d3d"
+    },
+    "upstream_executable": {
+      "sha256": "a090565b6d989a6525289c98bfd19c36eba40c8519c6f371d372a09e3e91f1b9",
+      "source_tag": "v2.6.0",
+      "source_commit": "d1d3d3c789740829d54986620ecaa81d3ea06a42",
+      "reported_version_string": "os_arch:v2.0.0-20260101-develop:default_kernel"
+    }
+  },
+  "build_provenance": {
+    "go1.24.13": {
+      "container_image": "golang@sha256:1a6d4452c65dea36aac2e2d606b01b4a029ec90cc1ae53890540ce6173ea77ac",
+      "client_sha256": "0272d8c0f6608215bf4106adab3b0f6ccd5663f545bd62fcda8ac419e66bf8fd",
+      "goos": "linux",
+      "goarch": "amd64",
+      "cgo_enabled": false,
+      "trimpath": true
+    },
+    "go1.25.13": {
+      "container_image": "golang@sha256:e401dae1bf814e29204a8cb7915682e1780951e609ca0dd8865ee1937f510c48",
+      "client_sha256": "f1493d81d0d9becf0a483a613c9888bedd3a6b540b1b5cbde65258ff9c1e82fd",
+      "goos": "linux",
+      "goarch": "amd64",
+      "cgo_enabled": false,
+      "trimpath": true
+    }
+  },
+  "runtime_configuration": {
+    "mapsize_kib": 4096,
+    "perf_reorder_lag_ms": 10,
+    "readiness_timeout_seconds": 20,
+    "shutdown_drain_seconds": 2,
+    "max_bridge_payload_bytes": 524288,
+    "upstream_gotls_segment_bytes": 16384,
+    "requests_per_version": 4,
+    "application_body_bytes_per_request": 65536,
+    "concurrent_outside_cgroup_requests_per_version": 2,
+    "concurrent_outside_cgroup_body_bytes_per_request": 32768,
+    "perf_event_paranoid": 3,
+    "unprivileged_bpf_disabled": 2,
+    "file_capabilities": [
+      "CAP_DAC_OVERRIDE",
+      "CAP_NET_ADMIN",
+      "CAP_SYS_PTRACE",
+      "CAP_SYS_ADMIN",
+      "CAP_SYS_RESOURCE",
+      "CAP_PERFMON",
+      "CAP_BPF"
+    ],
+    "recorder_user": "unprivileged",
+    "bridge_user": "unprivileged",
+    "target_user": "unprivileged",
+    "privileged_component": "private root-owned eCapture executable only"
+  },
+  "automated_tests": {
+    "ecapture_bridge_tests_passed": 11,
+    "gotls_export_verifier_tests_passed": 4,
+    "combined_python_bridge_and_verifier_tests_passed": 23,
+    "negative_cases": [
+      "missing GoTLS data marker",
+      "declared payload length disagreement",
+      "payload digest disagreement",
+      "event PID outside target binding",
+      "unexpected task marker",
+      "GoTLS libssl configuration misuse",
+      "upstream readiness deadline"
+    ]
+  },
+  "live_runs": [
+    {
+      "go_version": "go1.24.13",
+      "run_id": "run-01a0a8e0-16d8-71f4-aa33-ffd1cd9ca9dc",
+      "manifest_sha256": "1b59621c2411b127ef6779f3c293060a1bcf91d2a7793f6a9cb85a65b912d062",
+      "target_executable_sha256": "0272d8c0f6608215bf4106adab3b0f6ccd5663f545bd62fcda8ac419e66bf8fd",
+      "target_pid": 3391457,
+      "target_cgroup": "/sys/fs/cgroup/user.slice/user-1003.slice/user@1003.service/app.slice/run-p3391438-i49505261.scope/iorec-run-01a0a8e0-16d8-71f4-aa33-ffd1cd9ca9dc",
+      "status": "finished",
+      "target_exit_code": 0,
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "capture_drops": 0,
+      "manifest_events": 92,
+      "manifest_blobs": 70,
+      "probe_protocol_records": 70,
+      "probe_evidence_records": 68,
+      "probe_hits": 68,
+      "captured_connections": 4,
+      "request_stream_bytes": 263068,
+      "response_stream_bytes": 262840,
+      "application_body_bytes_each_direction": 262144,
+      "bidirectional_connection_pairing_valid": true,
+      "expected_inside_markers_complete": true,
+      "outside_cgroup_marker_occurrences": 0,
+      "all_payload_hashes_valid": true,
+      "final_complete": true,
+      "decrypted_protocol_export_sha256": "86f782efe3ca1abbac7c89672fa312ddf5ea7adca42df9b7950b37aa577d4844"
+    },
+    {
+      "go_version": "go1.25.13",
+      "run_id": "run-01a0a8e0-4635-742d-aeea-bd2d0218dda9",
+      "manifest_sha256": "18c8935c9c48f668873652af26e7c63d987ebf8ef712efbe8b35b336842e16fc",
+      "target_executable_sha256": "f1493d81d0d9becf0a483a613c9888bedd3a6b540b1b5cbde65258ff9c1e82fd",
+      "target_pid": 3391700,
+      "target_cgroup": "/sys/fs/cgroup/user.slice/user-1003.slice/user@1003.service/app.slice/run-p3391682-i49505505.scope/iorec-run-01a0a8e0-4635-742d-aeea-bd2d0218dda9",
+      "status": "finished",
+      "target_exit_code": 0,
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "capture_drops": 0,
+      "manifest_events": 94,
+      "manifest_blobs": 70,
+      "probe_protocol_records": 70,
+      "probe_evidence_records": 68,
+      "probe_hits": 68,
+      "captured_connections": 4,
+      "request_stream_bytes": 263068,
+      "response_stream_bytes": 262840,
+      "application_body_bytes_each_direction": 262144,
+      "bidirectional_connection_pairing_valid": true,
+      "expected_inside_markers_complete": true,
+      "outside_cgroup_marker_occurrences": 0,
+      "all_payload_hashes_valid": true,
+      "final_complete": true,
+      "decrypted_protocol_export_sha256": "a23cb35ba4c6d8d08bdd96c3610e374f57e11bbf4e786262c86a193ae2c8efb4"
+    }
+  ],
+  "fail_closed_evidence": {
+    "target_executable_path_and_sha256_echoed_by_ready": true,
+    "target_released_only_after_probe_ready": true,
+    "same_binary_outside_target_cgroup_excluded": true,
+    "write_and_read_tuple_directions_normalized_to_one_connection": true,
+    "source_drop_counters_feed_protocol_gap_and_final": true,
+    "nonzero_drop_or_incomplete_final_rejected_by_recorder": true,
+    "decrypted_exports_independently_reassembled_and_verified": true
+  },
+  "limitations": [
+    "These are exact Debian 13.7, Linux 6.12, x86-64, Go 1.24.13 and Go 1.25.13, eCapture v2.6.0, HTTP/1.1 cells; no wider Go, kernel, architecture, container, protocol, or Agent range is implied.",
+    "The qualification uses a purpose-built Go HTTPS client rather than a named production Agent or provider endpoint.",
+    "The private eCapture executable required a broad capability set including CAP_SYS_ADMIN; the recorder, bridge, server, and targets remained unprivileged.",
+    "The run manifest remains best-effort because this test qualifies privileged GoTLS plaintext capture, not complete logical inference or independently audited task egress.",
+    "The qualification binary includes the bridge implementation under test but predates the support-matrix and documentation updates made from these results; the final five-hour steady-state and 20-collector connected gates remain separate release requirements."
+  ]
+}

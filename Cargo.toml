@@ -1,0 +1,80 @@
+[package]
+name = "iorec"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+description = "A local, auditable flight recorder for agent inference I/O"
+license = "Apache-2.0 OR MIT"
+readme = "README.md"
+documentation = "https://docs.rs/iorec"
+keywords = ["observability", "llm", "agents", "inference", "recording"]
+categories = ["command-line-utilities", "development-tools::debugging"]
+exclude = [
+    "/iorec-platform/**",
+    "/platform/**",
+    "/tools/__pycache__/**",
+    "/tools/**/*.pyc",
+]
+
+[lib]
+name = "iorec"
+path = "src/lib.rs"
+
+[[bin]]
+name = "iorec"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0.100"
+axum = { version = "0.8.9", features = ["http1", "http2", "json", "macros", "tokio", "ws"] }
+bytes = "1.11.1"
+base64 = "0.22.1"
+chacha20poly1305 = { version = "0.11.0", features = ["zeroize"] }
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "serde", "std"] }
+clap = { version = "4.6.7", features = ["derive", "env"] }
+futures-util = "0.3.31"
+hex = "0.4.3"
+hkdf = "0.12.4"
+http = "1.4.0"
+http-body-util = "0.1.3"
+nix = { version = "0.31.3", features = ["fs", "process", "signal", "term"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["http2", "rustls", "stream"] }
+rcgen = { version = "0.14.10", default-features = false, features = ["aws_lc_rs", "pem", "zeroize"] }
+rustls = { version = "0.23.45", default-features = false, features = ["aws_lc_rs", "std", "tls12"] }
+rustls-platform-verifier = "0.7.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.149"
+serde_yaml_ng = "0.10.0"
+sha2 = "0.10.9"
+subtle = "2.6.1"
+tar = "0.4.44"
+tempfile = "3.23.0"
+thiserror = "2.0.17"
+time = { version = "0.3.55", default-features = false, features = ["std"] }
+tokio = { version = "1.53.1", features = ["fs", "io-std", "io-util", "macros", "net", "process", "rt-multi-thread", "signal", "sync", "time"] }
+tokio-rustls = { version = "0.26.5", default-features = false, features = ["tls12"] }
+tokio-stream = "0.1.17"
+tokio-tungstenite = { version = "0.29.0", features = ["rustls-tls-webpki-roots"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt"] }
+url = "2.5.8"
+uuid = { version = "1.26.1", features = ["serde", "v4", "v7"] }
+zeroize = "1.8.2"
+zstd = "0.13.3"
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+strip = "symbols"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+too_many_arguments = "allow"
+too_many_lines = "allow"

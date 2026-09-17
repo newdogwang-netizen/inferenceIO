@@ -1,0 +1,924 @@
+{
+  "configuration": {
+    "concurrency": 4,
+    "delay_ms": 5,
+    "max_run_blob_storage_bytes": 2147483648,
+    "payload_bytes": 1024,
+    "requests": 400,
+    "response_chunk_bytes": 256,
+    "response_chunks": 3,
+    "rounds": 5,
+    "warmup": 20
+  },
+  "created_at": "2026-09-15T11:34:24.071071+00:00",
+  "direct": {
+    "cpu_ms_per_request": 0.5237779999999999,
+    "cpu_seconds": 1.0475559999999997,
+    "error_samples": [],
+    "errors": 0,
+    "measurement_seconds": 22.255914183333516,
+    "mib_per_second": 0.11072537453613802,
+    "outer_wall_seconds": 23.676503172144294,
+    "requests": 2000,
+    "requests_per_second": 89.86375412508163,
+    "response_bytes": 2584000,
+    "rounds": 5,
+    "successes": 2000,
+    "system_cpu_seconds": 0.18489999999999954,
+    "ttft_ms": {
+      "max": 48.629603,
+      "min": 5.504991,
+      "p50": 43.962952,
+      "p95": 47.9652155,
+      "p99": 48.21247819,
+      "samples": 2000
+    },
+    "user_cpu_seconds": 0.8626560000000001
+  },
+  "format": "iorec-performance-report-v1",
+  "iorec": {
+    "path": "/home/Admin/inferenceIO/target/release/iorec",
+    "sha256": "sha256:d1c57ac789b5f461cd91b7574a02bce348e6952b186139cc5569f3f6b7923890",
+    "version": "iorec 0.1.0"
+  },
+  "methodology": {
+    "baseline": "same stdlib HTTP/SSE client directly to built-in fake server",
+    "cpu": "waited child user+system CPU; fake-server CPU excluded from both paths",
+    "recorded": "same client through one encrypted full-body iorec run per round",
+    "round_order": "alternating direct-first and recorded-first",
+    "startup_in_cpu_and_outer_wall": true,
+    "ttft": "client monotonic time from request start through first response body byte"
+  },
+  "overhead": {
+    "cpu_per_request_percent": 761.0329185265515,
+    "throughput_percent": -4.998842673615023,
+    "ttft_p50_percent": 8.529328285325333,
+    "ttft_p95_percent": 0.2184475747846859
+  },
+  "passed": true,
+  "platform": {
+    "cpu_count": 16,
+    "machine": "x86_64",
+    "python": "3.13.5",
+    "release": "6.12.94+deb13-cloud-amd64",
+    "system": "Linux"
+  },
+  "recorded": {
+    "cpu_ms_per_request": 4.509900999999999,
+    "cpu_seconds": 9.019801999999999,
+    "error_samples": [],
+    "errors": 0,
+    "measurement_seconds": 23.426992691121995,
+    "mib_per_second": 0.1051903872633055,
+    "outer_wall_seconds": 27.038230430334806,
+    "requests": 2000,
+    "requests_per_second": 85.37160643576456,
+    "response_bytes": 2584000,
+    "rounds": 5,
+    "successes": 2000,
+    "system_cpu_seconds": 5.218462,
+    "ttft_ms": {
+      "max": 52.077417,
+      "min": 41.337893,
+      "p50": 47.7126965,
+      "p95": 48.06999435,
+      "p99": 48.28225285,
+      "samples": 2000
+    },
+    "user_cpu_seconds": 3.8013399999999997
+  },
+  "run_validations": [
+    {
+      "attempt_count_matches": true,
+      "client_workload_passed": true,
+      "corrupt_blobs": 0,
+      "discarded_tail_bytes": 0,
+      "expected_attempts": 420,
+      "integrity_verifier": {
+        "checks": [
+          {
+            "detail": "status=finished",
+            "name": "run_finalized",
+            "passed": true
+          },
+          {
+            "detail": "discarded_tail_bytes=0",
+            "name": "event_log_committed",
+            "passed": true
+          },
+          {
+            "detail": "missing=0",
+            "name": "referenced_blobs_present",
+            "passed": true
+          },
+          {
+            "detail": "corrupt=0",
+            "name": "blob_integrity",
+            "passed": true
+          },
+          {
+            "detail": "authenticated=true",
+            "name": "manifest_authenticated",
+            "passed": true
+          }
+        ],
+        "manifest_claim": "best-effort",
+        "passed": true,
+        "profile": "integrity",
+        "run_id": "run-01a0a4d8-029f-76b9-97db-3c6cec091450"
+      },
+      "manifest": {
+        "command": {
+          "argv": [
+            "/usr/bin/python3",
+            "[REDACTED_ARG]",
+            "[REDACTED_ARG]",
+            "--url-env",
+            "[REDACTED_ARG]",
+            "--requests",
+            "[REDACTED_ARG]",
+            "--warmup",
+            "[REDACTED_ARG]",
+            "--concurrency",
+            "[REDACTED_ARG]",
+            "--payload-bytes",
+            "[REDACTED_ARG]",
+            "--response-chunks",
+            "[REDACTED_ARG]",
+            "--response-chunk-bytes",
+            "[REDACTED_ARG]",
+            "--delay-ms",
+            "[REDACTED_ARG]"
+          ],
+          "cwd": "/home/Admin/inferenceIO",
+          "environment": {
+            "COLORTERM": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "SHELL": "/bin/bash",
+            "TERM": "xterm-256color"
+          },
+          "executable": "/usr/bin/python3.13",
+          "executable_sha256": "sha256:889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+          "runtime": "python"
+        },
+        "counts": {
+          "blob_bytes": 951974,
+          "blob_storage_bytes": 1028822,
+          "blobs": 1601,
+          "completed_attempts": 420,
+          "errors": 0,
+          "events": 6329,
+          "incomplete_attempts": 0,
+          "input_tokens": 0,
+          "logical_inferences": 420,
+          "models": {
+            "iorec-perf-model": 420
+          },
+          "output_tokens": 0,
+          "transport_attempts": 420
+        },
+        "coverage": {
+          "all_attempts_have_terminal_state": true,
+          "capture_drops": 0,
+          "capture_sources": [
+            "adapter:none",
+            "correlation",
+            "correlator:bounded-unique",
+            "process",
+            "proxy",
+            "runner"
+          ],
+          "captured_request_payloads_complete": true,
+          "captured_response_payloads_complete": true,
+          "claim": "best-effort",
+          "known_gaps": [
+            "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+            "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+            "endpoint proxy is not independently cross-checked against a network capture",
+            "no agent-native lifecycle/model hook configured",
+            "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+            "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+            "v0.1 does not independently verify TLS or unknown egress"
+          ],
+          "observed_protocols": {
+            "http/1.1": 420
+          },
+          "unknown_egress": 0,
+          "unknown_tls_surfaces": 0,
+          "unparsed_connections": 0,
+          "unresolved_correlations": 420,
+          "unresolved_state_references": 0
+        },
+        "exit_code": 0,
+        "finished_at": "2026-09-15T11:33:40.434549900Z",
+        "policy": {
+          "allowed_paths": [],
+          "body_mode": "full",
+          "max_blob_bytes": 67108864,
+          "name": "default",
+          "redact_headers": [
+            "api-key",
+            "authentication",
+            "authorization",
+            "cookie",
+            "grpc-metadata-authorization",
+            "proxy-authorization",
+            "set-cookie",
+            "x-access-token",
+            "x-amz-security-token",
+            "x-api-key",
+            "x-auth-token",
+            "x-goog-api-key"
+          ]
+        },
+        "recorder_version": "0.1.0",
+        "run_id": "run-01a0a4d8-029f-76b9-97db-3c6cec091450",
+        "schema_version": 1,
+        "started_at": "2026-09-15T11:33:35.012172158Z",
+        "status": "finished",
+        "storage": {
+          "blobs": "blobs/",
+          "durability": "fsync-every-event",
+          "encryption": {
+            "algorithm": "XChaCha20-Poly1305",
+            "key_id": "c297393f3e1e305e6819b38c17c2e607be328374d7280003440c12a238c17c09",
+            "scope": [
+              "events",
+              "blobs"
+            ]
+          },
+          "events": "events.jsonl"
+        }
+      },
+      "missing_blobs": 0,
+      "run_dir": "/tmp/iorec-perf-5a2mv458/runs/run-01a0a4d8-029f-76b9-97db-3c6cec091450"
+    },
+    {
+      "attempt_count_matches": true,
+      "client_workload_passed": true,
+      "corrupt_blobs": 0,
+      "discarded_tail_bytes": 0,
+      "expected_attempts": 420,
+      "integrity_verifier": {
+        "checks": [
+          {
+            "detail": "status=finished",
+            "name": "run_finalized",
+            "passed": true
+          },
+          {
+            "detail": "discarded_tail_bytes=0",
+            "name": "event_log_committed",
+            "passed": true
+          },
+          {
+            "detail": "missing=0",
+            "name": "referenced_blobs_present",
+            "passed": true
+          },
+          {
+            "detail": "corrupt=0",
+            "name": "blob_integrity",
+            "passed": true
+          },
+          {
+            "detail": "authenticated=true",
+            "name": "manifest_authenticated",
+            "passed": true
+          }
+        ],
+        "manifest_claim": "best-effort",
+        "passed": true,
+        "profile": "integrity",
+        "run_id": "run-01a0a4d8-1a5e-7589-a111-4fe84083573c"
+      },
+      "manifest": {
+        "command": {
+          "argv": [
+            "/usr/bin/python3",
+            "[REDACTED_ARG]",
+            "[REDACTED_ARG]",
+            "--url-env",
+            "[REDACTED_ARG]",
+            "--requests",
+            "[REDACTED_ARG]",
+            "--warmup",
+            "[REDACTED_ARG]",
+            "--concurrency",
+            "[REDACTED_ARG]",
+            "--payload-bytes",
+            "[REDACTED_ARG]",
+            "--response-chunks",
+            "[REDACTED_ARG]",
+            "--response-chunk-bytes",
+            "[REDACTED_ARG]",
+            "--delay-ms",
+            "[REDACTED_ARG]"
+          ],
+          "cwd": "/home/Admin/inferenceIO",
+          "environment": {
+            "COLORTERM": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "SHELL": "/bin/bash",
+            "TERM": "xterm-256color"
+          },
+          "executable": "/usr/bin/python3.13",
+          "executable_sha256": "sha256:889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+          "runtime": "python"
+        },
+        "counts": {
+          "blob_bytes": 951974,
+          "blob_storage_bytes": 1028822,
+          "blobs": 1601,
+          "completed_attempts": 420,
+          "errors": 0,
+          "events": 6329,
+          "incomplete_attempts": 0,
+          "input_tokens": 0,
+          "logical_inferences": 420,
+          "models": {
+            "iorec-perf-model": 420
+          },
+          "output_tokens": 0,
+          "transport_attempts": 420
+        },
+        "coverage": {
+          "all_attempts_have_terminal_state": true,
+          "capture_drops": 0,
+          "capture_sources": [
+            "adapter:none",
+            "correlation",
+            "correlator:bounded-unique",
+            "process",
+            "proxy",
+            "runner"
+          ],
+          "captured_request_payloads_complete": true,
+          "captured_response_payloads_complete": true,
+          "claim": "best-effort",
+          "known_gaps": [
+            "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+            "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+            "endpoint proxy is not independently cross-checked against a network capture",
+            "no agent-native lifecycle/model hook configured",
+            "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+            "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+            "v0.1 does not independently verify TLS or unknown egress"
+          ],
+          "observed_protocols": {
+            "http/1.1": 420
+          },
+          "unknown_egress": 0,
+          "unknown_tls_surfaces": 0,
+          "unparsed_connections": 0,
+          "unresolved_correlations": 420,
+          "unresolved_state_references": 0
+        },
+        "exit_code": 0,
+        "finished_at": "2026-09-15T11:33:46.503324509Z",
+        "policy": {
+          "allowed_paths": [],
+          "body_mode": "full",
+          "max_blob_bytes": 67108864,
+          "name": "default",
+          "redact_headers": [
+            "api-key",
+            "authentication",
+            "authorization",
+            "cookie",
+            "grpc-metadata-authorization",
+            "proxy-authorization",
+            "set-cookie",
+            "x-access-token",
+            "x-amz-security-token",
+            "x-api-key",
+            "x-auth-token",
+            "x-goog-api-key"
+          ]
+        },
+        "recorder_version": "0.1.0",
+        "run_id": "run-01a0a4d8-1a5e-7589-a111-4fe84083573c",
+        "schema_version": 1,
+        "started_at": "2026-09-15T11:33:41.092545283Z",
+        "status": "finished",
+        "storage": {
+          "blobs": "blobs/",
+          "durability": "fsync-every-event",
+          "encryption": {
+            "algorithm": "XChaCha20-Poly1305",
+            "key_id": "c297393f3e1e305e6819b38c17c2e607be328374d7280003440c12a238c17c09",
+            "scope": [
+              "events",
+              "blobs"
+            ]
+          },
+          "events": "events.jsonl"
+        }
+      },
+      "missing_blobs": 0,
+      "run_dir": "/tmp/iorec-perf-5a2mv458/runs/run-01a0a4d8-1a5e-7589-a111-4fe84083573c"
+    },
+    {
+      "attempt_count_matches": true,
+      "client_workload_passed": true,
+      "corrupt_blobs": 0,
+      "discarded_tail_bytes": 0,
+      "expected_attempts": 420,
+      "integrity_verifier": {
+        "checks": [
+          {
+            "detail": "status=finished",
+            "name": "run_finalized",
+            "passed": true
+          },
+          {
+            "detail": "discarded_tail_bytes=0",
+            "name": "event_log_committed",
+            "passed": true
+          },
+          {
+            "detail": "missing=0",
+            "name": "referenced_blobs_present",
+            "passed": true
+          },
+          {
+            "detail": "corrupt=0",
+            "name": "blob_integrity",
+            "passed": true
+          },
+          {
+            "detail": "authenticated=true",
+            "name": "manifest_authenticated",
+            "passed": true
+          }
+        ],
+        "manifest_claim": "best-effort",
+        "passed": true,
+        "profile": "integrity",
+        "run_id": "run-01a0a4d8-56df-7232-9ae3-f0bd41fd0a1a"
+      },
+      "manifest": {
+        "command": {
+          "argv": [
+            "/usr/bin/python3",
+            "[REDACTED_ARG]",
+            "[REDACTED_ARG]",
+            "--url-env",
+            "[REDACTED_ARG]",
+            "--requests",
+            "[REDACTED_ARG]",
+            "--warmup",
+            "[REDACTED_ARG]",
+            "--concurrency",
+            "[REDACTED_ARG]",
+            "--payload-bytes",
+            "[REDACTED_ARG]",
+            "--response-chunks",
+            "[REDACTED_ARG]",
+            "--response-chunk-bytes",
+            "[REDACTED_ARG]",
+            "--delay-ms",
+            "[REDACTED_ARG]"
+          ],
+          "cwd": "/home/Admin/inferenceIO",
+          "environment": {
+            "COLORTERM": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "SHELL": "/bin/bash",
+            "TERM": "xterm-256color"
+          },
+          "executable": "/usr/bin/python3.13",
+          "executable_sha256": "sha256:889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+          "runtime": "python"
+        },
+        "counts": {
+          "blob_bytes": 951974,
+          "blob_storage_bytes": 1028822,
+          "blobs": 1601,
+          "completed_attempts": 420,
+          "errors": 0,
+          "events": 6329,
+          "incomplete_attempts": 0,
+          "input_tokens": 0,
+          "logical_inferences": 420,
+          "models": {
+            "iorec-perf-model": 420
+          },
+          "output_tokens": 0,
+          "transport_attempts": 420
+        },
+        "coverage": {
+          "all_attempts_have_terminal_state": true,
+          "capture_drops": 0,
+          "capture_sources": [
+            "adapter:none",
+            "correlation",
+            "correlator:bounded-unique",
+            "process",
+            "proxy",
+            "runner"
+          ],
+          "captured_request_payloads_complete": true,
+          "captured_response_payloads_complete": true,
+          "claim": "best-effort",
+          "known_gaps": [
+            "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+            "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+            "endpoint proxy is not independently cross-checked against a network capture",
+            "no agent-native lifecycle/model hook configured",
+            "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+            "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+            "v0.1 does not independently verify TLS or unknown egress"
+          ],
+          "observed_protocols": {
+            "http/1.1": 420
+          },
+          "unknown_egress": 0,
+          "unknown_tls_surfaces": 0,
+          "unparsed_connections": 0,
+          "unresolved_correlations": 420,
+          "unresolved_state_references": 0
+        },
+        "exit_code": 0,
+        "finished_at": "2026-09-15T11:34:01.937877111Z",
+        "policy": {
+          "allowed_paths": [],
+          "body_mode": "full",
+          "max_blob_bytes": 67108864,
+          "name": "default",
+          "redact_headers": [
+            "api-key",
+            "authentication",
+            "authorization",
+            "cookie",
+            "grpc-metadata-authorization",
+            "proxy-authorization",
+            "set-cookie",
+            "x-access-token",
+            "x-amz-security-token",
+            "x-api-key",
+            "x-auth-token",
+            "x-goog-api-key"
+          ]
+        },
+        "recorder_version": "0.1.0",
+        "run_id": "run-01a0a4d8-56df-7232-9ae3-f0bd41fd0a1a",
+        "schema_version": 1,
+        "started_at": "2026-09-15T11:33:56.581157884Z",
+        "status": "finished",
+        "storage": {
+          "blobs": "blobs/",
+          "durability": "fsync-every-event",
+          "encryption": {
+            "algorithm": "XChaCha20-Poly1305",
+            "key_id": "c297393f3e1e305e6819b38c17c2e607be328374d7280003440c12a238c17c09",
+            "scope": [
+              "events",
+              "blobs"
+            ]
+          },
+          "events": "events.jsonl"
+        }
+      },
+      "missing_blobs": 0,
+      "run_dir": "/tmp/iorec-perf-5a2mv458/runs/run-01a0a4d8-56df-7232-9ae3-f0bd41fd0a1a"
+    },
+    {
+      "attempt_count_matches": true,
+      "client_workload_passed": true,
+      "corrupt_blobs": 0,
+      "discarded_tail_bytes": 0,
+      "expected_attempts": 420,
+      "integrity_verifier": {
+        "checks": [
+          {
+            "detail": "status=finished",
+            "name": "run_finalized",
+            "passed": true
+          },
+          {
+            "detail": "discarded_tail_bytes=0",
+            "name": "event_log_committed",
+            "passed": true
+          },
+          {
+            "detail": "missing=0",
+            "name": "referenced_blobs_present",
+            "passed": true
+          },
+          {
+            "detail": "corrupt=0",
+            "name": "blob_integrity",
+            "passed": true
+          },
+          {
+            "detail": "authenticated=true",
+            "name": "manifest_authenticated",
+            "passed": true
+          }
+        ],
+        "manifest_claim": "best-effort",
+        "passed": true,
+        "profile": "integrity",
+        "run_id": "run-01a0a4d8-6e23-7764-9c76-8e6ec8c8d9a4"
+      },
+      "manifest": {
+        "command": {
+          "argv": [
+            "/usr/bin/python3",
+            "[REDACTED_ARG]",
+            "[REDACTED_ARG]",
+            "--url-env",
+            "[REDACTED_ARG]",
+            "--requests",
+            "[REDACTED_ARG]",
+            "--warmup",
+            "[REDACTED_ARG]",
+            "--concurrency",
+            "[REDACTED_ARG]",
+            "--payload-bytes",
+            "[REDACTED_ARG]",
+            "--response-chunks",
+            "[REDACTED_ARG]",
+            "--response-chunk-bytes",
+            "[REDACTED_ARG]",
+            "--delay-ms",
+            "[REDACTED_ARG]"
+          ],
+          "cwd": "/home/Admin/inferenceIO",
+          "environment": {
+            "COLORTERM": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "SHELL": "/bin/bash",
+            "TERM": "xterm-256color"
+          },
+          "executable": "/usr/bin/python3.13",
+          "executable_sha256": "sha256:889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+          "runtime": "python"
+        },
+        "counts": {
+          "blob_bytes": 951974,
+          "blob_storage_bytes": 1028822,
+          "blobs": 1601,
+          "completed_attempts": 420,
+          "errors": 0,
+          "events": 6329,
+          "incomplete_attempts": 0,
+          "input_tokens": 0,
+          "logical_inferences": 420,
+          "models": {
+            "iorec-perf-model": 420
+          },
+          "output_tokens": 0,
+          "transport_attempts": 420
+        },
+        "coverage": {
+          "all_attempts_have_terminal_state": true,
+          "capture_drops": 0,
+          "capture_sources": [
+            "adapter:none",
+            "correlation",
+            "correlator:bounded-unique",
+            "process",
+            "proxy",
+            "runner"
+          ],
+          "captured_request_payloads_complete": true,
+          "captured_response_payloads_complete": true,
+          "claim": "best-effort",
+          "known_gaps": [
+            "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+            "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+            "endpoint proxy is not independently cross-checked against a network capture",
+            "no agent-native lifecycle/model hook configured",
+            "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+            "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+            "v0.1 does not independently verify TLS or unknown egress"
+          ],
+          "observed_protocols": {
+            "http/1.1": 420
+          },
+          "unknown_egress": 0,
+          "unknown_tls_surfaces": 0,
+          "unparsed_connections": 0,
+          "unresolved_correlations": 420,
+          "unresolved_state_references": 0
+        },
+        "exit_code": 0,
+        "finished_at": "2026-09-15T11:34:07.931847731Z",
+        "policy": {
+          "allowed_paths": [],
+          "body_mode": "full",
+          "max_blob_bytes": 67108864,
+          "name": "default",
+          "redact_headers": [
+            "api-key",
+            "authentication",
+            "authorization",
+            "cookie",
+            "grpc-metadata-authorization",
+            "proxy-authorization",
+            "set-cookie",
+            "x-access-token",
+            "x-amz-security-token",
+            "x-api-key",
+            "x-auth-token",
+            "x-goog-api-key"
+          ]
+        },
+        "recorder_version": "0.1.0",
+        "run_id": "run-01a0a4d8-6e23-7764-9c76-8e6ec8c8d9a4",
+        "schema_version": 1,
+        "started_at": "2026-09-15T11:34:02.536735150Z",
+        "status": "finished",
+        "storage": {
+          "blobs": "blobs/",
+          "durability": "fsync-every-event",
+          "encryption": {
+            "algorithm": "XChaCha20-Poly1305",
+            "key_id": "c297393f3e1e305e6819b38c17c2e607be328374d7280003440c12a238c17c09",
+            "scope": [
+              "events",
+              "blobs"
+            ]
+          },
+          "events": "events.jsonl"
+        }
+      },
+      "missing_blobs": 0,
+      "run_dir": "/tmp/iorec-perf-5a2mv458/runs/run-01a0a4d8-6e23-7764-9c76-8e6ec8c8d9a4"
+    },
+    {
+      "attempt_count_matches": true,
+      "client_workload_passed": true,
+      "corrupt_blobs": 0,
+      "discarded_tail_bytes": 0,
+      "expected_attempts": 420,
+      "integrity_verifier": {
+        "checks": [
+          {
+            "detail": "status=finished",
+            "name": "run_finalized",
+            "passed": true
+          },
+          {
+            "detail": "discarded_tail_bytes=0",
+            "name": "event_log_committed",
+            "passed": true
+          },
+          {
+            "detail": "missing=0",
+            "name": "referenced_blobs_present",
+            "passed": true
+          },
+          {
+            "detail": "corrupt=0",
+            "name": "blob_integrity",
+            "passed": true
+          },
+          {
+            "detail": "authenticated=true",
+            "name": "manifest_authenticated",
+            "passed": true
+          }
+        ],
+        "manifest_claim": "best-effort",
+        "passed": true,
+        "profile": "integrity",
+        "run_id": "run-01a0a4d8-aaa3-7750-8e36-8286c513bf50"
+      },
+      "manifest": {
+        "command": {
+          "argv": [
+            "/usr/bin/python3",
+            "[REDACTED_ARG]",
+            "[REDACTED_ARG]",
+            "--url-env",
+            "[REDACTED_ARG]",
+            "--requests",
+            "[REDACTED_ARG]",
+            "--warmup",
+            "[REDACTED_ARG]",
+            "--concurrency",
+            "[REDACTED_ARG]",
+            "--payload-bytes",
+            "[REDACTED_ARG]",
+            "--response-chunks",
+            "[REDACTED_ARG]",
+            "--response-chunk-bytes",
+            "[REDACTED_ARG]",
+            "--delay-ms",
+            "[REDACTED_ARG]"
+          ],
+          "cwd": "/home/Admin/inferenceIO",
+          "environment": {
+            "COLORTERM": "",
+            "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8",
+            "SHELL": "/bin/bash",
+            "TERM": "xterm-256color"
+          },
+          "executable": "/usr/bin/python3.13",
+          "executable_sha256": "sha256:889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+          "runtime": "python"
+        },
+        "counts": {
+          "blob_bytes": 951974,
+          "blob_storage_bytes": 1028822,
+          "blobs": 1601,
+          "completed_attempts": 420,
+          "errors": 0,
+          "events": 6329,
+          "incomplete_attempts": 0,
+          "input_tokens": 0,
+          "logical_inferences": 420,
+          "models": {
+            "iorec-perf-model": 420
+          },
+          "output_tokens": 0,
+          "transport_attempts": 420
+        },
+        "coverage": {
+          "all_attempts_have_terminal_state": true,
+          "capture_drops": 0,
+          "capture_sources": [
+            "adapter:none",
+            "correlation",
+            "correlator:bounded-unique",
+            "process",
+            "proxy",
+            "runner"
+          ],
+          "captured_request_payloads_complete": true,
+          "captured_response_payloads_complete": true,
+          "claim": "best-effort",
+          "known_gaps": [
+            "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+            "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+            "endpoint proxy is not independently cross-checked against a network capture",
+            "no agent-native lifecycle/model hook configured",
+            "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+            "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+            "v0.1 does not independently verify TLS or unknown egress"
+          ],
+          "observed_protocols": {
+            "http/1.1": 420
+          },
+          "unknown_egress": 0,
+          "unknown_tls_surfaces": 0,
+          "unparsed_connections": 0,
+          "unresolved_correlations": 420,
+          "unresolved_state_references": 0
+        },
+        "exit_code": 0,
+        "finished_at": "2026-09-15T11:34:23.429338090Z",
+        "policy": {
+          "allowed_paths": [],
+          "body_mode": "full",
+          "max_blob_bytes": 67108864,
+          "name": "default",
+          "redact_headers": [
+            "api-key",
+            "authentication",
+            "authorization",
+            "cookie",
+            "grpc-metadata-authorization",
+            "proxy-authorization",
+            "set-cookie",
+            "x-access-token",
+            "x-amz-security-token",
+            "x-api-key",
+            "x-auth-token",
+            "x-goog-api-key"
+          ]
+        },
+        "recorder_version": "0.1.0",
+        "run_id": "run-01a0a4d8-aaa3-7750-8e36-8286c513bf50",
+        "schema_version": 1,
+        "started_at": "2026-09-15T11:34:18.024721464Z",
+        "status": "finished",
+        "storage": {
+          "blobs": "blobs/",
+          "durability": "fsync-every-event",
+          "encryption": {
+            "algorithm": "XChaCha20-Poly1305",
+            "key_id": "c297393f3e1e305e6819b38c17c2e607be328374d7280003440c12a238c17c09",
+            "scope": [
+              "events",
+              "blobs"
+            ]
+          },
+          "events": "events.jsonl"
+        }
+      },
+      "missing_blobs": 0,
+      "run_dir": "/tmp/iorec-perf-5a2mv458/runs/run-01a0a4d8-aaa3-7750-8e36-8286c513bf50"
+    }
+  ],
+  "schema_version": 1,
+  "work_dir": "/tmp/iorec-perf-5a2mv458"
+}

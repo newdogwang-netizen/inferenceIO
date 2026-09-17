@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "upstream_path": "/usr/local/libexec/iorec/ecapture-v2.6.0",
+  "upstream_sha256": "sha256:REPLACE_WITH_UNCOMPRESSED_EXECUTABLE_SHA256",
+  "upstream_release": "v2.6.0",
+  "module": "tls",
+  "libssl": "/usr/lib/x86_64-linux-gnu/libssl.so.3",
+  "mapsize_kib": 4096,
+  "perf_reorder_lag_ms": 10,
+  "readiness_timeout_seconds": 20,
+  "shutdown_drain_seconds": 2,
+  "max_payload_bytes": 524288
+}

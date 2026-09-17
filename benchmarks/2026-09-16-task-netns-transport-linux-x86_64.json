@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-16T03:12:36Z",
+  "subject": "iorec rootless proxy-only task-network transport boundary",
+  "status": "qualified_single_cell_transport_complete_and_bypass_fail_closed",
+  "qualification_scope": {
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "architecture": "x86_64",
+    "kernel": "6.12.94+deb13-cloud-amd64",
+    "backend": "rootless-user-netns-slirp4netns-nftables-v1",
+    "completeness_boundary": "target-network-namespace-ip-transport",
+    "target_identity": "original UID/GID retained; all target capability sets and bounding set empty; NoNewPrivs enabled",
+    "network_policy": "DNS and IPv6 disabled; loopback allowed; all non-loopback egress denied except IPv4 TCP to 10.0.2.2 at the exact recorder proxy port",
+    "capture": "immediate-mode classic pcap of all IPv4/IPv6 packets inside the target network namespace",
+    "upstream": "certificate-validating local HTTPS HTTP/1.1 fixture",
+    "comparison": "exact multiset comparison of decoded request/response body lengths and SHA-256 digests against proxy evidence"
+  },
+  "artifacts": {
+    "iorec_release": {
+      "version": "0.1.0",
+      "sha256": "8fd4f096eb0a8210dbe0a2cbabd94234883e70d7f4177722b0535119ed652b05"
+    },
+    "source_files": {
+      "src/task_netns.rs": "199abc036bb6a64d3dcbe4d2edfb52ee12cfa900320e66e39895211003a04451",
+      "src/pcap.rs": "0bfaa76fdb04bff86d6a35219b4c75f7ad34f30894ebd3839c405f778f406b23",
+      "src/runner.rs": "601c044d1f83e360d98ca788f461a21d0ce8a4deef90ed221f7146dc81def3a0",
+      "src/inspect.rs": "dbd1341c5c9be5c5796b98efbaa60c5f4abf273aaef4c72516f2d0ad0bef7bb5",
+      "src/transport_audit.rs": "507c60b1bfe01dcd411a6a16b96570e03cd886cab523a2c9be78a4c392a7899b",
+      "src/process_tracker.rs": "4ec830f82b9f6380c6756a758f11545425695b17741a442bca718357bf194b1c",
+      "src/probe_plan.rs": "368268be99b8ab5984e4c492c76e776ea6956255d6934989640b2fe715478083",
+      "src/artifact_export.rs": "f911d36b71fc0535a2abd8a40d8b0ec2f185531ebf14ad1c40a9223d737ba8f5",
+      "src/manifest.rs": "c2861938aa0bf90aa7ece9bcbb5dfa08074f58615036ca5b6584274c69dd7732",
+      "src/main.rs": "0dc2871dfefd84cf8799ab3bbc48dbbe7a4aeda89d22c741b26ac531b344291e",
+      "Cargo.toml": "4dc08d6cd66fedf68ffcc78f32b05f075e60eeda2f2343becf3215636606729a",
+      "Cargo.lock": "8d185c50f5fe348fa88b5211bdf8cf1b621bb3db56fc191320470d63b4ff763d"
+    },
+    "helpers": {
+      "slirp4netns": {
+        "version": "1.2.1",
+        "libslirp": "4.8.0",
+        "libseccomp": "2.6.0",
+        "sha256": "c51b2fda8e64140d8856060e1e845542d99994882136fe7ef21a64325a486dda"
+      },
+      "nftables": {
+        "version": "1.1.3",
+        "sha256": "57bdb96c8a48844ddd6dd469c267cda951b9a466be93d254c928891ed8c3b7f0"
+      },
+      "sysctl": {
+        "version": "procps-ng 4.0.4",
+        "sha256": "9b22424d8cfeee75372890163ba9a770817cf23d97e582a94749f940c10c62aa"
+      },
+      "util_linux": {
+        "version": "2.41.5",
+        "unshare_sha256": "e7d3961bd874d5a4fe531efe6feb61b358b8000bd8c5fe91c5f1bdd9af81a002",
+        "setpriv_sha256": "f7cedc63bbc1df7912b343a1240a77d16db7633563d69897ec8ad2a99c24024b",
+        "nsenter_sha256": "09ea3a612a16b59c04aa55d894a1e868deaddb8a6a9927c4f1993827a3554de1"
+      },
+      "uidmap": {
+        "version": "4.17.4",
+        "newuidmap_mode": "4755 root:root",
+        "newgidmap_mode": "4755 root:root",
+        "newuidmap_sha256": "0cc756b5234e731b57f4fe213665cddcbbcea2ed6930605523abb5e2a059fd24",
+        "newgidmap_sha256": "7b6b83b41e5d110d4c68f592159d0001164718c8e3eb3ba4654051cad1a29965"
+      },
+      "tcpdump": {
+        "version": "4.99.5",
+        "sha256": "0d426e2571a22de0d30996fd01bb44c1f267f33065023abea092c88bad16d2d2"
+      },
+      "tshark": {
+        "version": "4.4.18",
+        "sha256": "261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074"
+      }
+    },
+    "audit_reports": {
+      "positive_sha256": "04dbaa85ac084c2f9d400ae976f886280bbf5b76ea825f348d9c21141080e189",
+      "negative_sha256": "2779f205ecb2173148f013feffd234a19238160823c3983bedc535cf7c7ee438",
+      "mode": "0600"
+    }
+  },
+  "automated_gates": {
+    "rust_library_tests": 190,
+    "rust_library_passed": 190,
+    "cli_tests": 4,
+    "cli_passed": 4,
+    "proxy_integration_tests": 11,
+    "proxy_integration_passed": 11,
+    "runner_integration_tests": 22,
+    "runner_integration_passed": 22,
+    "rootless_positive_and_bypass_tests_repeated_in_parallel": 5,
+    "rootless_positive_and_bypass_test_cases_passed": 10,
+    "clippy_all_targets_all_features_warnings": 0,
+    "rust_1_89_all_targets_all_features_check_passed": true,
+    "release_build_passed": true,
+    "cargo_package_passed": true,
+    "cargo_package_files": 79,
+    "cargo_package_compressed_kib": 369.7
+  },
+  "live_runs": {
+    "positive": {
+      "run_id": "run-01a0a832-d983-751f-81bb-bb5c4e688da8",
+      "target_exit_code": 0,
+      "manifest_status": "finished",
+      "manifest_claim": "best-effort",
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "events": 46,
+      "blobs": 12,
+      "capture_drops": 0,
+      "unknown_tls_surfaces": 0,
+      "unparsed_connections": 0,
+      "unknown_egress": 0,
+      "firewall_before_target": {
+        "proxy_packets": 0,
+        "denied_packets": 0
+      },
+      "firewall_target_window": {
+        "proxy_packets": 7,
+        "denied_packets": 0
+      },
+      "firewall_post_target": {
+        "proxy_packets": 0,
+        "denied_packets": 0
+      },
+      "ipv6_disabled_at_start": true,
+      "ipv6_disabled_at_stop": true,
+      "pcap_packets_captured": 14,
+      "pcap_packets_received": 14,
+      "pcap_packets_missed": 0,
+      "pcap_packets_dropped": 0,
+      "pcap_records": 5,
+      "pcap_bytes": 1495,
+      "tls_key_records": 5,
+      "tls_key_bytes": 938,
+      "decoded_streams": 1,
+      "proxy_attempts": 1,
+      "matched_attempts": 1,
+      "missing_from_wire": 0,
+      "extra_on_wire": 0,
+      "ambiguous_signature_groups": 0,
+      "request_bytes": 49,
+      "request_sha256": "8853f01e17a2c74d5e19309409a35ce7a8c26d51281c540d80105e39461eb270",
+      "response_bytes": 26,
+      "response_sha256": "ab4beb7c349ba8c4b63672a795132d04d168c7c2d6f7a4b6d090c3724bee369f",
+      "payload_diff_passed": true,
+      "transport_complete": true,
+      "transport_audit_exit_status": 0,
+      "audit_gaps": []
+    },
+    "blocked_bypass": {
+      "run_id": "run-01a0a833-1781-7669-a1ea-12d3e7bb96c5",
+      "target_exit_code": 0,
+      "manifest_status": "finished",
+      "manifest_claim": "best-effort",
+      "manifest_authenticated": true,
+      "integrity_profile_passed": true,
+      "event_log_tail_bytes": 0,
+      "missing_blobs": 0,
+      "corrupt_blobs": 0,
+      "events": 58,
+      "blobs": 14,
+      "capture_drops": 0,
+      "unparsed_connections": 0,
+      "unknown_egress": 2,
+      "attempted_bypass": "1.1.1.1:80/tcp",
+      "firewall_target_window": {
+        "proxy_packets": 7,
+        "denied_packets": 1
+      },
+      "firewall_post_target": {
+        "proxy_packets": 0,
+        "denied_packets": 0
+      },
+      "pcap_packets_captured": 13,
+      "pcap_packets_received": 13,
+      "pcap_packets_missed": 0,
+      "pcap_packets_dropped": 0,
+      "pcap_records": 7,
+      "pcap_bytes": 1419,
+      "decoded_streams": 1,
+      "proxy_attempts": 1,
+      "matched_attempts": 1,
+      "missing_from_wire": 0,
+      "extra_on_wire": 0,
+      "ambiguous_signature_groups": 0,
+      "payload_diff_passed": true,
+      "transport_complete": false,
+      "transport_audit_exit_status": 3,
+      "audit_gaps": {
+        "unknown_egress": 2
+      }
+    }
+  },
+  "security_and_fail_closed_evidence": {
+    "target_released_only_after_namespace_policy_and_privilege_verification": true,
+    "all_target_capability_sets_zero": true,
+    "target_bounding_capability_set_zero": true,
+    "target_no_new_privileges": true,
+    "slirp_sandbox_and_seccomp_required": true,
+    "firewall_policy_exactly_parsed_before_and_after_target_and_at_stop": true,
+    "firewall_counter_regression_rejected": true,
+    "initialization_traffic_excluded_by_pre_target_counter_baseline": true,
+    "post_target_network_traffic_prevents_complete_helper_final": true,
+    "pcap_received_minus_captured_is_counted_as_loss": true,
+    "direct_ip_bypass_was_blocked": true,
+    "payload_diff_can_pass_while_unknown_egress_forces_incomplete": true,
+    "positive_audit_chain_valid": true,
+    "positive_audit_chain_records": 11,
+    "negative_audit_chain_valid": true,
+    "negative_audit_chain_records": 11,
+    "tcpdump_host_file_capabilities_added": false,
+    "qualification_left_no_slirp_tcpdump_or_unshare_helpers_running": true
+  },
+  "limitations": [
+    "Completeness is limited to target-network-namespace IP transport. Same-user Unix-domain IPC and shared host daemons, Agent lifecycle semantics, provider-hidden state, and host-wide traffic are outside this claim.",
+    "The policy deliberately blocks DNS, IPv6, auth, telemetry, update, and every other non-proxy endpoint. It is suitable only when all required target IP traffic can traverse the recorder proxy.",
+    "Only one Debian 13 Linux x86-64 kernel/helper/TShark/HTTP/1.1 cell is qualified. Container, arm64, macOS, other helper versions, WebSocket wire reconstruction, and HTTP/2 task-egress decoding remain unqualified.",
+    "The manifest remains best-effort. Only the separate schema-v2 audit report returned transport complete for the positive run.",
+    "The current-tree final operator-approved five-hour steady-state gate has not run; this qualification does not replace it."
+  ]
+}

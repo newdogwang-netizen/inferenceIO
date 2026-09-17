@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "format": "iorec-connected-soak-runtime-provenance-v1",
+  "captured_at": "2026-09-16T10:44:52Z",
+  "purpose": "Preserve non-qualifying historical provenance for the first final-candidate attempt without recording secrets or environment values.",
+  "qualification_status": {
+    "qualified": false,
+    "terminated_at": "2026-09-16T11:20:16Z",
+    "reason": "A requirement audit found that roadmap P3/UP-006 required platform-owned remote erasure, TTL, tombstones, shared-blob reference safety, and automatic delete_local propagation; those server-side features were absent from the tested images.",
+    "work_dir_preserved_at": "/tmp/iorec-connected5h-aborted-missing-retention-20260916T1120Z",
+    "report_written": false,
+    "supersedes_evidence": false,
+    "restart_required": true
+  },
+  "orchestrator": {
+    "pid": 4071700,
+    "elapsed_seconds_at_capture": 2949,
+    "report_target": "benchmarks/2026-09-16-connected-soak-5h-final-current-linux-x86_64.json",
+    "harness_path": "tools/connected_soak.py",
+    "harness_sha256": "275ecc5ed45cdc2579e2f0885d3434c6f28b3d7dae1d8592b1461ae44ff205a8"
+  },
+  "iorec": {
+    "path": "target/release/iorec",
+    "sha256": "b416dc616df451c3864549020cfcbc8993062f4e6f0c07080fc7984f848a89ec"
+  },
+  "compose": {
+    "project": "iorec-final-soak",
+    "base_file": {
+      "path": "iorec-platform/deploy/compose.yaml",
+      "sha256": "7e9ee81e3fc1bf9b283eddb714f98a18ef1350cbdc25b6ef02544d96cea27bf5"
+    },
+    "qualification_override": {
+      "path": "iorec-platform/deploy/compose.qualify.yaml",
+      "sha256": "6f1ef74aa35a7e248ba737a2de8f1151ec53a7d2f87518ccb5bc634a185328e3",
+      "effect": "publish platform-api only on 127.0.0.1:48090"
+    },
+    "container_config_files_label": [
+      "/home/Admin/inferenceIO/iorec-platform/deploy/compose.yaml",
+      "/home/Admin/inferenceIO/iorec-platform/deploy/compose.qualify.yaml"
+    ]
+  },
+  "containers": [
+    {
+      "service": "platform-api",
+      "name": "iorec-final-soak-platform-api-1",
+      "container_id": "d05a54bd63e62e39e6a6dc2a275206086a45ec4a7524b34f3ee0540f13146e8a",
+      "started_at_before_faults": "2026-09-16T09:55:27.699362425Z",
+      "image_id": "sha256:dd05dc3d8a3e7c46dc4887ff8035608a42fc4c38ace5ac2a50b9a8a8d145cf50",
+      "user": "nonroot",
+      "read_only_rootfs": true,
+      "cap_drop": ["ALL"],
+      "no_new_privileges": true
+    },
+    {
+      "service": "pipeline-worker",
+      "name": "iorec-final-soak-pipeline-worker-1",
+      "container_id": "630982bce111b427489ef12c5f2d33112f07b168dafaf51613d5142bf519046c",
+      "started_at_before_faults": "2026-09-16T09:55:28.107651393Z",
+      "image_id": "sha256:b2f57fbf9b32e25a408b2991d3563905b4e2dd48e6655dca9fd039a9c877b0ce",
+      "user": "65532:65532",
+      "read_only_rootfs": true,
+      "cap_drop": ["ALL"],
+      "no_new_privileges": true
+    },
+    {
+      "service": "pipeline-worker",
+      "name": "iorec-final-soak-pipeline-worker-2",
+      "container_id": "f12680f393d9ff4d59bf7f41c4e64cc51ceb4074ed4ffeca0d5f7842116b63e2",
+      "started_at_before_faults": "2026-09-16T09:55:27.87578812Z",
+      "image_id": "sha256:b2f57fbf9b32e25a408b2991d3563905b4e2dd48e6655dca9fd039a9c877b0ce",
+      "user": "65532:65532",
+      "read_only_rootfs": true,
+      "cap_drop": ["ALL"],
+      "no_new_privileges": true
+    },
+    {
+      "service": "web-console",
+      "name": "iorec-final-soak-web-console-1",
+      "container_id": "fdb8da734f4e739619f100862603b6375a9bf0fdcf7cfbcab3b77d6dd4510c0e",
+      "started_at_before_faults": "2026-09-16T09:55:27.876960823Z",
+      "image_id": "sha256:f390ac5054d42729258daaaa81a76a1fbd98b28e04547f61b96c3b0e7e25ee06",
+      "user": "65532:65532",
+      "read_only_rootfs": true,
+      "cap_drop": ["ALL"],
+      "no_new_privileges": true
+    },
+    {
+      "service": "postgres",
+      "name": "iorec-final-soak-postgres-1",
+      "container_id": "0800c8460cf29cee4f56dbfd42247d120f08fa1536b7ad5dd7e0f992cff71fd0",
+      "started_at_before_faults": "2026-09-16T09:55:22.044888009Z",
+      "image_id": "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+      "role": "Compose qualification dependency; application-container hardening assertions do not apply"
+    }
+  ],
+  "independent_observations": {
+    "api_outage": {
+      "scheduled_orchestrator_elapsed_seconds": 3600,
+      "container_finished_at": "2026-09-16T10:55:44.028449314Z",
+      "observer_confirmed_stopped_at": "2026-09-16T10:55:48Z",
+      "api_unavailable": true,
+      "container_restarted_at": "2026-09-16T11:10:44.77867815Z",
+      "observer_confirmed_ready_at": "2026-09-16T11:10:46Z",
+      "container_unavailable_seconds": 900.750228836,
+      "healthz_ready_after_restart": true,
+      "local_growth_sample_seconds": 55,
+      "local_event_logs": 20,
+      "local_event_logs_advanced": 20,
+      "minimum_event_log_byte_delta": 25990,
+      "maximum_event_log_byte_delta": 26730,
+      "orchestrator_and_core_soak_alive_after_sample": true,
+      "sample_completed_at": "2026-09-16T10:57:04Z",
+      "immediate_recovery_snapshot": {
+        "online_collectors": 20,
+        "recordings": 236,
+        "open_recordings": 20,
+        "attempts": 1140,
+        "inferences": 1140,
+        "active_jobs": 0,
+        "dead_jobs": 0,
+        "parse_lag_events": 0
+      },
+      "recovery_drained_snapshot": {
+        "observed_by": "2026-09-16T11:12:15Z",
+        "online_collectors": 20,
+        "recordings": 236,
+        "open_recordings": 0,
+        "attempts": 1520,
+        "inferences": 1520,
+        "active_jobs": 0,
+        "dead_jobs": 0,
+        "parse_lag_events": 0,
+        "manual_recovery_actions": 0
+      },
+      "verdict_scope": "Historical cross-check only. This attempt was intentionally terminated after the requirement gap was confirmed and cannot qualify any release."
+    }
+  },
+  "application_container_hardening_passed": true,
+  "secrets_included": false
+}

@@ -1,0 +1,957 @@
+package pipeline
+
+import (
+	"bufio"
+	"context"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"sort"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/heidihealth/iorec-platform/internal/jobs"
+	"github.com/heidihealth/iorec-platform/internal/objstore"
+	"github.com/heidihealth/iorec-platform/internal/protocol"
+)
+
+// NMessage is a provider-neutral message view.
+type NMessage struct {
+	Role       string      `json:"role"`
+	Text       string      `json:"text,omitempty"`
+	ToolCalls  []NToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string      `json:"tool_call_id,omitempty"`
+	Hash       string      `json:"hash"`
+}
+
+// NToolCall is a tool invocation requested by the model.
+type NToolCall struct {
+	ID       string `json:"id,omitempty"`
+	Name     string `json:"name"`
+	ArgsHash string `json:"args_hash,omitempty"`
+}
+
+// Normalized is stored in model_attempts.normalized / model_inferences.normalized.
+type Normalized struct {
+	APIMode            string         `json:"api_mode"`
+	Model              string         `json:"model,omitempty"`
+	Stream             bool           `json:"stream"`
+	System             string         `json:"system,omitempty"`
+	Messages           []NMessage     `json:"messages"`
+	Tools              []string       `json:"tools,omitempty"`
+	Params             map[string]any `json:"params,omitempty"`
+	PreviousResponseID string         `json:"previous_response_id,omitempty"`
+	ResponseID         string         `json:"response_id,omitempty"`
+	ServerStateRefs    []string       `json:"server_state_refs,omitempty"`
+	BodyUnavailable    bool           `json:"body_unavailable,omitempty"`
+	// response side
+	ResponseText      string         `json:"response_text,omitempty"`
+	ResponseToolCalls []NToolCall    `json:"response_tool_calls,omitempty"`
+	FinishReason      string         `json:"finish_reason,omitempty"`
+	StreamTerminated  *bool          `json:"stream_terminated,omitempty"`
+	Usage             map[string]any `json:"usage,omitempty"`
+	MessageHashes     []string       `json:"message_hashes"`
+	Fingerprint       string         `json:"fingerprint"`
+	InputHash         string         `json:"input_hash"`
+}
+
+func sha(s ...string) string {
+	h := sha256.New()
+	for _, x := range s {
+		h.Write([]byte(x))
+		h.Write([]byte{0})
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+func (n *Normalized) finalize() {
+	n.MessageHashes = n.MessageHashes[:0]
+	for i := range n.Messages {
+		m := &n.Messages[i]
+		var tc []string
+		for _, t := range m.ToolCalls {
+			tc = append(tc, t.Name+":"+t.ArgsHash)
+		}
+		m.Hash = sha(m.Role, m.Text, strings.Join(tc, ","), m.ToolCallID)[:32]
+		n.MessageHashes = append(n.MessageHashes, m.Hash)
+	}
+	tools := append([]string(nil), n.Tools...)
+	sort.Strings(tools)
+	n.Fingerprint = sha(normalizeWS(n.System), strings.Join(tools, ","))
+	n.InputHash = sha(n.Model, n.System, strings.Join(n.MessageHashes, ","), n.PreviousResponseID)
+}
+
+func normalizeWS(s string) string { return strings.Join(strings.Fields(s), " ") }
+
+// textOf flattens OpenAI/Anthropic/Gemini content shapes to text.
+func textOf(v any) string {
+	switch c := v.(type) {
+	case nil:
+		return ""
+	case string:
+		return c
+	case []any:
+		var sb strings.Builder
+		for _, part := range c {
+			if m, ok := part.(map[string]any); ok {
+				if t, ok := m["text"].(string); ok {
+					sb.WriteString(t)
+					continue
+				}
+				if t, ok := m["type"].(string); ok {
+					sb.WriteString("[" + t + "]")
+				}
+			}
+		}
+		return sb.String()
+	case map[string]any:
+		if t, ok := c["text"].(string); ok {
+			return t
+		}
+		b, _ := json.Marshal(c)
+		return string(b)
+	default:
+		b, _ := json.Marshal(c)
+		return string(b)
+	}
+}
+
+func argsHash(v any) string {
+	switch a := v.(type) {
+	case string:
+		return sha(a)[:16]
+	default:
+		b, _ := json.Marshal(a)
+		return sha(string(b))[:16]
+	}
+}
+
+// NormalizeRequest parses a provider request body.
+func NormalizeRequest(apiMode string, body []byte) (*Normalized, error) {
+	var req map[string]any
+	if err := json.Unmarshal(body, &req); err != nil {
+		return nil, fmt.Errorf("request body is not a JSON object: %w", err)
+	}
+	n := &Normalized{APIMode: apiMode, Params: map[string]any{}}
+	if m, ok := req["model"].(string); ok {
+		n.Model = m
+	}
+	if s, ok := req["stream"].(bool); ok {
+		n.Stream = s
+	}
+	for _, k := range []string{"temperature", "top_p", "max_tokens", "max_output_tokens", "max_completion_tokens", "reasoning_effort", "reasoning", "tool_choice", "store", "service_tier", "seed"} {
+		if v, ok := req[k]; ok {
+			n.Params[k] = v
+		}
+	}
+	switch apiMode {
+	case "chat_completions", "completions", "unknown":
+		msgs, _ := req["messages"].([]any)
+		for _, mv := range msgs {
+			m, _ := mv.(map[string]any)
+			role, _ := m["role"].(string)
+			nm := NMessage{Role: role, Text: textOf(m["content"])}
+			if role == "system" || role == "developer" {
+				if n.System != "" {
+					n.System += "\n"
+				}
+				n.System += nm.Text
+			}
+			if tcs, ok := m["tool_calls"].([]any); ok {
+				for _, tv := range tcs {
+					t, _ := tv.(map[string]any)
+					fn, _ := t["function"].(map[string]any)
+					name, _ := fn["name"].(string)
+					id, _ := t["id"].(string)
+					nm.ToolCalls = append(nm.ToolCalls, NToolCall{ID: id, Name: name, ArgsHash: argsHash(fn["arguments"])})
+				}
+			}
+			if id, ok := m["tool_call_id"].(string); ok {
+				nm.ToolCallID = id
+			}
+			n.Messages = append(n.Messages, nm)
+		}
+		if tools, ok := req["tools"].([]any); ok {
+			for _, tv := range tools {
+				t, _ := tv.(map[string]any)
+				if fn, ok := t["function"].(map[string]any); ok {
+					if name, ok := fn["name"].(string); ok {
+						n.Tools = append(n.Tools, name)
+					}
+				} else if name, ok := t["name"].(string); ok {
+					n.Tools = append(n.Tools, name)
+				}
+			}
+		}
+	case "responses", "codex_responses":
+		if ins, ok := req["instructions"].(string); ok {
+			n.System = ins
+		}
+		if prev, ok := req["previous_response_id"].(string); ok && prev != "" {
+			n.PreviousResponseID = prev
+			n.ServerStateRefs = append(n.ServerStateRefs, prev)
+		}
+		if conv, ok := req["conversation"]; ok && conv != nil {
+			n.ServerStateRefs = append(n.ServerStateRefs, "conversation:"+textOf(conv))
+		}
+		switch in := req["input"].(type) {
+		case string:
+			n.Messages = append(n.Messages, NMessage{Role: "user", Text: in})
+		case []any:
+			for _, iv := range in {
+				item, _ := iv.(map[string]any)
+				typ, _ := item["type"].(string)
+				switch typ {
+				case "function_call":
+					name, _ := item["name"].(string)
+					id, _ := item["call_id"].(string)
+					n.Messages = append(n.Messages, NMessage{Role: "assistant", ToolCalls: []NToolCall{{ID: id, Name: name, ArgsHash: argsHash(item["arguments"])}}})
+				case "function_call_output":
+					id, _ := item["call_id"].(string)
+					n.Messages = append(n.Messages, NMessage{Role: "tool", Text: textOf(item["output"]), ToolCallID: id})
+				default:
+					role, _ := item["role"].(string)
+					if role == "" {
+						role = "user"
+					}
+					n.Messages = append(n.Messages, NMessage{Role: role, Text: textOf(item["content"])})
+				}
+			}
+		}
+		if tools, ok := req["tools"].([]any); ok {
+			for _, tv := range tools {
+				t, _ := tv.(map[string]any)
+				if name, ok := t["name"].(string); ok {
+					n.Tools = append(n.Tools, name)
+				} else if typ, ok := t["type"].(string); ok {
+					n.Tools = append(n.Tools, typ)
+				}
+			}
+		}
+	case "anthropic_messages":
+		n.System = textOf(req["system"])
+		msgs, _ := req["messages"].([]any)
+		for _, mv := range msgs {
+			m, _ := mv.(map[string]any)
+			role, _ := m["role"].(string)
+			nm := NMessage{Role: role}
+			switch c := m["content"].(type) {
+			case string:
+				nm.Text = c
+			case []any:
+				var sb strings.Builder
+				for _, pv := range c {
+					p, _ := pv.(map[string]any)
+					switch p["type"] {
+					case "text":
+						t, _ := p["text"].(string)
+						sb.WriteString(t)
+					case "tool_use":
+						name, _ := p["name"].(string)
+						id, _ := p["id"].(string)
+						nm.ToolCalls = append(nm.ToolCalls, NToolCall{ID: id, Name: name, ArgsHash: argsHash(p["input"])})
+					case "tool_result":
+						id, _ := p["tool_use_id"].(string)
+						nm.ToolCallID = id
+						sb.WriteString(textOf(p["content"]))
+					default:
+						if t, ok := p["type"].(string); ok {
+							sb.WriteString("[" + t + "]")
+						}
+					}
+				}
+				nm.Text = sb.String()
+			}
+			n.Messages = append(n.Messages, nm)
+		}
+		if tools, ok := req["tools"].([]any); ok {
+			for _, tv := range tools {
+				t, _ := tv.(map[string]any)
+				if name, ok := t["name"].(string); ok {
+					n.Tools = append(n.Tools, name)
+				}
+			}
+		}
+	case "gemini_generate":
+		if si, ok := req["systemInstruction"].(map[string]any); ok {
+			n.System = textOf(si["parts"])
+		} else if si, ok := req["system_instruction"].(map[string]any); ok {
+			n.System = textOf(si["parts"])
+		}
+		if cc, ok := req["cachedContent"].(string); ok && cc != "" {
+			n.ServerStateRefs = append(n.ServerStateRefs, cc)
+		}
+		contents, _ := req["contents"].([]any)
+		for _, cv := range contents {
+			c, _ := cv.(map[string]any)
+			role, _ := c["role"].(string)
+			if role == "model" {
+				role = "assistant"
+			}
+			nm := NMessage{Role: role}
+			parts, _ := c["parts"].([]any)
+			var sb strings.Builder
+			for _, pv := range parts {
+				p, _ := pv.(map[string]any)
+				if t, ok := p["text"].(string); ok {
+					sb.WriteString(t)
+				}
+				if fc, ok := p["functionCall"].(map[string]any); ok {
+					name, _ := fc["name"].(string)
+					nm.ToolCalls = append(nm.ToolCalls, NToolCall{Name: name, ArgsHash: argsHash(fc["args"])})
+				}
+				if fr, ok := p["functionResponse"].(map[string]any); ok {
+					nm.Role = "tool"
+					name, _ := fr["name"].(string)
+					nm.ToolCallID = name
+					sb.WriteString(textOf(fr["response"]))
+				}
+			}
+			nm.Text = sb.String()
+			n.Messages = append(n.Messages, nm)
+		}
+		if tools, ok := req["tools"].([]any); ok {
+			for _, tv := range tools {
+				t, _ := tv.(map[string]any)
+				if fds, ok := t["functionDeclarations"].([]any); ok {
+					for _, fv := range fds {
+						f, _ := fv.(map[string]any)
+						if name, ok := f["name"].(string); ok {
+							n.Tools = append(n.Tools, name)
+						}
+					}
+				}
+			}
+		}
+	}
+	n.finalize()
+	return n, nil
+}
+
+// sseEvent is one parsed SSE event.
+type sseEvent struct {
+	Event string
+	Data  string
+}
+
+func parseSSE(raw string) []sseEvent {
+	var out []sseEvent
+	sc := bufio.NewScanner(strings.NewReader(raw))
+	sc.Buffer(make([]byte, 1<<20), 64<<20)
+	var cur sseEvent
+	var data []string
+	flush := func() {
+		if len(data) > 0 || cur.Event != "" {
+			cur.Data = strings.Join(data, "\n")
+			out = append(out, cur)
+		}
+		cur = sseEvent{}
+		data = nil
+	}
+	for sc.Scan() {
+		line := sc.Text()
+		if line == "" {
+			flush()
+			continue
+		}
+		if strings.HasPrefix(line, ":") {
+			continue
+		}
+		k, v, _ := strings.Cut(line, ":")
+		v = strings.TrimPrefix(v, " ")
+		switch k {
+		case "event":
+			cur.Event = v
+		case "data":
+			data = append(data, v)
+		}
+	}
+	flush()
+	return out
+}
+
+// ApplyStream folds SSE events into the normalized response fields.
+// It sets StreamTerminated when the provider's terminal marker was seen.
+func ApplyStream(n *Normalized, chunks []string) {
+	var text strings.Builder
+	terminated := false
+	toolCalls := map[int]*NToolCall{}
+	toolArgs := map[int]*strings.Builder{}
+	for _, raw := range chunks {
+		for _, ev := range parseSSE(raw) {
+			d := strings.TrimSpace(ev.Data)
+			if d == "[DONE]" {
+				terminated = true
+				continue
+			}
+			if d == "" {
+				continue
+			}
+			var obj map[string]any
+			if json.Unmarshal([]byte(d), &obj) != nil {
+				continue
+			}
+			switch n.APIMode {
+			case "chat_completions", "completions", "unknown":
+				if u, ok := obj["usage"].(map[string]any); ok && u != nil {
+					n.Usage = u
+				}
+				if m, ok := obj["model"].(string); ok && n.Model == "" {
+					n.Model = m
+				}
+				if id, ok := obj["id"].(string); ok {
+					n.ResponseID = id
+				}
+				choices, _ := obj["choices"].([]any)
+				for _, cv := range choices {
+					c, _ := cv.(map[string]any)
+					if fr, ok := c["finish_reason"].(string); ok && fr != "" {
+						n.FinishReason = fr
+					}
+					delta, _ := c["delta"].(map[string]any)
+					if t, ok := delta["content"].(string); ok {
+						text.WriteString(t)
+					}
+					if tcs, ok := delta["tool_calls"].([]any); ok {
+						for _, tv := range tcs {
+							t, _ := tv.(map[string]any)
+							idx := int(toFloat(t["index"]))
+							if toolCalls[idx] == nil {
+								toolCalls[idx] = &NToolCall{}
+								toolArgs[idx] = &strings.Builder{}
+							}
+							if id, ok := t["id"].(string); ok && id != "" {
+								toolCalls[idx].ID = id
+							}
+							if fn, ok := t["function"].(map[string]any); ok {
+								if name, ok := fn["name"].(string); ok && name != "" {
+									toolCalls[idx].Name = name
+								}
+								if a, ok := fn["arguments"].(string); ok {
+									toolArgs[idx].WriteString(a)
+								}
+							}
+						}
+					}
+				}
+			case "anthropic_messages":
+				typ, _ := obj["type"].(string)
+				switch typ {
+				case "message_start":
+					if msg, ok := obj["message"].(map[string]any); ok {
+						if m, ok := msg["model"].(string); ok && n.Model == "" {
+							n.Model = m
+						}
+						if id, ok := msg["id"].(string); ok {
+							n.ResponseID = id
+						}
+						if u, ok := msg["usage"].(map[string]any); ok {
+							n.Usage = mergeUsage(n.Usage, u)
+						}
+					}
+				case "content_block_start":
+					if cb, ok := obj["content_block"].(map[string]any); ok && cb["type"] == "tool_use" {
+						idx := int(toFloat(obj["index"]))
+						name, _ := cb["name"].(string)
+						id, _ := cb["id"].(string)
+						toolCalls[idx] = &NToolCall{ID: id, Name: name}
+						toolArgs[idx] = &strings.Builder{}
+					}
+				case "content_block_delta":
+					delta, _ := obj["delta"].(map[string]any)
+					if t, ok := delta["text"].(string); ok {
+						text.WriteString(t)
+					}
+					if pj, ok := delta["partial_json"].(string); ok {
+						idx := int(toFloat(obj["index"]))
+						if toolArgs[idx] != nil {
+							toolArgs[idx].WriteString(pj)
+						}
+					}
+				case "message_delta":
+					if delta, ok := obj["delta"].(map[string]any); ok {
+						if sr, ok := delta["stop_reason"].(string); ok {
+							n.FinishReason = sr
+						}
+					}
+					if u, ok := obj["usage"].(map[string]any); ok {
+						n.Usage = mergeUsage(n.Usage, u)
+					}
+				case "message_stop":
+					terminated = true
+				}
+			case "responses", "codex_responses":
+				typ, _ := obj["type"].(string)
+				switch typ {
+				case "response.output_text.delta":
+					if t, ok := obj["delta"].(string); ok {
+						text.WriteString(t)
+					}
+				case "response.output_item.done":
+					if item, ok := obj["item"].(map[string]any); ok && item["type"] == "function_call" {
+						name, _ := item["name"].(string)
+						id, _ := item["call_id"].(string)
+						n.ResponseToolCalls = append(n.ResponseToolCalls, NToolCall{ID: id, Name: name, ArgsHash: argsHash(item["arguments"])})
+					}
+				case "response.completed", "response.incomplete", "response.failed":
+					terminated = true
+					n.FinishReason = strings.TrimPrefix(typ, "response.")
+					if r, ok := obj["response"].(map[string]any); ok {
+						if id, ok := r["id"].(string); ok {
+							n.ResponseID = id
+						}
+						if u, ok := r["usage"].(map[string]any); ok {
+							n.Usage = u
+						}
+						if m, ok := r["model"].(string); ok && n.Model == "" {
+							n.Model = m
+						}
+					}
+				}
+			case "gemini_generate":
+				cands, _ := obj["candidates"].([]any)
+				for _, cv := range cands {
+					c, _ := cv.(map[string]any)
+					if content, ok := c["content"].(map[string]any); ok {
+						parts, _ := content["parts"].([]any)
+						for _, pv := range parts {
+							p, _ := pv.(map[string]any)
+							if t, ok := p["text"].(string); ok {
+								text.WriteString(t)
+							}
+							if fc, ok := p["functionCall"].(map[string]any); ok {
+								name, _ := fc["name"].(string)
+								n.ResponseToolCalls = append(n.ResponseToolCalls, NToolCall{Name: name, ArgsHash: argsHash(fc["args"])})
+							}
+						}
+					}
+					if fr, ok := c["finishReason"].(string); ok && fr != "" {
+						n.FinishReason = fr
+						terminated = true
+					}
+				}
+				if u, ok := obj["usageMetadata"].(map[string]any); ok {
+					n.Usage = u
+				}
+			}
+		}
+	}
+	for idx := 0; idx < len(toolCalls)+len(toolCalls); idx++ { // stable order by index
+		if tc, ok := toolCalls[idx]; ok {
+			tc.ArgsHash = argsHash(toolArgs[idx].String())
+			n.ResponseToolCalls = append(n.ResponseToolCalls, *tc)
+		}
+	}
+	n.ResponseText = text.String()
+	t := terminated
+	n.StreamTerminated = &t
+}
+
+// ApplyResponseBody extracts response fields from a non-streaming body.
+func ApplyResponseBody(n *Normalized, body []byte) {
+	var obj map[string]any
+	if json.Unmarshal(body, &obj) != nil {
+		return
+	}
+	if u, ok := obj["usage"].(map[string]any); ok {
+		n.Usage = u
+	}
+	if u, ok := obj["usageMetadata"].(map[string]any); ok {
+		n.Usage = u
+	}
+	if m, ok := obj["model"].(string); ok && n.Model == "" {
+		n.Model = m
+	}
+	if id, ok := obj["id"].(string); ok {
+		n.ResponseID = id
+	}
+	switch n.APIMode {
+	case "chat_completions", "completions", "unknown":
+		choices, _ := obj["choices"].([]any)
+		for _, cv := range choices {
+			c, _ := cv.(map[string]any)
+			if fr, ok := c["finish_reason"].(string); ok {
+				n.FinishReason = fr
+			}
+			msg, _ := c["message"].(map[string]any)
+			n.ResponseText += textOf(msg["content"])
+			if tcs, ok := msg["tool_calls"].([]any); ok {
+				for _, tv := range tcs {
+					t, _ := tv.(map[string]any)
+					fn, _ := t["function"].(map[string]any)
+					name, _ := fn["name"].(string)
+					id, _ := t["id"].(string)
+					n.ResponseToolCalls = append(n.ResponseToolCalls, NToolCall{ID: id, Name: name, ArgsHash: argsHash(fn["arguments"])})
+				}
+			}
+		}
+	case "anthropic_messages":
+		if sr, ok := obj["stop_reason"].(string); ok {
+			n.FinishReason = sr
+		}
+		content, _ := obj["content"].([]any)
+		for _, pv := range content {
+			p, _ := pv.(map[string]any)
+			if t, ok := p["text"].(string); ok {
+				n.ResponseText += t
+			}
+			if p["type"] == "tool_use" {
+				name, _ := p["name"].(string)
+				id, _ := p["id"].(string)
+				n.ResponseToolCalls = append(n.ResponseToolCalls, NToolCall{ID: id, Name: name, ArgsHash: argsHash(p["input"])})
+			}
+		}
+	case "responses", "codex_responses":
+		if st, ok := obj["status"].(string); ok {
+			n.FinishReason = st
+		}
+		out, _ := obj["output"].([]any)
+		for _, iv := range out {
+			item, _ := iv.(map[string]any)
+			switch item["type"] {
+			case "message":
+				n.ResponseText += textOf(item["content"])
+			case "function_call":
+				name, _ := item["name"].(string)
+				id, _ := item["call_id"].(string)
+				n.ResponseToolCalls = append(n.ResponseToolCalls, NToolCall{ID: id, Name: name, ArgsHash: argsHash(item["arguments"])})
+			}
+		}
+	case "gemini_generate":
+		cands, _ := obj["candidates"].([]any)
+		for _, cv := range cands {
+			c, _ := cv.(map[string]any)
+			if fr, ok := c["finishReason"].(string); ok {
+				n.FinishReason = fr
+			}
+			if content, ok := c["content"].(map[string]any); ok {
+				n.ResponseText += textOf(content["parts"])
+			}
+		}
+	}
+	t := true
+	n.StreamTerminated = &t
+}
+
+func mergeUsage(a, b map[string]any) map[string]any {
+	if a == nil {
+		a = map[string]any{}
+	}
+	for k, v := range b {
+		a[k] = v
+	}
+	return a
+}
+
+func toFloat(v any) float64 {
+	switch f := v.(type) {
+	case float64:
+		return f
+	case int:
+		return float64(f)
+	case json.Number:
+		x, _ := f.Float64()
+		return x
+	}
+	return 0
+}
+
+// bodyBytes returns the inline body or fetches the referenced blob.
+func (d *Deps) bodyBytes(ctx context.Context, project string, inline json.RawMessage, ref []byte) ([]byte, bool, error) {
+	const maximum = 64 << 20
+	if len(inline) > 0 {
+		if len(inline) > maximum {
+			return nil, false, fmt.Errorf("inline body exceeds processing limit %d", maximum)
+		}
+		// {"raw_base64": ...} wrapper is treated as opaque
+		var wrap struct {
+			RawBase64 string `json:"raw_base64"`
+		}
+		if json.Unmarshal(inline, &wrap) == nil && wrap.RawBase64 != "" {
+			return nil, false, nil
+		}
+		return inline, true, nil
+	}
+	if len(ref) == 0 {
+		return nil, false, nil
+	}
+	var key string
+	var declaredSize int64
+	err := d.DB.Pool.QueryRow(ctx, `select object_key, size from blobs where project_id=$1 and sha256=$2`, project, ref).Scan(&key, &declaredSize)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	if declaredSize < 0 || declaredSize > maximum {
+		return nil, false, nil
+	}
+	rc, err := d.Obj.Get(ctx, key)
+	if errors.Is(err, objstore.ErrNotFound) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	defer rc.Close()
+	b, err := io.ReadAll(io.LimitReader(rc, maximum+1))
+	if err != nil {
+		return nil, false, err
+	}
+	if len(b) > maximum || int64(len(b)) != declaredSize {
+		return nil, false, fmt.Errorf("blob object length does not match its catalog entry")
+	}
+	digest := sha256.Sum256(b)
+	if subtle.ConstantTimeCompare(digest[:], ref) != 1 {
+		return nil, false, fmt.Errorf("blob object digest does not match its catalog key")
+	}
+	return b, true, nil
+}
+
+// Normalize computes normalized views for attempts and observed inferences touched by the batch.
+func (d *Deps) Normalize(ctx context.Context, j *jobs.Job) error {
+	rec := *j.RecordingID
+	run := runIDOf(j)
+	var input struct {
+		batchRef
+		BlobArrived string `json:"blob_arrived"`
+	}
+	_ = json.Unmarshal(j.InputRef, &input)
+	var attemptIDs []string
+	var err error
+	if input.BlobArrived != "" {
+		ref, _ := hex.DecodeString(input.BlobArrived)
+		attemptIDs, err = scanStrings(d.DB.Pool.Query(ctx, `select id from model_attempts where capture_run_id=$1 and (request_body_ref=$2 or response_body_ref=$2)`, run, ref))
+	} else {
+		attemptIDs, err = scanStrings(d.DB.Pool.Query(ctx, `select distinct attempt_id from recording_events where recording_id=$1 and seq between $2 and $3 and attempt_id is not null`, rec, input.FirstSeq, input.LastSeq))
+		for i := range attemptIDs {
+			attemptIDs[i] = AttemptKey(run, attemptIDs[i])
+		}
+	}
+	if err != nil {
+		return err
+	}
+	for _, id := range attemptIDs {
+		if err := d.normalizeAttempt(ctx, j, run, id); err != nil {
+			return fmt.Errorf("normalize attempt %s: %w", id, err)
+		}
+	}
+	infIDs, err := scanStrings(d.DB.Pool.Query(ctx, `select distinct inference_id from recording_events where recording_id=$1 and seq between $2 and $3 and inference_id is not null and event='inference_request'`, rec, input.FirstSeq, input.LastSeq))
+	if err != nil {
+		return err
+	}
+	for _, id := range infIDs {
+		if err := d.normalizeInference(ctx, InferenceKey(run, id)); err != nil {
+			return fmt.Errorf("normalize inference %s: %w", id, err)
+		}
+	}
+	if input.BatchID != "" {
+		// mark batch parsed and advance parsed_seq over contiguous parsed batches
+		if err := d.DB.Tx(ctx, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(ctx, `update batches set parsed_at=now() where recording_id=$1 and batch_id=$2`, rec, input.BatchID); err != nil {
+				return err
+			}
+			var parsed int64
+			if err := tx.QueryRow(ctx, `select parsed_seq from recordings where id=$1 for update`, rec).Scan(&parsed); err != nil {
+				return err
+			}
+			for i := 0; i < 100000; i++ {
+				var last int64
+				err := tx.QueryRow(ctx, `select last_seq from batches where recording_id=$1 and first_seq=$2 and parsed_at is not null`, rec, parsed+1).Scan(&last)
+				if errors.Is(err, pgx.ErrNoRows) {
+					break
+				}
+				if err != nil {
+					return err
+				}
+				parsed = last
+			}
+			if _, err := tx.Exec(ctx, `update recordings set parsed_seq=$2, updated_at=now() where id=$1`, rec, parsed); err != nil {
+				return err
+			}
+			resolveInput := map[string]any{"recording_id": rec, "parsed_seq": parsed}
+			if input.Reprocess != "" {
+				resolveInput["reprocess"] = input.Reprocess
+			}
+			if _, err := jobs.Enqueue(ctx, tx, jobs.Spec{ProjectID: j.ProjectID, Type: jobs.TypeResolve, CaptureRunID: run, InputRef: resolveInput, ProcessorVersion: ResolverVersion, Priority: 6}); err != nil {
+				return err
+			}
+			return d.publishTx(ctx, tx, j.ProjectID, "recording", rec, "parsed_seq", parsed)
+		}); err != nil {
+			return err
+		}
+	} else {
+		return d.enqueueNext(ctx, j.ProjectID, jobs.TypeResolve, "", run, map[string]any{"recording_id": rec, "blob_arrived": input.BlobArrived}, ResolverVersion, 6)
+	}
+	return nil
+}
+
+func scanStrings(rows pgx.Rows, err error) ([]string, error) {
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
+func (d *Deps) normalizeAttempt(ctx context.Context, j *jobs.Job, run, id string) error {
+	var apiMode, terminal, nativeID string
+	var reqInline, respInline json.RawMessage
+	var reqRef, respRef []byte
+	var url *string
+	if err := d.DB.Pool.QueryRow(ctx, `select coalesce(api_mode,'unknown'), terminal_state, request_body, request_body_ref, response_body, response_body_ref, url, native_id from model_attempts where id=$1`, id).
+		Scan(&apiMode, &terminal, &reqInline, &reqRef, &respInline, &respRef, &url, &nativeID); err != nil {
+		return err
+	}
+	if apiMode == "unknown" && url != nil {
+		apiMode = detectAPIMode(*url)
+	}
+	body, ok, err := d.bodyBytes(ctx, j.ProjectID.String(), reqInline, reqRef)
+	if err != nil {
+		return err
+	}
+	var n *Normalized
+	if !ok {
+		n = &Normalized{APIMode: apiMode, BodyUnavailable: true}
+		n.finalize()
+	} else {
+		n, err = NormalizeRequest(apiMode, body)
+		if err != nil {
+			n = &Normalized{APIMode: apiMode, BodyUnavailable: true, Params: map[string]any{"parse_error": err.Error()}}
+			n.finalize()
+		}
+	}
+	// response
+	chunks, err := d.loadRunEvents(ctx, run, `and e.attempt_id=$2 and e.event in ('sse_chunk','sse_event')`, nativeID)
+	if err != nil {
+		return err
+	}
+	if len(chunks) > 0 {
+		var raws []string
+		streamBytes := 0
+		for _, c := range chunks {
+			if c.Event == protocol.EvSSEEvent {
+				raw, available, err := d.bodyBytes(ctx, j.ProjectID.String(), nil, c.PayloadSHA)
+				if err != nil {
+					return err
+				}
+				if !available || c.RawTruncated || streamBytes > (64<<20)-len(raw) {
+					n.BodyUnavailable = true
+					continue
+				}
+				streamBytes += len(raw)
+				raws = append(raws, string(raw))
+				continue
+			}
+			var p struct {
+				Raw   string `json:"raw"`
+				Event string `json:"event"`
+				Data  string `json:"data"`
+			}
+			if json.Unmarshal(c.Payload, &p) == nil {
+				if p.Raw != "" {
+					raws = append(raws, p.Raw)
+				} else if p.Data != "" || p.Event != "" {
+					s := ""
+					if p.Event != "" {
+						s += "event: " + p.Event + "\n"
+					}
+					s += "data: " + p.Data + "\n\n"
+					raws = append(raws, s)
+				}
+			}
+		}
+		ApplyStream(n, raws)
+		if n.StreamTerminated != nil && !*n.StreamTerminated && terminal == "completed" {
+			terminal = "truncated"
+		}
+	} else if rb, ok, err := d.bodyBytes(ctx, j.ProjectID.String(), respInline, respRef); err != nil {
+		return err
+	} else if ok {
+		ApplyResponseBody(n, rb)
+	} else if terminal == "completed" {
+		n.BodyUnavailable = true
+	}
+	nb, _ := json.Marshal(n)
+	var usage any
+	if n.Usage != nil {
+		usage, _ = json.Marshal(n.Usage)
+	}
+	fp, _ := hex.DecodeString(n.Fingerprint)
+	ih, _ := hex.DecodeString(n.InputHash)
+	_, err = d.DB.Pool.Exec(ctx, `update model_attempts set normalized=$2, api_mode=$3, model=coalesce(nullif($4,''), model), usage=coalesce($5::jsonb, usage), response_text=$6, request_fingerprint=$7, input_hash=$8, terminal_state=$9, processor_version=$10, updated_at=now() where id=$1`,
+		id, nb, n.APIMode, n.Model, usage, truncateStr(n.ResponseText, 200000), fp, ih, terminal, NormalizerVersion)
+	return err
+}
+
+func truncateStr(s string, n int) string {
+	if len(s) > n {
+		return s[:n]
+	}
+	return s
+}
+
+func (d *Deps) normalizeInference(ctx context.Context, id string) error {
+	var apiMode string
+	var req, resp json.RawMessage
+	if err := d.DB.Pool.QueryRow(ctx, `select coalesce(api_mode,'unknown'), request, response from model_inferences where id=$1`, id).Scan(&apiMode, &req, &resp); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return err
+	}
+	if len(req) == 0 {
+		return nil
+	}
+	if apiMode == "unknown" {
+		// Hermes hooks label api_mode as chat_completions/responses/anthropic_messages; fall back by shape
+		var probe map[string]any
+		_ = json.Unmarshal(req, &probe)
+		switch {
+		case probe["messages"] != nil && probe["system"] != nil:
+			apiMode = "anthropic_messages"
+		case probe["input"] != nil:
+			apiMode = "responses"
+		case probe["contents"] != nil:
+			apiMode = "gemini_generate"
+		default:
+			apiMode = "chat_completions"
+		}
+	}
+	n, err := NormalizeRequest(apiMode, req)
+	if err != nil {
+		return nil
+	}
+	if len(resp) > 0 {
+		ApplyResponseBody(n, resp)
+	}
+	nb, _ := json.Marshal(n)
+	fp, _ := hex.DecodeString(n.Fingerprint)
+	ih, _ := hex.DecodeString(n.InputHash)
+	var usage any
+	if n.Usage != nil {
+		usage, _ = json.Marshal(n.Usage)
+	}
+	_, err = d.DB.Pool.Exec(ctx, `update model_inferences set normalized=$2, api_mode=$3, model=coalesce(nullif($4,''), model), request_fingerprint=$5, input_hash=$6, usage=coalesce($7::jsonb, usage), processor_version=$8, updated_at=now() where id=$1`,
+		id, nb, n.APIMode, n.Model, fp, ih, usage, NormalizerVersion)
+	return err
+}
+
+func (d *Deps) publishTx(ctx context.Context, tx pgx.Tx, project interface{ String() string }, entityType, id, kind string, rev int64) error {
+	_, err := tx.Exec(ctx, `insert into notifications_outbox(project_id, entity_type, entity_id, kind, revision) values($1,$2,$3,$4,$5)`, project.String(), entityType, id, kind, rev)
+	return err
+}
