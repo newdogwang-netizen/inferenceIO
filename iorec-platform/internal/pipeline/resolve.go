@@ -392,10 +392,15 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 		start, end  time.Time
 		pid         int
 		fingerprint string
+		refs        []EvidenceRef
 	}
 	var spans []span
 	for key, ns := range bySession {
-		spans = append(spans, span{key, ns[0].At, ns[len(ns)-1].At, ns[0].PID, ns[0].Fingerprint})
+		var refs []EvidenceRef
+		for _, node := range ns {
+			refs = mergeEvidenceRefs(refs, node.Evidence)
+		}
+		spans = append(spans, span{key, ns[0].At, ns[len(ns)-1].At, ns[0].PID, ns[0].Fingerprint, refs})
 	}
 	for _, s := range spans {
 		if _, ok := parentOf[s.key]; ok {
@@ -409,7 +414,7 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 				parentOf[s.key] = struct {
 					parent string
 					ev     evidence
-				}{m.key, evidence{Kind: "nested_span", Weight: confFingerprint, Note: "child span nested in parent span, same pid, different fingerprint"}}
+				}{m.key, evidence{Kind: "nested_span", Weight: confFingerprint, Note: "child span nested in parent span, same pid, different fingerprint", Refs: mergeEvidenceRefs(m.refs, s.refs)}}
 				break
 			}
 		}
@@ -613,11 +618,12 @@ func absDur(a, b time.Time) time.Duration {
 // linkEvidence returns the strongest evidence that cur continues prev.
 func linkEvidence(prev, cur *inferenceNode) (evidence, bool) {
 	p, c := prev.Norm, cur.Norm
+	refs := mergeEvidenceRefs(prev.Evidence, cur.Evidence)
 	if c.PreviousResponseID != "" && p.ResponseID != "" && c.PreviousResponseID == p.ResponseID {
-		return evidence{Kind: "response_id_chain", Weight: confResponseID}, true
+		return evidence{Kind: "response_id_chain", Weight: confResponseID, Refs: refs}, true
 	}
 	if len(c.MessageHashes) > len(p.MessageHashes) && len(p.MessageHashes) > 0 && isPrefix(p.MessageHashes, c.MessageHashes) {
-		return evidence{Kind: "prefix_chain", Weight: confPrefixChain}, true
+		return evidence{Kind: "prefix_chain", Weight: confPrefixChain, Refs: refs}, true
 	}
 	for _, m := range c.Messages {
 		if m.ToolCallID == "" {
@@ -625,18 +631,33 @@ func linkEvidence(prev, cur *inferenceNode) (evidence, bool) {
 		}
 		for _, tc := range p.ResponseToolCalls {
 			if tc.ID != "" && tc.ID == m.ToolCallID {
-				return evidence{Kind: "tool_call_id_match", Weight: confToolCallID}, true
+				return evidence{Kind: "tool_call_id_match", Weight: confToolCallID, Refs: refs}, true
 			}
 		}
 	}
 	if prev.PID == cur.PID && prev.Fingerprint != "" && prev.Fingerprint == cur.Fingerprint && absDur(prev.At, cur.At) < adjacencyWindow {
 		// compaction: same fingerprint, prefix broke
-		return evidence{Kind: "fingerprint", Weight: confFingerprint, Note: "same system prompt/tools, prefix chain broken (possible compaction)"}, true
+		return evidence{Kind: "fingerprint", Weight: confFingerprint, Note: "same system prompt/tools, prefix chain broken (possible compaction)", Refs: refs}, true
 	}
 	if prev.PID == cur.PID && prev.PID != 0 && absDur(prev.At, cur.At) < adjacencyWindow {
-		return evidence{Kind: "temporal_pid", Weight: confTemporalPID}, true
+		return evidence{Kind: "temporal_pid", Weight: confTemporalPID, Refs: refs}, true
 	}
 	return evidence{}, false
+}
+
+func mergeEvidenceRefs(groups ...[]EvidenceRef) []EvidenceRef {
+	seen := make(map[EvidenceRef]struct{})
+	var merged []EvidenceRef
+	for _, group := range groups {
+		for _, ref := range group {
+			if _, exists := seen[ref]; exists {
+				continue
+			}
+			seen[ref] = struct{}{}
+			merged = append(merged, ref)
+		}
+	}
+	return merged
 }
 
 func isPrefix(a, b []string) bool {

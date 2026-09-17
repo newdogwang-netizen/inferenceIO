@@ -198,18 +198,29 @@ func (d *Deps) Rules(ctx context.Context, j *jobs.Job) error {
 			}
 		}
 		// duplicate_request: same input_hash across different inferences (non-retry) in run
-		drows, err := pool.Query(ctx, `select encode(input_hash,'hex'), array_agg(id), min(recording_id) from model_inferences where capture_run_id=$1 and input_hash is not null group by input_hash having count(*) > 1`, run)
+		drows, err := pool.Query(ctx, `select encode(input_hash,'hex'), array_agg(id order by id), min(recording_id), jsonb_agg(evidence_refs order by id)
+			from model_inferences where capture_run_id=$1 and input_hash is not null group by input_hash having count(*) > 1`, run)
 		if err != nil {
 			return err
 		}
 		for drows.Next() {
 			var h, rec string
 			var ids []string
-			if err := drows.Scan(&h, &ids, &rec); err != nil {
+			var groupedEvidence json.RawMessage
+			if err := drows.Scan(&h, &ids, &rec, &groupedEvidence); err != nil {
 				drows.Close()
 				return err
 			}
-			findings = append(findings, Finding{RuleID: "duplicate_request", Severity: "info", Title: "相同输入被作为不同逻辑调用发送多次", Detail: map[string]any{"input_hash": h, "inference_ids": ids}, Evidence: []EvidenceRef{{rec, 1, 1}}, EvidenceKey: h, RecordingID: rec})
+			var evidenceGroups [][]EvidenceRef
+			if err := json.Unmarshal(groupedEvidence, &evidenceGroups); err != nil {
+				drows.Close()
+				return fmt.Errorf("decode duplicate request evidence: %w", err)
+			}
+			var refs []EvidenceRef
+			for _, group := range evidenceGroups {
+				refs = mergeEvidenceRefs(refs, group)
+			}
+			findings = append(findings, Finding{RuleID: "duplicate_request", Severity: "info", Title: "相同输入被作为不同逻辑调用发送多次", Detail: map[string]any{"input_hash": h, "inference_ids": ids}, Evidence: refs, EvidenceKey: run + "#" + h, RecordingID: rec})
 		}
 		drows.Close()
 		// tool_loop: same tool + args repeated >=3 consecutively within a session

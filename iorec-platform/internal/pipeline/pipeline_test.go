@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -409,6 +410,96 @@ func TestResolvePromotesNativeTaskIDToStableCaptureTaskKey(t *testing.T) {
 	}
 }
 
+func TestResolvePersistsRawEvidenceForInferredRelations(t *testing.T) {
+	db := pipelineTestDB(t)
+	ctx := context.Background()
+	tenant, project := uuid.New(), uuid.New()
+	run := "run-relation-evidence-" + uuid.NewString()[:8]
+	recording := run + "#0000"
+	if _, err := db.Pool.Exec(ctx, `insert into tenants(id,name) values($1,$2)`, tenant, "t-"+tenant.String()[:8]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into projects(id,tenant_id,name) values($1,$2,'p')`, project, tenant); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into capture_runs(id,project_id) values($1,$2)`, run, project); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into recordings(id,project_id,capture_run_id,state,durable_seq,parsed_seq,final_seq) values($1,$2,$3,'sealed',4,4,4)`, recording, project, run); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Now().UTC()
+	type relationFixture struct {
+		nativeID, sessionID, fingerprint string
+		at                               time.Time
+		seq                              int64
+		messages                         []string
+	}
+	fixtures := []relationFixture{
+		{"parent-1", "parent-session", "aa", now, 1, []string{"parent-1"}},
+		{"child-1", "child-session", "bb", now.Add(time.Second), 2, []string{"child-1"}},
+		{"child-2", "child-session", "bb", now.Add(2 * time.Second), 3, []string{"child-1", "child-2"}},
+		{"parent-2", "parent-session", "aa", now.Add(3 * time.Second), 4, []string{"parent-1", "parent-2"}},
+	}
+	for _, fixture := range fixtures {
+		norm, err := json.Marshal(Normalized{
+			APIMode:       "chat_completions",
+			Fingerprint:   fixture.fingerprint,
+			MessageHashes: fixture.messages,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		refs, err := json.Marshal([]EvidenceRef{{RecordingID: recording, FirstSeq: fixture.seq, LastSeq: fixture.seq}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Pool.Exec(ctx, `insert into model_inferences(id,native_id,recording_id,capture_run_id,project_id,status,first_attempt_at,api_mode,request_fingerprint,normalized,session_id,pid,evidence_refs,processor_version)
+			values($1,$2,$3,$4,$5,'observed',$6,'chat_completions',decode($7,'hex'),$8,$9,42,$10,'test')`,
+			InferenceKey(run, fixture.nativeID), fixture.nativeID, recording, run, project, fixture.at, fixture.fingerprint, norm, fixture.sessionID, refs); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	job := &jobs.Job{ProjectID: project, Type: jobs.TypeResolve, RecordingID: &recording, CaptureRunID: &run, ProcessorVersion: ResolverVersion}
+	if err := (&Deps{DB: db}).Resolve(ctx, job); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := db.Pool.Query(ctx, `select type,evidence from relations where capture_run_id=$1 and type in ('follows','parent_of') and superseded_by is null order by type,from_id`, run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		var relationType string
+		var raw json.RawMessage
+		if err := rows.Scan(&relationType, &raw); err != nil {
+			t.Fatal(err)
+		}
+		var evidenceChain []evidence
+		if err := json.Unmarshal(raw, &evidenceChain); err != nil {
+			t.Fatalf("%s relation has invalid evidence JSON %s: %v", relationType, raw, err)
+		}
+		if len(evidenceChain) != 1 || len(evidenceChain[0].Refs) == 0 {
+			t.Fatalf("%s relation is not traceable to raw recording evidence: %s", relationType, raw)
+		}
+		for _, ref := range evidenceChain[0].Refs {
+			if ref.RecordingID != recording || ref.FirstSeq < 1 || ref.LastSeq > 4 || ref.FirstSeq > ref.LastSeq {
+				t.Fatalf("%s relation has invalid raw evidence ref: %+v", relationType, ref)
+			}
+		}
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if count != 3 {
+		t.Fatalf("expected two follows and one inferred parent_of relation, got %d", count)
+	}
+}
+
 func TestStableTaskIdentityRejectsCrossTaskEvidence(t *testing.T) {
 	current := "task-a"
 	if err := mergeStableIdentity(&current, "", "task"); err != nil || current != "task-a" {
@@ -490,6 +581,88 @@ func TestMissingResponseProjectionRuleOnlyFlagsSuccessfulModelOutput(t *testing.
 		if missing {
 			t.Fatalf("%s was incorrectly flagged as a missing response projection", name)
 		}
+	}
+}
+
+func TestDuplicateRequestFindingIsScopedToCaptureRun(t *testing.T) {
+	db := pipelineTestDB(t)
+	ctx := context.Background()
+	tenant, project := uuid.New(), uuid.New()
+	if _, err := db.Pool.Exec(ctx, `insert into tenants(id,name) values($1,$2)`, tenant, "t-"+tenant.String()[:8]); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into projects(id,tenant_id,name) values($1,$2,'p')`, project, tenant); err != nil {
+		t.Fatal(err)
+	}
+
+	runs := []string{"run-duplicate-a-" + uuid.NewString()[:8], "run-duplicate-b-" + uuid.NewString()[:8]}
+	for _, run := range runs {
+		recording := run + "#0000"
+		if _, err := db.Pool.Exec(ctx, `insert into capture_runs(id,project_id) values($1,$2)`, run, project); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Pool.Exec(ctx, `insert into recordings(id,project_id,capture_run_id,state,durable_seq,parsed_seq,final_seq,coverage) values($1,$2,$3,'sealed',2,2,2,'{}')`, recording, project, run); err != nil {
+			t.Fatal(err)
+		}
+		for index := 1; index <= 2; index++ {
+			nativeID := fmt.Sprintf("inference-%d", index)
+			if _, err := db.Pool.Exec(ctx, `insert into model_inferences(id,native_id,recording_id,capture_run_id,project_id,status,first_attempt_at,input_hash,evidence_refs,processor_version)
+				values($1,$2,$3,$4,$5,'observed',now()+($6 * interval '1 second'),decode('aa','hex'),$7,'test')`,
+				InferenceKey(run, nativeID), nativeID, recording, run, project, index,
+				fmt.Sprintf(`[{"recording_id":%q,"first_seq":%d,"last_seq":%d}]`, recording, index, index)); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+
+	deps := &Deps{DB: db}
+	// Re-run the first capture after the second one to prove that identical
+	// input hashes cannot overwrite or move a finding between capture runs.
+	for _, run := range []string{runs[0], runs[1], runs[0]} {
+		if err := deps.Rules(ctx, &jobs.Job{ProjectID: project, Type: jobs.TypeRules, CaptureRunID: &run, ProcessorVersion: RulesVersion}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows, err := db.Pool.Query(ctx, `select capture_run_id,recording_id,evidence_key,detail,evidence_refs from findings where project_id=$1 and rule_id='duplicate_request' and status='open' order by capture_run_id`, project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	count := 0
+	for rows.Next() {
+		var captureRun, recording, evidenceKey string
+		var detail, rawEvidence json.RawMessage
+		if err := rows.Scan(&captureRun, &recording, &evidenceKey, &detail, &rawEvidence); err != nil {
+			t.Fatal(err)
+		}
+		if count >= len(runs) {
+			t.Fatalf("unexpected extra duplicate finding for capture %q", captureRun)
+		}
+		if captureRun != runs[count] || recording != captureRun+"#0000" || !strings.HasPrefix(evidenceKey, captureRun+"#") {
+			t.Fatalf("duplicate finding crossed capture boundary: run=%q recording=%q key=%q", captureRun, recording, evidenceKey)
+		}
+		var decoded struct {
+			InferenceIDs []string `json:"inference_ids"`
+		}
+		if err := json.Unmarshal(detail, &decoded); err != nil || len(decoded.InferenceIDs) != 2 {
+			t.Fatalf("invalid duplicate finding detail %s: %v", detail, err)
+		}
+		for _, id := range decoded.InferenceIDs {
+			if !strings.HasPrefix(id, captureRun+"~") {
+				t.Fatalf("finding for %q contains inference from another capture: %q", captureRun, id)
+			}
+		}
+		var refs []EvidenceRef
+		if err := json.Unmarshal(rawEvidence, &refs); err != nil || len(refs) != 2 || refs[0].FirstSeq != 1 || refs[1].FirstSeq != 2 {
+			t.Fatalf("duplicate finding did not preserve inference evidence: %s err=%v", rawEvidence, err)
+		}
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if count != len(runs) {
+		t.Fatalf("expected one duplicate finding per capture run, got %d", count)
 	}
 }
 
@@ -694,10 +867,15 @@ func TestResponsesAPIStateRefs(t *testing.T) {
 	if n.PreviousResponseID != "resp_1" || len(n.ServerStateRefs) != 1 || n.Messages[0].Role != "tool" || n.Messages[0].ToolCallID != "c1" || n.Tools[0] != "web_search" {
 		t.Fatalf("unexpected %+v", n)
 	}
-	prev := &inferenceNode{Norm: &Normalized{APIMode: "responses", ResponseID: "resp_1", MessageHashes: []string{"x"}}}
-	ev, ok := linkEvidence(prev, &inferenceNode{Norm: n})
+	prevRef := EvidenceRef{RecordingID: "recording-1", FirstSeq: 1, LastSeq: 2}
+	curRef := EvidenceRef{RecordingID: "recording-1", FirstSeq: 3, LastSeq: 4}
+	prev := &inferenceNode{Norm: &Normalized{APIMode: "responses", ResponseID: "resp_1", MessageHashes: []string{"x"}}, Evidence: []EvidenceRef{prevRef}}
+	ev, ok := linkEvidence(prev, &inferenceNode{Norm: n, Evidence: []EvidenceRef{prevRef, curRef}})
 	if !ok || ev.Kind != "response_id_chain" {
 		t.Fatalf("want response_id_chain got %+v", ev)
+	}
+	if len(ev.Refs) != 2 || ev.Refs[0] != prevRef || ev.Refs[1] != curRef {
+		t.Fatalf("relationship evidence refs were not preserved and deduplicated: %+v", ev.Refs)
 	}
 }
 
