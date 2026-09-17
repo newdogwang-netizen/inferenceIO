@@ -490,6 +490,13 @@ func TestTransportAuditPersistsVerifiedProofAndCoverageConsumesIt(t *testing.T) 
 	if !coverage.PlatformTransportProofVerified || coverage.PlatformTransportProofVersion != TransportAuditVersion || coverage.Claim != "client-complete" {
 		t.Fatalf("coverage did not consume exact platform proof: %+v", coverage)
 	}
+	var coverageRulesJobs int
+	if err := db.Pool.QueryRow(ctx, `select count(*) from processing_jobs where capture_run_id=$1 and type=$2 and input_ref->>'coverage_recording_id'=$3`, run, jobs.TypeRules, recording).Scan(&coverageRulesJobs); err != nil {
+		t.Fatal(err)
+	}
+	if coverageRulesJobs != 1 {
+		t.Fatalf("coverage did not schedule a final rules refresh: jobs=%d", coverageRulesJobs)
+	}
 
 	insertEvent("proxy", "request_body_finished", "", map[string]any{}, nil, nil, "", "complete")
 	if err := deps.TransportAudit(ctx, transportJob); err != nil {

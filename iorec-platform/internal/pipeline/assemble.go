@@ -142,7 +142,50 @@ type attemptStart struct {
 	Host     string          `json:"host"`
 	Protocol string          `json:"protocol"`
 	APIMode  string          `json:"api_mode"`
+	Model    string          `json:"model"`
 	Headers  json.RawMessage `json:"headers"`
+}
+
+type hookAPIEvent struct {
+	Model           string          `json:"model"`
+	APIMode         string          `json:"api_mode"`
+	BaseURL         string          `json:"base_url"`
+	Request         json.RawMessage `json:"request"`
+	RequestMessages json.RawMessage `json:"request_messages"`
+	Response        json.RawMessage `json:"response"`
+	Usage           json.RawMessage `json:"usage"`
+	StatusCode      *int            `json:"status_code"`
+	Error           struct {
+		Type    string `json:"type"`
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+// hookRequestBody preserves the directly observed request when available. A
+// Hermes hook may instead send only a bounded preview plus a compact message
+// list. In that case the synthetic body remains useful for normalization but
+// carries an explicit marker so it can never be mistaken for a complete wire
+// request.
+func hookRequestBody(p hookAPIEvent) json.RawMessage {
+	if len(p.Request) > 0 {
+		var wrapper map[string]any
+		if json.Unmarshal(p.Request, &wrapper) == nil && wrapper["preview"] == nil {
+			return p.Request
+		}
+	}
+	if len(p.RequestMessages) == 0 {
+		return nil
+	}
+	var messages any
+	if json.Unmarshal(p.RequestMessages, &messages) != nil {
+		return nil
+	}
+	body, _ := json.Marshal(map[string]any{
+		"model":                   p.Model,
+		"messages":                messages,
+		"_iorec_body_unavailable": true,
+	})
+	return body
 }
 
 func (d *Deps) upsertAttempt(ctx context.Context, j *jobs.Job, rec, run, id string, evs []rawEvent) error {
@@ -308,6 +351,46 @@ func (d *Deps) upsertAttempt(ctx context.Context, j *jobs.Job, rec, run, id stri
 			terminal = "cancelled"
 			t := e.WallTime
 			ended = &t
+		case "pre_api_request":
+			var p hookAPIEvent
+			_ = json.Unmarshal(e.Payload, &p)
+			st.Method = "POST"
+			st.URL = p.BaseURL
+			st.APIMode = p.APIMode
+			st.Model = p.Model
+			if body := hookRequestBody(p); len(body) > 0 {
+				reqBody = body
+			}
+			if started == nil {
+				t := e.WallTime
+				started = &t
+			}
+		case "post_api_request":
+			var p hookAPIEvent
+			_ = json.Unmarshal(e.Payload, &p)
+			if len(p.Response) > 0 {
+				respBody = p.Response
+			}
+			terminal = "completed"
+			t := e.WallTime
+			ended = &t
+		case "api_request_error":
+			var p hookAPIEvent
+			_ = json.Unmarshal(e.Payload, &p)
+			terminal = "error"
+			if p.StatusCode != nil {
+				status = p.StatusCode
+			}
+			class := p.Error.Type
+			if class == "" {
+				class = "error"
+			}
+			errClass = &class
+			// The complete hook payload contains the structured error and is
+			// normalized by ApplyResponseBody's generic error handling.
+			respBody = e.Payload
+			t := e.WallTime
+			ended = &t
 		}
 	}
 	if status != nil && *status >= 400 && terminal == "completed" {
@@ -349,6 +432,9 @@ func (d *Deps) upsertAttempt(ctx context.Context, j *jobs.Job, rec, run, id stri
 		AttemptKey(run, id), rec, j.ProjectID, run, explicitInference, nilIfEmpty(connection), nilIfEmpty(taskID), nilIfEmpty(sessionID), source, nilIfEmpty(st.Protocol), nilIfEmpty(st.Method), nilIfEmpty(st.URL), nilIfEmpty(host), apiMode,
 		started, ended, firstByte, terminal, status, errClass, nullJSON(reqHeaders), nullJSON(respHeaders), nullJSON(reqBody), reqRef, nullJSON(respBody), respRef,
 		sseCount, evs[0].Seq, evs[len(evs)-1].Seq, AssemblerVersion, pid, container, id)
+	if err == nil && st.Model != "" {
+		_, err = d.DB.Pool.Exec(ctx, `update model_attempts set model=coalesce(nullif($2,''),model) where id=$1`, AttemptKey(run, id), st.Model)
+	}
 	return err
 }
 
@@ -455,17 +541,9 @@ func (d *Deps) upsertObservedInference(ctx context.Context, j *jobs.Job, rec, ru
 				first = &t
 			}
 		case "pre_api_request":
-			var p struct {
-				Model           string          `json:"model"`
-				APIMode         string          `json:"api_mode"`
-				Request         json.RawMessage `json:"request"`
-				RequestMessages json.RawMessage `json:"request_messages"`
-			}
+			var p hookAPIEvent
 			_ = json.Unmarshal(e.Payload, &p)
-			model, apiMode, req = p.Model, p.APIMode, p.Request
-			if len(req) == 0 {
-				req = p.RequestMessages
-			}
+			model, apiMode, req = p.Model, p.APIMode, hookRequestBody(p)
 			if first == nil {
 				t := e.WallTime
 				first = &t

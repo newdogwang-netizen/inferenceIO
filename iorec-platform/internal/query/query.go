@@ -19,6 +19,7 @@ import (
 	"github.com/heidihealth/iorec-platform/internal/httpapi"
 	"github.com/heidihealth/iorec-platform/internal/jobs"
 	"github.com/heidihealth/iorec-platform/internal/pipeline"
+	"github.com/heidihealth/iorec-platform/internal/protocol"
 	"github.com/heidihealth/iorec-platform/internal/store"
 )
 
@@ -348,6 +349,26 @@ func (s *Service) GetAttempt(w http.ResponseWriter, r *http.Request) {
 		}
 		it["events"] = events
 	}
+	bodyParts, err := s.list(r.Context(), `select e.seq, e.event, e.payload_sha256 as sha256, e.payload_size as size, e.raw_media_type as media_type, e.raw_truncated,
+			case when coalesce(e.payload->>'chunk_sequence','') ~ '^[0-9]+$' then (e.payload->>'chunk_sequence')::bigint else 0 end as chunk_sequence
+		from recording_events e join recordings r on r.id=e.recording_id
+		where r.capture_run_id=$1 and r.project_id=$2 and e.attempt_id=$3 and e.event in ('request_body_chunk','response_body_chunk')
+		order by e.seq, e.recording_id`, run, p.ProjectID, native)
+	if err != nil {
+		httpapi.WriteError(w, r, err)
+		return
+	}
+	requestParts := make([]map[string]any, 0)
+	responseParts := make([]map[string]any, 0)
+	for _, part := range bodyParts {
+		if part["event"] == protocol.EvRequestBodyChunk {
+			requestParts = append(requestParts, part)
+		} else {
+			responseParts = append(responseParts, part)
+		}
+	}
+	it["request_body_parts"] = requestParts
+	it["response_body_parts"] = responseParts
 	rels, err := s.list(r.Context(), `select type, to_id, status, confidence, evidence, revision from relations where from_id=$1 and project_id=$2 and superseded_by is null order by revision desc`, id, p.ProjectID)
 	if err == nil {
 		it["relations"] = rels

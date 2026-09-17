@@ -137,7 +137,7 @@ func (q *Queue) Renew(ctx context.Context, id uuid.UUID) error {
 
 // Complete marks done.
 func (q *Queue) Complete(ctx context.Context, id uuid.UUID) error {
-	_, err := q.Pool.Exec(ctx, `update processing_jobs set status='done', finished_at=now(), lease_owner=null, lease_until=null where id=$1`, id)
+	_, err := q.Pool.Exec(ctx, `update processing_jobs set status='done', finished_at=now(), lease_owner=null, lease_until=null, last_error=null where id=$1`, id)
 	return err
 }
 

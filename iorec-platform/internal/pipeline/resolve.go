@@ -38,7 +38,8 @@ type evidence struct {
 
 type attemptRow struct {
 	ID, Recording  string
-	InferenceID    string // explicit
+	InferenceID    string // explicit raw ID, or canonicalized cross-source ID
+	Source         string
 	PID            int
 	StartedAt      time.Time
 	InputHash      string
@@ -47,6 +48,7 @@ type attemptRow struct {
 	Terminal       string
 	FirstSeq, Last int64
 	Norm           *Normalized
+	Correlation    *evidence
 }
 
 type inferenceNode struct {
@@ -61,6 +63,9 @@ type inferenceNode struct {
 	SessionID   string // explicit native
 	TurnID      string
 	Norm        *Normalized
+	Request     json.RawMessage
+	Response    json.RawMessage
+	Usage       json.RawMessage
 	Attempts    []*attemptRow
 	Evidence    []EvidenceRef
 	Model       string
@@ -88,13 +93,66 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 	if err != nil {
 		return err
 	}
+	correlations, sessionCorrelations, err := d.loadInferenceCorrelations(ctx, run)
+	if err != nil {
+		return err
+	}
 	nodes := map[string]*inferenceNode{}
 	for _, o := range observed {
 		nodes[o.ID] = o
 	}
+	// A recorder correlation maps an observer-native inference onto the
+	// transport inference already used by attempt links and user-facing URLs.
+	// Merge the observer projection into that canonical node without deleting
+	// any immutable raw event evidence.
+	for alias, correlation := range correlations {
+		source := nodes[alias]
+		target := nodes[correlation.Canonical]
+		if source == nil {
+			continue
+		}
+		if target == nil {
+			delete(nodes, alias)
+			source.ID = correlation.Canonical
+			target = source
+			nodes[target.ID] = target
+		} else if source != target {
+			mergeInferenceNode(target, source)
+			delete(nodes, alias)
+		}
+		target.Evidence = append(target.Evidence, correlation.Evidence.Refs...)
+	}
+	for canonical, correlation := range sessionCorrelations {
+		node := nodes[canonical]
+		if node == nil {
+			node = &inferenceNode{ID: canonical, Recording: correlation.Recording, At: correlation.At}
+			nodes[canonical] = node
+		}
+		if node.TaskID == "" {
+			node.TaskID = correlation.TaskID
+		} else if correlation.TaskID != "" && node.TaskID != correlation.TaskID {
+			node.conflict = true
+		}
+		if node.SessionID == "" {
+			node.SessionID = correlation.SessionID
+		} else if correlation.SessionID != "" && node.SessionID != correlation.SessionID {
+			node.conflict = true
+		}
+		if node.TurnID == "" {
+			node.TurnID = correlation.TurnID
+		} else if correlation.TurnID != "" && node.TurnID != correlation.TurnID {
+			node.conflict = true
+		}
+		node.Evidence = append(node.Evidence, correlation.Evidence.Refs...)
+	}
 	// 2. attempt -> inference
 	var unbound []*attemptRow
 	for _, a := range attempts {
+		if correlation, ok := correlations[a.InferenceID]; ok {
+			a.InferenceID = correlation.Canonical
+			ev := correlation.Evidence
+			a.Correlation = &ev
+		}
 		if a.InferenceID != "" {
 			n := nodes[a.InferenceID]
 			if n == nil {
@@ -147,15 +205,13 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 			if n.At.IsZero() || a0.StartedAt.Before(n.At) {
 				n.At = a0.StartedAt
 			}
-			if n.Norm == nil || (n.Norm.BodyUnavailable && a0.Norm != nil && !a0.Norm.BodyUnavailable) {
-				n.Norm = a0.Norm
+			best, bestScore := n.Norm, normalizedProjectionScore(n.Norm, "")
+			for _, attempt := range n.Attempts {
+				if score := normalizedProjectionScore(attempt.Norm, attempt.Terminal); score >= bestScore {
+					best, bestScore = attempt.Norm, score
+				}
 			}
-			if n.InputHash == "" {
-				n.InputHash = a0.InputHash
-			}
-			if n.Fingerprint == "" {
-				n.Fingerprint = a0.Fingerprint
-			}
+			n.Norm = best
 			if n.PID == 0 {
 				n.PID = a0.PID
 			}
@@ -165,6 +221,7 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 		}
 		if n.Norm != nil {
 			n.Model, n.APIMode = n.Norm.Model, n.Norm.APIMode
+			n.InputHash, n.Fingerprint = n.Norm.InputHash, n.Norm.Fingerprint
 		}
 		list = append(list, n)
 	}
@@ -219,10 +276,10 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 		cur.prev, cur.prevEv = best.n, best.ev
 	}
 	// 4. sessions: chains via prev pointers; explicit native session ids override
-	nativeSessions := map[string]bool{}
+	nativeSessions := map[string]string{}
 	for _, n := range list {
 		if n.SessionID != "" {
-			nativeSessions[n.SessionID] = true
+			nativeSessions[SessionKey(run, n.SessionID)] = n.SessionID
 		}
 	}
 	root := func(n *inferenceNode) *inferenceNode {
@@ -369,12 +426,23 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 		if _, err := tx.Exec(ctx, `update relations set superseded_by = -1 where capture_run_id=$1 and revision < $2 and superseded_by is null`, run, rev); err != nil {
 			return err
 		}
+		aliasIDs := make([]string, 0, len(correlations))
+		for alias, correlation := range correlations {
+			if alias != correlation.Canonical {
+				aliasIDs = append(aliasIDs, alias)
+			}
+		}
+		if len(aliasIDs) > 0 {
+			if _, err := tx.Exec(ctx, `delete from model_inferences where capture_run_id=$1 and id=any($2::text[])`, run, aliasIDs); err != nil {
+				return err
+			}
+		}
 		unattributed := 0
 		for key, ns := range bySession {
 			kind, native := "inferred", (*string)(nil)
-			if strings.HasPrefix(key, "sess:") && !strings.HasPrefix(key, "sess:inf:") {
+			if nativeID, ok := nativeSessions[key]; ok {
 				kind = "native"
-				nid := strings.TrimPrefix(key, "sess:"+run+keySep)
+				nid := nativeID
 				native = &nid
 			}
 			role := "main"
@@ -429,30 +497,37 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 				}
 			}
 			taskKey := resolvedTaskKey(run, n.TaskID, n.SessionID)
-			if _, err := tx.Exec(ctx, `insert into model_inferences(id, recording_id, capture_run_id, project_id, status, attempt_count, first_attempt_at, model, api_mode, request_fingerprint, input_hash, normalized, server_state, task_id, session_id, turn_id, pid, evidence_refs, processor_version, relation_revision)
-				values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
-				on conflict (id) do update set attempt_count=excluded.attempt_count, first_attempt_at=excluded.first_attempt_at, model=coalesce(model_inferences.model, excluded.model), api_mode=coalesce(nullif(model_inferences.api_mode,'unknown'), excluded.api_mode),
-					request_fingerprint=coalesce(model_inferences.request_fingerprint, excluded.request_fingerprint), input_hash=coalesce(model_inferences.input_hash, excluded.input_hash), normalized=coalesce(model_inferences.normalized, excluded.normalized),
-					server_state=excluded.server_state, task_id=excluded.task_id, session_id=excluded.session_id, turn_id=excluded.turn_id, pid=coalesce(model_inferences.pid, excluded.pid), evidence_refs=excluded.evidence_refs, relation_revision=excluded.relation_revision, updated_at=now()`,
-				n.ID, n.Recording, run, j.ProjectID, status, len(n.Attempts), n.At, nilIfEmpty(n.Model), orUnknown(n.APIMode), fp, ih, normB, serverState, taskKey, n.sessionKey, nilIfEmpty(turnID), nilIfZero(n.PID), evB, ResolverVersion, rev); err != nil {
+			if _, err := tx.Exec(ctx, `insert into model_inferences(id, recording_id, capture_run_id, project_id, status, attempt_count, first_attempt_at, model, api_mode, request_fingerprint, input_hash, request, response, usage, normalized, server_state, task_id, session_id, turn_id, pid, evidence_refs, processor_version, relation_revision)
+				values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
+				on conflict (id) do update set status=excluded.status, attempt_count=excluded.attempt_count, first_attempt_at=excluded.first_attempt_at, model=coalesce(excluded.model,model_inferences.model), api_mode=coalesce(nullif(excluded.api_mode,'unknown'),model_inferences.api_mode),
+					request_fingerprint=coalesce(excluded.request_fingerprint,model_inferences.request_fingerprint), input_hash=coalesce(excluded.input_hash,model_inferences.input_hash), request=coalesce(excluded.request,model_inferences.request), response=coalesce(excluded.response,model_inferences.response), usage=coalesce(excluded.usage,model_inferences.usage), normalized=coalesce(excluded.normalized,model_inferences.normalized),
+					server_state=excluded.server_state, task_id=excluded.task_id, session_id=excluded.session_id, turn_id=excluded.turn_id, pid=coalesce(excluded.pid,model_inferences.pid), evidence_refs=excluded.evidence_refs, relation_revision=excluded.relation_revision, updated_at=now()`,
+				n.ID, n.Recording, run, j.ProjectID, status, len(n.Attempts), n.At, nilIfEmpty(n.Model), orUnknown(n.APIMode), fp, ih, nullJSON(n.Request), nullJSON(n.Response), nullJSON(n.Usage), normB, serverState, taskKey, n.sessionKey, nilIfEmpty(turnID), nilIfZero(n.PID), evB, ResolverVersion, rev); err != nil {
 				return err
 			}
 			for _, a := range n.Attempts {
 				st, conf, kind := "observed", confExplicit, "explicit_id"
+				relationEvidence := evidence{Kind: kind, Weight: conf, Refs: []EvidenceRef{{RecordingID: a.Recording, FirstSeq: a.FirstSeq, LastSeq: a.Last}}}
 				if a.InferenceID == "" {
 					st, conf, kind = "inferred", confInputHash, "input_hash_retry_group"
 					if len(n.Attempts) == 1 && !n.Observed {
 						conf, kind = confExplicit, "single_attempt"
 					}
+					relationEvidence = evidence{Kind: kind, Weight: conf, Refs: []EvidenceRef{{RecordingID: a.Recording, FirstSeq: a.FirstSeq, LastSeq: a.Last}}}
+				} else if a.Correlation != nil {
+					st, conf, kind = "inferred", a.Correlation.Weight, a.Correlation.Kind
+					if conf >= confExplicit {
+						st = "observed"
+					}
+					relationEvidence = *a.Correlation
+					relationEvidence.Refs = append(append([]EvidenceRef(nil), relationEvidence.Refs...), EvidenceRef{RecordingID: a.Recording, FirstSeq: a.FirstSeq, LastSeq: a.Last})
 				}
-				eb, _ := json.Marshal([]evidence{{Kind: kind, Weight: conf, Refs: []EvidenceRef{{RecordingID: a.Recording, FirstSeq: a.FirstSeq, LastSeq: a.Last}}}})
+				eb, _ := json.Marshal([]evidence{relationEvidence})
 				if _, err := tx.Exec(ctx, `insert into relations(project_id, capture_run_id, type, from_id, to_id, status, confidence, evidence, revision) values($1,$2,'attempt_of',$3,$4,$5,$6,$7,$8)`, j.ProjectID, run, a.ID, n.ID, st, conf, eb, rev); err != nil {
 					return err
 				}
-				if a.InferenceID == "" {
-					if _, err := tx.Exec(ctx, `update model_attempts set inference_id=$2 where id=$1`, a.ID, n.ID); err != nil {
-						return err
-					}
+				if _, err := tx.Exec(ctx, `update model_attempts set inference_id=$2 where id=$1`, a.ID, n.ID); err != nil {
+					return err
 				}
 				if _, err := tx.Exec(ctx, `update model_attempts set task_id=coalesce($2,task_id), session_id=coalesce($3,session_id) where id=$1`, a.ID, taskKey, n.sessionKey); err != nil {
 					return err
@@ -497,6 +572,28 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 		}
 		return d.publishTx(ctx, tx, j.ProjectID, "capture_run", run, "relation_revision", rev)
 	})
+}
+
+func normalizedProjectionScore(n *Normalized, terminal string) int {
+	if n == nil {
+		return -1
+	}
+	score := 0
+	if !n.BodyUnavailable {
+		score += 100
+	}
+	if strings.TrimSpace(n.ResponseText) != "" || len(n.ResponseToolCalls) > 0 {
+		score += 20
+	}
+	switch terminal {
+	case "completed":
+		score += 30
+	case "error":
+		score += 10
+	case "cancelled", "truncated":
+		score += 5
+	}
+	return score
 }
 
 func orUnknown(s string) string {
@@ -572,8 +669,11 @@ func resolvedTaskKey(run, taskID, sessionID string) *string {
 }
 
 func (d *Deps) loadAttempts(ctx context.Context, run string) ([]*attemptRow, error) {
-	rows, err := d.DB.Pool.Query(ctx, `select id, recording_id, coalesce(inference_id,''), coalesce(pid,0), coalesce(started_at, now()), coalesce(encode(input_hash,'hex'),''), coalesce(encode(request_fingerprint,'hex'),''), coalesce(provider_host,''), terminal_state, coalesce(first_seq,0), coalesce(last_seq,0), normalized
-		from model_attempts where capture_run_id=$1 order by started_at`, run)
+	rows, err := d.DB.Pool.Query(ctx, `select a.id, a.recording_id,
+		coalesce((select e.inference_id from recording_events e join recordings er on er.id=e.recording_id
+			where er.capture_run_id=a.capture_run_id and e.attempt_id=a.native_id and e.inference_id is not null order by e.seq limit 1),''),
+		a.source, coalesce(a.pid,0), coalesce(a.started_at, now()), coalesce(encode(a.input_hash,'hex'),''), coalesce(encode(a.request_fingerprint,'hex'),''), coalesce(a.provider_host,''), a.terminal_state, coalesce(a.first_seq,0), coalesce(a.last_seq,0), a.normalized
+		from model_attempts a where a.capture_run_id=$1 order by a.started_at`, run)
 	if err != nil {
 		return nil, err
 	}
@@ -582,8 +682,12 @@ func (d *Deps) loadAttempts(ctx context.Context, run string) ([]*attemptRow, err
 	for rows.Next() {
 		a := &attemptRow{}
 		var norm json.RawMessage
-		if err := rows.Scan(&a.ID, &a.Recording, &a.InferenceID, &a.PID, &a.StartedAt, &a.InputHash, &a.Fingerprint, &a.Host, &a.Terminal, &a.FirstSeq, &a.Last, &norm); err != nil {
+		var nativeInferenceID string
+		if err := rows.Scan(&a.ID, &a.Recording, &nativeInferenceID, &a.Source, &a.PID, &a.StartedAt, &a.InputHash, &a.Fingerprint, &a.Host, &a.Terminal, &a.FirstSeq, &a.Last, &norm); err != nil {
 			return nil, err
+		}
+		if nativeInferenceID != "" {
+			a.InferenceID = InferenceKey(run, nativeInferenceID)
 		}
 		if len(norm) > 0 {
 			var n Normalized
@@ -597,8 +701,13 @@ func (d *Deps) loadAttempts(ctx context.Context, run string) ([]*attemptRow, err
 }
 
 func (d *Deps) loadObservedInferences(ctx context.Context, run string) ([]*inferenceNode, error) {
-	rows, err := d.DB.Pool.Query(ctx, `select id, recording_id, coalesce(pid,0), coalesce(first_attempt_at, now()), coalesce(encode(input_hash,'hex'),''), coalesce(encode(request_fingerprint,'hex'),''), coalesce(task_id,''), coalesce(session_id,''), coalesce(turn_id,''), normalized, evidence_refs, coalesce(model,''), coalesce(api_mode,'')
-		from model_inferences where capture_run_id=$1 and status='observed'`, run)
+	rows, err := d.DB.Pool.Query(ctx, `select i.id, i.recording_id, coalesce(i.pid,0), coalesce(i.first_attempt_at, now()), coalesce(encode(i.input_hash,'hex'),''), coalesce(encode(i.request_fingerprint,'hex'),''),
+		coalesce((select e.task_id from recording_events e join recordings er on er.id=e.recording_id where er.capture_run_id=i.capture_run_id and e.inference_id=i.native_id and e.task_id is not null order by e.seq limit 1),case when coalesce(i.task_id,'') not like 'task:%' then i.task_id end,''),
+		coalesce((select e.agent_session_id from recording_events e join recordings er on er.id=e.recording_id where er.capture_run_id=i.capture_run_id and e.inference_id=i.native_id and e.agent_session_id is not null order by e.seq limit 1),case when coalesce(i.session_id,'') not like 'sess:%' then i.session_id end,''),
+		coalesce((select e.turn_id from recording_events e join recordings er on er.id=e.recording_id where er.capture_run_id=i.capture_run_id and e.inference_id=i.native_id and e.turn_id is not null order by e.seq limit 1),case when coalesce(i.turn_id,'') not like 'sess:%' then i.turn_id end,''),
+		coalesce(i.task_id,''),coalesce(i.session_id,''),coalesce((select s.native_id from sessions s where s.id=i.session_id and s.capture_run_id=i.capture_run_id and s.kind='native' order by s.superseded,s.relation_revision desc limit 1),''),
+		i.normalized, i.request, i.response, i.usage, i.evidence_refs, coalesce(i.model,''), coalesce(i.api_mode,'')
+		from model_inferences i where i.capture_run_id=$1 and i.status='observed'`, run)
 	if err != nil {
 		return nil, err
 	}
@@ -607,15 +716,15 @@ func (d *Deps) loadObservedInferences(ctx context.Context, run string) ([]*infer
 	for rows.Next() {
 		n := &inferenceNode{Observed: true}
 		var norm, ev json.RawMessage
-		var sess string
-		if err := rows.Scan(&n.ID, &n.Recording, &n.PID, &n.At, &n.InputHash, &n.Fingerprint, &n.TaskID, &sess, &n.TurnID, &norm, &ev, &n.Model, &n.APIMode); err != nil {
+		var storedTask, storedSession, recoveredSession string
+		if err := rows.Scan(&n.ID, &n.Recording, &n.PID, &n.At, &n.InputHash, &n.Fingerprint, &n.TaskID, &n.SessionID, &n.TurnID, &storedTask, &storedSession, &recoveredSession, &norm, &n.Request, &n.Response, &n.Usage, &ev, &n.Model, &n.APIMode); err != nil {
 			return nil, err
 		}
-		// session_id from hook is the raw native id; after a resolve pass it holds our sess: key
-		if sess != "" && !strings.HasPrefix(sess, "sess:") {
-			n.SessionID = sess
-		} else if strings.HasPrefix(sess, "sess:") && !strings.HasPrefix(sess, "sess:inf:") {
-			n.SessionID = strings.TrimPrefix(sess, "sess:"+run+keySep)
+		if n.TaskID == "" {
+			n.TaskID = nativeTaskID(run, storedTask)
+		}
+		if n.SessionID == "" && storedSession != "sess:"+n.ID {
+			n.SessionID = recoveredSession
 		}
 		if len(norm) > 0 {
 			var nn Normalized
@@ -627,6 +736,128 @@ func (d *Deps) loadObservedInferences(ctx context.Context, run string) ([]*infer
 		out = append(out, n)
 	}
 	return out, rows.Err()
+}
+
+func nativeTaskID(run, stored string) string {
+	prefix := fmt.Sprintf("task:agent_task:%d:%s:", len(run), run)
+	if strings.HasPrefix(stored, prefix) {
+		return strings.TrimPrefix(stored, prefix)
+	}
+	return ""
+}
+
+type inferenceCorrelation struct {
+	Canonical         string
+	Recording         string
+	At                time.Time
+	TaskID, SessionID string
+	TurnID            string
+	Evidence          evidence
+}
+
+func (d *Deps) loadInferenceCorrelations(ctx context.Context, run string) (map[string]inferenceCorrelation, map[string]inferenceCorrelation, error) {
+	rows, err := d.DB.Pool.Query(ctx, `select e.recording_id,e.seq,e.wall_time,coalesce(e.inference_id,''),coalesce(e.task_id,''),coalesce(e.agent_session_id,''),coalesce(e.turn_id,''),e.payload,coalesce(e.confidence,0)
+		from recording_events e join recordings r on r.id=e.recording_id
+		where r.capture_run_id=$1 and e.event='inference_correlation' order by e.seq,e.recording_id`, run)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+	aliases := map[string]inferenceCorrelation{}
+	sessions := map[string]inferenceCorrelation{}
+	for rows.Next() {
+		var recording, transportNative, taskID, sessionID, turnID string
+		var seq int64
+		var at time.Time
+		var payload json.RawMessage
+		var confidence float64
+		if err := rows.Scan(&recording, &seq, &at, &transportNative, &taskID, &sessionID, &turnID, &payload, &confidence); err != nil {
+			return nil, nil, err
+		}
+		var body struct {
+			NativeInferenceID string `json:"native_inference_id"`
+			Method            string `json:"method"`
+		}
+		if json.Unmarshal(payload, &body) != nil || transportNative == "" || body.Method == "" {
+			return nil, nil, fmt.Errorf("malformed inference_correlation event at %s:%d", recording, seq)
+		}
+		if confidence <= 0 || confidence > 1 {
+			return nil, nil, fmt.Errorf("invalid inference_correlation confidence at %s:%d", recording, seq)
+		}
+		correlation := inferenceCorrelation{
+			Canonical: InferenceKey(run, transportNative), Recording: recording, At: at,
+			TaskID: taskID, SessionID: sessionID, TurnID: turnID,
+			Evidence: evidence{
+				Kind:   "cross_source_" + orUnknown(body.Method),
+				Weight: confidence,
+				Refs:   []EvidenceRef{{RecordingID: recording, FirstSeq: seq, LastSeq: seq}},
+			},
+		}
+		if body.NativeInferenceID != "" {
+			alias := InferenceKey(run, body.NativeInferenceID)
+			if existing, ok := aliases[alias]; ok && existing.Canonical != correlation.Canonical {
+				return nil, nil, fmt.Errorf("conflicting inference_correlation targets for %s", alias)
+			}
+			aliases[alias] = correlation
+		}
+		if taskID != "" || sessionID != "" || turnID != "" {
+			if existing, ok := sessions[correlation.Canonical]; ok &&
+				((existing.TaskID != "" && taskID != "" && existing.TaskID != taskID) ||
+					(existing.SessionID != "" && sessionID != "" && existing.SessionID != sessionID) ||
+					(existing.TurnID != "" && turnID != "" && existing.TurnID != turnID)) {
+				return nil, nil, fmt.Errorf("conflicting inference session correlations for %s", correlation.Canonical)
+			}
+			sessions[correlation.Canonical] = correlation
+		}
+		if body.NativeInferenceID == "" && taskID == "" && sessionID == "" && turnID == "" {
+			return nil, nil, fmt.Errorf("inference_correlation event has no alias or identity at %s:%d", recording, seq)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	return aliases, sessions, nil
+}
+
+func mergeInferenceNode(target, source *inferenceNode) {
+	target.Observed = target.Observed || source.Observed
+	if target.Recording == "" {
+		target.Recording = source.Recording
+	}
+	if target.At.IsZero() || (!source.At.IsZero() && source.At.Before(target.At)) {
+		target.At = source.At
+	}
+	if target.PID == 0 {
+		target.PID = source.PID
+	}
+	if target.InputHash == "" {
+		target.InputHash = source.InputHash
+	}
+	if target.Fingerprint == "" {
+		target.Fingerprint = source.Fingerprint
+	}
+	if target.TaskID == "" {
+		target.TaskID = source.TaskID
+	}
+	if target.SessionID == "" {
+		target.SessionID = source.SessionID
+	}
+	if target.TurnID == "" {
+		target.TurnID = source.TurnID
+	}
+	if target.Norm == nil || (target.Norm.BodyUnavailable && source.Norm != nil && !source.Norm.BodyUnavailable) {
+		target.Norm = source.Norm
+	}
+	if len(target.Request) == 0 {
+		target.Request = source.Request
+	}
+	if len(target.Response) == 0 {
+		target.Response = source.Response
+	}
+	if len(target.Usage) == 0 {
+		target.Usage = source.Usage
+	}
+	target.Evidence = append(target.Evidence, source.Evidence...)
 }
 
 type subagentEvent struct {

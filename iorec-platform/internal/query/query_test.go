@@ -96,6 +96,60 @@ func TestEncodedInferenceIDAndScalarMessagesAreReadable(t *testing.T) {
 	}
 }
 
+func TestAttemptReturnsChunkBodyEvidenceAlongsideMetadata(t *testing.T) {
+	db := queryTestDB(t)
+	service := &Service{DB: db}
+	principal := queryProject(t, db)
+	ctx := context.Background()
+	run := "run-query-body-" + uuid.NewString()[:8]
+	recording := run + "#0000"
+	nativeAttempt := "attempt-1"
+	attempt := run + "~" + nativeAttempt
+	digest := make([]byte, 32)
+	for index := range digest {
+		digest[index] = byte(index + 1)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into capture_runs(id,project_id) values($1,$2)`, run, principal.ProjectID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into recordings(id,project_id,capture_run_id,state) values($1,$2,$3,'sealed')`, recording, principal.ProjectID, run); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into model_attempts(id,native_id,recording_id,project_id,capture_run_id,source,processor_version) values($1,$2,$3,$4,$5,'proxy','test')`, attempt, nativeAttempt, recording, principal.ProjectID, run); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into recording_events(recording_id,seq,monotonic_ns,wall_time,source,event,attempt_id,payload,payload_sha256,payload_size,raw_media_type,batch_id)
+		values($1,1,1,now(),'proxy','response_body_chunk',$2,'{"chunk_sequence":1,"captured_size":12,"observed_size":12}',$3,12,'application/json','batch-1')`, recording, nativeAttempt, digest); err != nil {
+		t.Fatal(err)
+	}
+
+	response := httptest.NewRecorder()
+	service.GetAttempt(response, requestWithID(t, principal, attempt))
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+	var body struct {
+		ResponseBodyParts []struct {
+			SHA256        string `json:"sha256"`
+			Size          int64  `json:"size"`
+			ChunkSequence int64  `json:"chunk_sequence"`
+		} `json:"response_body_parts"`
+		Events []struct {
+			Payload       json.RawMessage `json:"payload"`
+			PayloadSHA256 string          `json:"payload_sha256"`
+		} `json:"events"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.ResponseBodyParts) != 1 || body.ResponseBodyParts[0].SHA256 == "" || body.ResponseBodyParts[0].Size != 12 || body.ResponseBodyParts[0].ChunkSequence != 1 {
+		t.Fatalf("body part evidence missing: %#v", body.ResponseBodyParts)
+	}
+	if len(body.Events) != 1 || len(body.Events[0].Payload) == 0 || body.Events[0].PayloadSHA256 == "" {
+		t.Fatalf("raw event metadata or blob reference missing: %#v", body.Events)
+	}
+}
+
 func TestSessionDerivedQueriesRemainProjectScoped(t *testing.T) {
 	db := queryTestDB(t)
 	service := &Service{DB: db}

@@ -3,6 +3,35 @@ import { Link, useParams } from "react-router-dom";
 import { api, enc, fmtDur, fmtTime } from "../api";
 import { EvidenceLinks, Json, Loading, RecLink, Terminal } from "../components";
 
+function BodyEvidence({ inline, bodyRef, parts }: { inline: any; bodyRef?: string; parts?: any[] }) {
+  if (inline) return <Json v={inline} max={500} />;
+  const allParts = parts ?? [];
+  const availableParts = allParts.filter((part: any) => part.sha256);
+  if (allParts.length) {
+    const bytes = allParts.reduce((sum: number, part: any) => sum + Number(part.size ?? 0), 0);
+    return (
+      <div>
+        <div className="muted small">{allParts.length} chunks · {bytes} B（wire 顺序）</div>
+        {availableParts.map((part: any) => (
+          <div key={`${part.seq}-${part.sha256}`}>
+            <a href={`/v1/blobs/${part.sha256}`} target="_blank" rel="noreferrer" className="mono small">
+              #{part.chunk_sequence} blob {String(part.sha256).slice(0, 16)}… ({part.size} B)
+            </a>
+            {part.raw_truncated ? <span className="tag warn">截断</span> : null}
+          </div>
+        ))}
+        {allParts.filter((part: any) => !part.sha256).map((part: any) => (
+          <div key={`${part.seq}-empty`} className="mono small muted">
+            #{part.chunk_sequence} 空块（0 B，无 Blob）
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (bodyRef) return <a href={`/v1/blobs/${bodyRef}`} target="_blank" rel="noreferrer">blob {bodyRef}</a>;
+  return <span className="muted">不可用</span>;
+}
+
 export default function AttemptDetail() {
   const { id = "" } = useParams();
   const q = useQuery({ queryKey: ["attempt", id], queryFn: () => api(`/v1/attempts/${enc(id)}`) });
@@ -34,13 +63,14 @@ export default function AttemptDetail() {
             <div className="panel">
               <h3>请求 header（白名单）</h3><Json v={a.request_headers} max={140} />
               <h3>请求正文（raw）</h3>
-              {a.request_body ? <Json v={a.request_body} max={500} /> : a.request_body_ref ? <a href={`/v1/blobs/${a.request_body_ref}`} target="_blank">blob {a.request_body_ref}</a> : <span className="muted">不可用</span>}
+              <BodyEvidence inline={a.request_body} bodyRef={a.request_body_ref} parts={a.request_body_parts} />
             </div>
             <div className="panel">
               <h3>响应 header</h3><Json v={a.response_headers} max={140} />
               <h3>响应文本（重组）</h3>
               <pre className="json" style={{ maxHeight: 200 }}>{a.response_text || <span className="muted">（无）</span>}</pre>
-              {a.response_body ? (<><h3>响应正文（raw）</h3><Json v={a.response_body} max={300} /></>) : null}
+              <h3>响应正文（raw）</h3>
+              <BodyEvidence inline={a.response_body} bodyRef={a.response_body_ref} parts={a.response_body_parts} />
             </div>
           </div>
           <div className="panel">
@@ -52,7 +82,7 @@ export default function AttemptDetail() {
               <thead><tr><th>seq</th><th>时间</th><th>event</th><th>payload</th></tr></thead>
               <tbody>{(a.events ?? []).map((e: any) => (
                 <tr key={e.seq}><td className="mono">{e.seq}</td><td className="muted small">{fmtTime(e.wall_time)}</td><td className="mono">{e.event}</td>
-                  <td><code className="small">{e.payload ? JSON.stringify(e.payload).slice(0, 300) : e.payload_sha256 ? `blob ${e.payload_sha256} (${e.payload_size} B)` : ""}</code></td></tr>
+                  <td><code className="small">{e.payload ? JSON.stringify(e.payload).slice(0, 300) : ""}</code>{e.payload_sha256 ? <> <a href={`/v1/blobs/${e.payload_sha256}`} target="_blank" rel="noreferrer" className="mono small">blob {String(e.payload_sha256).slice(0, 16)}… ({e.payload_size} B)</a></> : null}</td></tr>
               ))}</tbody>
             </table>
           </div>

@@ -2,18 +2,26 @@ package pipeline
 
 import (
 	"bufio"
+	"bytes"
+	"compress/flate"
+	"compress/gzip"
+	"compress/zlib"
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"sort"
 	"strings"
 
+	"github.com/andybalholm/brotli"
 	"github.com/jackc/pgx/v5"
+	"github.com/klauspost/compress/zstd"
 
 	"github.com/heidihealth/iorec-platform/internal/jobs"
 	"github.com/heidihealth/iorec-platform/internal/objstore"
@@ -138,6 +146,9 @@ func NormalizeRequest(apiMode string, body []byte) (*Normalized, error) {
 		return nil, fmt.Errorf("request body is not a JSON object: %w", err)
 	}
 	n := &Normalized{APIMode: apiMode, Params: map[string]any{}}
+	if unavailable, _ := req["_iorec_body_unavailable"].(bool); unavailable {
+		n.BodyUnavailable = true
+	}
 	if m, ok := req["model"].(string); ok {
 		n.Model = m
 	}
@@ -541,11 +552,15 @@ func ApplyStream(n *Normalized, chunks []string) {
 			}
 		}
 	}
-	for idx := 0; idx < len(toolCalls)+len(toolCalls); idx++ { // stable order by index
-		if tc, ok := toolCalls[idx]; ok {
-			tc.ArgsHash = argsHash(toolArgs[idx].String())
-			n.ResponseToolCalls = append(n.ResponseToolCalls, *tc)
-		}
+	indices := make([]int, 0, len(toolCalls))
+	for index := range toolCalls {
+		indices = append(indices, index)
+	}
+	sort.Ints(indices)
+	for _, index := range indices {
+		tc := toolCalls[index]
+		tc.ArgsHash = argsHash(toolArgs[index].String())
+		n.ResponseToolCalls = append(n.ResponseToolCalls, *tc)
 	}
 	n.ResponseText = text.String()
 	t := terminated
@@ -569,6 +584,30 @@ func ApplyResponseBody(n *Normalized, body []byte) {
 	}
 	if id, ok := obj["id"].(string); ok {
 		n.ResponseID = id
+	}
+	// Agent-native observer payloads (notably Hermes) wrap the provider result
+	// instead of returning the wire response shape. Preserve that semantic L2
+	// evidence even when the corresponding transport request is unavailable.
+	if fr, ok := obj["finish_reason"].(string); ok && fr != "" {
+		n.FinishReason = fr
+	}
+	if message, ok := obj["assistant_message"].(map[string]any); ok {
+		n.ResponseText += textOf(message["content"])
+		if calls, ok := message["tool_calls"].([]any); ok {
+			for _, value := range calls {
+				call, _ := value.(map[string]any)
+				function, _ := call["function"].(map[string]any)
+				name, _ := function["name"].(string)
+				id, _ := call["id"].(string)
+				n.ResponseToolCalls = append(n.ResponseToolCalls, NToolCall{ID: id, Name: name, ArgsHash: argsHash(function["arguments"])})
+			}
+		}
+	}
+	if providerError, ok := obj["error"].(map[string]any); ok && n.ResponseText == "" {
+		n.ResponseText = textOf(providerError["message"])
+		if n.FinishReason == "" {
+			n.FinishReason = "error"
+		}
 	}
 	switch n.APIMode {
 	case "chat_completions", "completions", "unknown":
@@ -668,12 +707,16 @@ func (d *Deps) bodyBytes(ctx context.Context, project string, inline json.RawMes
 		if len(inline) > maximum {
 			return nil, false, fmt.Errorf("inline body exceeds processing limit %d", maximum)
 		}
-		// {"raw_base64": ...} wrapper is treated as opaque
+		// Decode the protocol's binary-safe inline wrapper before normalization.
 		var wrap struct {
 			RawBase64 string `json:"raw_base64"`
 		}
 		if json.Unmarshal(inline, &wrap) == nil && wrap.RawBase64 != "" {
-			return nil, false, nil
+			decoded, err := base64.StdEncoding.DecodeString(wrap.RawBase64)
+			if err != nil || len(decoded) > maximum {
+				return nil, false, nil
+			}
+			return decoded, true, nil
 		}
 		return inline, true, nil
 	}
@@ -714,6 +757,188 @@ func (d *Deps) bodyBytes(ctx context.Context, project string, inline json.RawMes
 	return b, true, nil
 }
 
+type bodyChunkMetadata struct {
+	Sequence     int64  `json:"chunk_sequence"`
+	CapturedSize int64  `json:"captured_size"`
+	ObservedSize int64  `json:"observed_size"`
+	SHA256       string `json:"sha256"`
+}
+
+// attemptBodyBytes returns an attempt body in wire order. New recorder events
+// intentionally store every transport read as a separate immutable blob, so a
+// multi-chunk body cannot be represented by model_attempts.*_body_ref alone.
+func (d *Deps) attemptBodyBytes(ctx context.Context, project, run, nativeID, chunkEvent string, inline json.RawMessage, ref []byte) ([]byte, bool, error) {
+	if body, ok, err := d.bodyBytes(ctx, project, inline, ref); err != nil || ok {
+		return body, ok, err
+	}
+	events, err := d.loadRunEvents(ctx, run, `and e.attempt_id=$2 and e.event=$3`, nativeID, chunkEvent)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(events) == 0 {
+		return nil, false, nil
+	}
+	const maximum = 64 << 20
+	var out bytes.Buffer
+	expectedSequence := int64(1)
+	for _, event := range events {
+		var metadata bodyChunkMetadata
+		if err := json.Unmarshal(event.Payload, &metadata); err != nil {
+			return nil, false, fmt.Errorf("%s seq %d has invalid chunk metadata: %w", chunkEvent, event.Seq, err)
+		}
+		if metadata.Sequence != expectedSequence {
+			return nil, false, fmt.Errorf("%s chunk sequence gap: expected %d, got %d", chunkEvent, expectedSequence, metadata.Sequence)
+		}
+		expectedSequence++
+		if metadata.CapturedSize < 0 || metadata.ObservedSize < metadata.CapturedSize || event.RawTruncated || metadata.CapturedSize != metadata.ObservedSize {
+			return nil, false, nil
+		}
+		if metadata.CapturedSize == 0 {
+			emptyDigest := sha256.Sum256(nil)
+			declaredDigest := strings.TrimPrefix(strings.ToLower(metadata.SHA256), "sha256:")
+			if declaredDigest != "" && declaredDigest != hex.EncodeToString(emptyDigest[:]) {
+				return nil, false, fmt.Errorf("%s chunk %d has an invalid empty-body digest", chunkEvent, metadata.Sequence)
+			}
+			if event.PayloadSize != nil && *event.PayloadSize != 0 {
+				return nil, false, fmt.Errorf("%s chunk %d has a non-zero event size for an empty body", chunkEvent, metadata.Sequence)
+			}
+			if len(event.PayloadSHA) > 0 && subtle.ConstantTimeCompare(event.PayloadSHA, emptyDigest[:]) != 1 {
+				return nil, false, fmt.Errorf("%s chunk %d has a mismatched empty-body event digest", chunkEvent, metadata.Sequence)
+			}
+			continue
+		}
+		if len(event.PayloadSHA) == 0 || event.PayloadSize == nil || *event.PayloadSize != metadata.CapturedSize {
+			return nil, false, nil
+		}
+		if strings.TrimPrefix(strings.ToLower(metadata.SHA256), "sha256:") != hex.EncodeToString(event.PayloadSHA) {
+			return nil, false, fmt.Errorf("%s chunk %d metadata digest does not match its event reference", chunkEvent, metadata.Sequence)
+		}
+		part, ok, err := d.bodyBytes(ctx, project, nil, event.PayloadSHA)
+		if err != nil {
+			return nil, false, err
+		}
+		if !ok || int64(len(part)) != metadata.CapturedSize {
+			return nil, false, nil
+		}
+		if out.Len() > maximum-len(part) {
+			return nil, false, fmt.Errorf("reassembled %s exceeds processing limit %d", chunkEvent, maximum)
+		}
+		_, _ = out.Write(part)
+	}
+	return out.Bytes(), true, nil
+}
+
+func headerValue(headers json.RawMessage, name string) string {
+	var values map[string]any
+	if json.Unmarshal(headers, &values) != nil {
+		return ""
+	}
+	for key, value := range values {
+		if !strings.EqualFold(key, name) {
+			continue
+		}
+		switch typed := value.(type) {
+		case string:
+			return typed
+		case []any:
+			parts := make([]string, 0, len(typed))
+			for _, item := range typed {
+				if text, ok := item.(string); ok {
+					parts = append(parts, text)
+				}
+			}
+			return strings.Join(parts, ",")
+		}
+	}
+	return ""
+}
+
+func requestBodyExpected(apiMode, method string, headers json.RawMessage) bool {
+	if apiMode != "unknown" {
+		return true
+	}
+	if value := strings.TrimSpace(headerValue(headers, "content-length")); value != "" && value != "0" {
+		return true
+	}
+	if headerValue(headers, "transfer-encoding") != "" {
+		return true
+	}
+	switch strings.ToUpper(method) {
+	case "POST", "PUT", "PATCH":
+		return true
+	default:
+		return false
+	}
+}
+
+func responseBodyExpected(method string, status *int, headers json.RawMessage) bool {
+	if strings.EqualFold(method, "HEAD") || (status != nil && (*status == http.StatusNoContent || *status == http.StatusNotModified)) {
+		return false
+	}
+	return strings.TrimSpace(headerValue(headers, "content-length")) != "0"
+}
+
+func readDecodedBody(reader io.Reader) ([]byte, error) {
+	const maximum = 64 << 20
+	body, err := io.ReadAll(io.LimitReader(reader, maximum+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(body) > maximum {
+		return nil, fmt.Errorf("decoded response body exceeds processing limit %d", maximum)
+	}
+	return body, nil
+}
+
+// decodeContentEncoding reverses HTTP Content-Encoding in RFC order and keeps
+// decompression bounded. Recorder blobs remain untouched wire evidence.
+func decodeContentEncoding(body []byte, contentEncoding string) ([]byte, error) {
+	encodings := strings.Split(strings.ToLower(contentEncoding), ",")
+	decoded := body
+	for i := len(encodings) - 1; i >= 0; i-- {
+		encoding := strings.TrimSpace(encodings[i])
+		if encoding == "" || encoding == "identity" {
+			continue
+		}
+		var (
+			reader io.ReadCloser
+			err    error
+		)
+		switch encoding {
+		case "gzip", "x-gzip":
+			reader, err = gzip.NewReader(bytes.NewReader(decoded))
+		case "deflate":
+			reader, err = zlib.NewReader(bytes.NewReader(decoded))
+			if err != nil {
+				reader = flate.NewReader(bytes.NewReader(decoded))
+				err = nil
+			}
+		case "br":
+			reader = io.NopCloser(brotli.NewReader(bytes.NewReader(decoded)))
+		case "zstd":
+			var zr *zstd.Decoder
+			zr, err = zstd.NewReader(bytes.NewReader(decoded), zstd.WithDecoderMaxMemory(64<<20), zstd.WithDecoderMaxWindow(64<<20))
+			if err == nil {
+				reader = zr.IOReadCloser()
+			}
+		default:
+			return nil, fmt.Errorf("unsupported content-encoding %q", encoding)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("decode content-encoding %s: %w", encoding, err)
+		}
+		decoded, err = readDecodedBody(reader)
+		closeErr := reader.Close()
+		if err != nil {
+			return nil, fmt.Errorf("decode content-encoding %s: %w", encoding, err)
+		}
+		if closeErr != nil {
+			return nil, fmt.Errorf("close content-encoding %s decoder: %w", encoding, closeErr)
+		}
+	}
+	return decoded, nil
+}
+
 // Normalize computes normalized views for attempts and observed inferences touched by the batch.
 func (d *Deps) Normalize(ctx context.Context, j *jobs.Job) error {
 	rec := *j.RecordingID
@@ -728,6 +953,21 @@ func (d *Deps) Normalize(ctx context.Context, j *jobs.Job) error {
 	if input.BlobArrived != "" {
 		ref, _ := hex.DecodeString(input.BlobArrived)
 		attemptIDs, err = scanStrings(d.DB.Pool.Query(ctx, `select id from model_attempts where capture_run_id=$1 and (request_body_ref=$2 or response_body_ref=$2)`, run, ref))
+		if err == nil {
+			var nativeIDs []string
+			nativeIDs, err = scanStrings(d.DB.Pool.Query(ctx, `select distinct e.attempt_id from recording_events e join recordings r on r.id=e.recording_id where r.capture_run_id=$1 and e.payload_sha256=$2 and e.attempt_id is not null`, run, ref))
+			seen := make(map[string]struct{}, len(attemptIDs)+len(nativeIDs))
+			for _, id := range attemptIDs {
+				seen[id] = struct{}{}
+			}
+			for _, nativeID := range nativeIDs {
+				id := AttemptKey(run, nativeID)
+				if _, exists := seen[id]; !exists {
+					attemptIDs = append(attemptIDs, id)
+					seen[id] = struct{}{}
+				}
+			}
+		}
 	} else {
 		attemptIDs, err = scanStrings(d.DB.Pool.Query(ctx, `select distinct attempt_id from recording_events where recording_id=$1 and seq between $2 and $3 and attempt_id is not null`, rec, input.FirstSeq, input.LastSeq))
 		for i := range attemptIDs {
@@ -742,7 +982,7 @@ func (d *Deps) Normalize(ctx context.Context, j *jobs.Job) error {
 			return fmt.Errorf("normalize attempt %s: %w", id, err)
 		}
 	}
-	infIDs, err := scanStrings(d.DB.Pool.Query(ctx, `select distinct inference_id from recording_events where recording_id=$1 and seq between $2 and $3 and inference_id is not null and event='inference_request'`, rec, input.FirstSeq, input.LastSeq))
+	infIDs, err := scanStrings(d.DB.Pool.Query(ctx, `select distinct inference_id from recording_events where recording_id=$1 and seq between $2 and $3 and inference_id is not null and event in ('inference_request','inference_response','inference_error','pre_api_request','post_api_request','api_request_error')`, rec, input.FirstSeq, input.LastSeq))
 	if err != nil {
 		return err
 	}
@@ -809,24 +1049,26 @@ func scanStrings(rows pgx.Rows, err error) ([]string, error) {
 }
 
 func (d *Deps) normalizeAttempt(ctx context.Context, j *jobs.Job, run, id string) error {
-	var apiMode, terminal, nativeID string
-	var reqInline, respInline json.RawMessage
+	var apiMode, terminal, nativeID, method string
+	var reqInline, respInline, reqHeaders, respHeaders json.RawMessage
 	var reqRef, respRef []byte
+	var sseCount int
+	var status *int
 	var url *string
-	if err := d.DB.Pool.QueryRow(ctx, `select coalesce(api_mode,'unknown'), terminal_state, request_body, request_body_ref, response_body, response_body_ref, url, native_id from model_attempts where id=$1`, id).
-		Scan(&apiMode, &terminal, &reqInline, &reqRef, &respInline, &respRef, &url, &nativeID); err != nil {
+	if err := d.DB.Pool.QueryRow(ctx, `select coalesce(api_mode,'unknown'), terminal_state, request_body, request_body_ref, response_body, response_body_ref, request_headers, response_headers, sse_event_count, url, native_id, coalesce(method,''), status_code from model_attempts where id=$1`, id).
+		Scan(&apiMode, &terminal, &reqInline, &reqRef, &respInline, &respRef, &reqHeaders, &respHeaders, &sseCount, &url, &nativeID, &method, &status); err != nil {
 		return err
 	}
 	if apiMode == "unknown" && url != nil {
 		apiMode = detectAPIMode(*url)
 	}
-	body, ok, err := d.bodyBytes(ctx, j.ProjectID.String(), reqInline, reqRef)
+	body, ok, err := d.attemptBodyBytes(ctx, j.ProjectID.String(), run, nativeID, protocol.EvRequestBodyChunk, reqInline, reqRef)
 	if err != nil {
 		return err
 	}
 	var n *Normalized
 	if !ok {
-		n = &Normalized{APIMode: apiMode, BodyUnavailable: true}
+		n = &Normalized{APIMode: apiMode, BodyUnavailable: requestBodyExpected(apiMode, method, reqHeaders)}
 		n.finalize()
 	} else {
 		n, err = NormalizeRequest(apiMode, body)
@@ -835,56 +1077,76 @@ func (d *Deps) normalizeAttempt(ctx context.Context, j *jobs.Job, run, id string
 			n.finalize()
 		}
 	}
-	// response
-	chunks, err := d.loadRunEvents(ctx, run, `and e.attempt_id=$2 and e.event in ('sse_chunk','sse_event')`, nativeID)
+	// Prefer the complete wire body. Besides supporting chunked bodies, this is
+	// required when an upstream compresses SSE: capture-time SSE parsing sees
+	// encoded bytes, while the platform can safely decode the complete stream.
+	responseBody, responseAvailable, err := d.attemptBodyBytes(ctx, j.ProjectID.String(), run, nativeID, protocol.EvResponseBodyChunk, respInline, respRef)
 	if err != nil {
 		return err
 	}
-	if len(chunks) > 0 {
-		var raws []string
-		streamBytes := 0
-		for _, c := range chunks {
-			if c.Event == protocol.EvSSEEvent {
-				raw, available, err := d.bodyBytes(ctx, j.ProjectID.String(), nil, c.PayloadSHA)
-				if err != nil {
-					return err
-				}
-				if !available || c.RawTruncated || streamBytes > (64<<20)-len(raw) {
-					n.BodyUnavailable = true
+	if responseAvailable {
+		responseBody, err = decodeContentEncoding(responseBody, headerValue(respHeaders, "content-encoding"))
+		if err != nil {
+			return err
+		}
+		if sseCount > 0 || strings.Contains(strings.ToLower(headerValue(respHeaders, "content-type")), "text/event-stream") {
+			ApplyStream(n, []string{string(responseBody)})
+		} else {
+			ApplyResponseBody(n, responseBody)
+		}
+	} else {
+		chunks, err := d.loadRunEvents(ctx, run, `and e.attempt_id=$2 and e.event in ('sse_chunk','sse_event')`, nativeID)
+		if err != nil {
+			return err
+		}
+		if len(chunks) == 0 {
+			if terminal == "completed" && responseBodyExpected(method, status, respHeaders) {
+				n.BodyUnavailable = true
+			}
+		} else {
+			var raws []string
+			streamBytes := 0
+			for _, c := range chunks {
+				if c.Event == protocol.EvSSEEvent {
+					raw, available, err := d.bodyBytes(ctx, j.ProjectID.String(), nil, c.PayloadSHA)
+					if err != nil {
+						return err
+					}
+					if !available || c.RawTruncated || streamBytes > (64<<20)-len(raw) {
+						n.BodyUnavailable = true
+						continue
+					}
+					streamBytes += len(raw)
+					raws = append(raws, string(raw))
 					continue
 				}
-				streamBytes += len(raw)
-				raws = append(raws, string(raw))
-				continue
-			}
-			var p struct {
-				Raw   string `json:"raw"`
-				Event string `json:"event"`
-				Data  string `json:"data"`
-			}
-			if json.Unmarshal(c.Payload, &p) == nil {
-				if p.Raw != "" {
-					raws = append(raws, p.Raw)
-				} else if p.Data != "" || p.Event != "" {
-					s := ""
-					if p.Event != "" {
-						s += "event: " + p.Event + "\n"
+				var p struct {
+					Raw   string `json:"raw"`
+					Event string `json:"event"`
+					Data  string `json:"data"`
+				}
+				if json.Unmarshal(c.Payload, &p) == nil {
+					if p.Raw != "" {
+						raws = append(raws, p.Raw)
+					} else if p.Data != "" || p.Event != "" {
+						s := ""
+						if p.Event != "" {
+							s += "event: " + p.Event + "\n"
+						}
+						s += "data: " + p.Data + "\n\n"
+						raws = append(raws, s)
 					}
-					s += "data: " + p.Data + "\n\n"
-					raws = append(raws, s)
 				}
 			}
+			ApplyStream(n, raws)
 		}
-		ApplyStream(n, raws)
-		if n.StreamTerminated != nil && !*n.StreamTerminated && terminal == "completed" {
+	}
+	if n.StreamTerminated != nil {
+		if !*n.StreamTerminated && terminal == "completed" {
 			terminal = "truncated"
+		} else if *n.StreamTerminated && responseAvailable && status != nil && *status >= 200 && *status < 300 && (terminal == "truncated" || terminal == "cancelled") {
+			terminal = "completed"
 		}
-	} else if rb, ok, err := d.bodyBytes(ctx, j.ProjectID.String(), respInline, respRef); err != nil {
-		return err
-	} else if ok {
-		ApplyResponseBody(n, rb)
-	} else if terminal == "completed" {
-		n.BodyUnavailable = true
 	}
 	nb, _ := json.Marshal(n)
 	var usage any
@@ -894,7 +1156,7 @@ func (d *Deps) normalizeAttempt(ctx context.Context, j *jobs.Job, run, id string
 	fp, _ := hex.DecodeString(n.Fingerprint)
 	ih, _ := hex.DecodeString(n.InputHash)
 	_, err = d.DB.Pool.Exec(ctx, `update model_attempts set normalized=$2, api_mode=$3, model=coalesce(nullif($4,''), model), usage=coalesce($5::jsonb, usage), response_text=$6, request_fingerprint=$7, input_hash=$8, terminal_state=$9, processor_version=$10, updated_at=now() where id=$1`,
-		id, nb, n.APIMode, n.Model, usage, truncateStr(n.ResponseText, 200000), fp, ih, terminal, NormalizerVersion)
+		id, nb, n.APIMode, n.Model, usage, nilIfEmpty(truncateStr(n.ResponseText, 200000)), fp, ih, terminal, NormalizerVersion)
 	return err
 }
 
@@ -908,13 +1170,14 @@ func truncateStr(s string, n int) string {
 func (d *Deps) normalizeInference(ctx context.Context, id string) error {
 	var apiMode string
 	var req, resp json.RawMessage
+	var err error
 	if err := d.DB.Pool.QueryRow(ctx, `select coalesce(api_mode,'unknown'), request, response from model_inferences where id=$1`, id).Scan(&apiMode, &req, &resp); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
 		return err
 	}
-	if len(req) == 0 {
+	if len(req) == 0 && len(resp) == 0 {
 		return nil
 	}
 	if apiMode == "unknown" {
@@ -932,9 +1195,16 @@ func (d *Deps) normalizeInference(ctx context.Context, id string) error {
 			apiMode = "chat_completions"
 		}
 	}
-	n, err := NormalizeRequest(apiMode, req)
-	if err != nil {
-		return nil
+	var n *Normalized
+	if len(req) > 0 {
+		n, err = NormalizeRequest(apiMode, req)
+	}
+	if n == nil || err != nil {
+		n = &Normalized{APIMode: apiMode, BodyUnavailable: true}
+		if err != nil {
+			n.Params = map[string]any{"parse_error": err.Error()}
+		}
+		n.finalize()
 	}
 	if len(resp) > 0 {
 		ApplyResponseBody(n, resp)

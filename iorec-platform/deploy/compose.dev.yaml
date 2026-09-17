@@ -4,7 +4,11 @@ services:
     environment:
       IOREC_AUTH_MODE: dev
       IOREC_BOOTSTRAP_PROJECT_TOKEN: iorp_devtoken0000000000000000
-    ports: ["8080:8080"]
+      # Caddy reaches the API over the private Compose network. Publishing the
+      # port only on loopback keeps unauthenticated dev mode local to the host.
+      IOREC_API_ADDR: "0.0.0.0:8080"
+      IOREC_ALLOW_REMOTE_DEV_AUTH: "true"
+    ports: ["127.0.0.1:18080:8080"]
   postgres:
-    ports: ["54329:5432"]
+    ports: ["127.0.0.1:${IOREC_POSTGRES_PORT:-54329}:5432"]
     command: ["postgres", "-c", "fsync=off", "-c", "synchronous_commit=off"]
