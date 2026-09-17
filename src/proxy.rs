@@ -1816,15 +1816,21 @@ fn connection_nominated_headers(input: &HeaderMap) -> BTreeSet<String> {
 fn target_url(base: &Url, uri: &Uri) -> anyhow::Result<Url> {
     let mut target = base.clone();
     let base_path = base.path().trim_end_matches('/');
-    let request_path = uri.path().trim_start_matches('/');
+    let uri_path = uri.path();
+    let request_path = uri_path.trim_start_matches('/');
     let combined = if base_path.is_empty() || base_path == "/" {
         format!("/{request_path}")
-    } else if uri.path() == base_path || uri.path().starts_with(&format!("{base_path}/")) {
-        uri.path().to_owned()
+    } else if uri_path == base_path || uri_path.starts_with(&format!("{base_path}/")) {
+        uri_path.to_owned()
     } else if request_path.is_empty() {
         base_path.to_owned()
     } else {
-        format!("{base_path}/{request_path}")
+        let overlap = overlapping_path_prefix_len(base_path, uri_path);
+        if overlap == 0 {
+            format!("{base_path}/{request_path}")
+        } else {
+            format!("{base_path}{}", &uri_path[overlap..])
+        }
     };
     target.set_path(&combined);
     target.set_query(uri.query());
@@ -1833,6 +1839,26 @@ fn target_url(base: &Url, uri: &Uri) -> anyhow::Result<Url> {
         anyhow::bail!("unsupported upstream scheme {}", target.scheme());
     }
     Ok(target)
+}
+
+// Return the longest whole-segment request prefix already present at the end
+// of the upstream base path. OpenAI-compatible clients commonly send `/v1/...`
+// while provider bases already end in `/v1` (for example `/inference/v1`).
+fn overlapping_path_prefix_len(base_path: &str, request_path: &str) -> usize {
+    let mut end = request_path.len();
+    loop {
+        let prefix = &request_path[..end];
+        if prefix.len() > 1 && base_path.ends_with(prefix) {
+            return end;
+        }
+        let Some(previous_separator) = prefix.rfind('/') else {
+            return 0;
+        };
+        if previous_separator == 0 {
+            return 0;
+        }
+        end = previous_separator;
+    }
 }
 
 fn validate_upstream_base(upstream: &Url) -> anyhow::Result<()> {
@@ -2072,6 +2098,39 @@ mod tests {
         )
         .unwrap();
         assert_eq!(target.as_str(), "https://example.test/v1/responses");
+    }
+
+    #[test]
+    fn deduplicates_version_suffix_after_provider_prefix() {
+        let target = target_url(
+            &Url::parse("https://api.fireworks.ai/inference/v1").unwrap(),
+            &"/v1/chat/completions?stream=true".parse().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            target.as_str(),
+            "https://api.fireworks.ai/inference/v1/chat/completions?stream=true"
+        );
+
+        let longest = target_url(
+            &Url::parse("https://example.test/proxy/openai/v1").unwrap(),
+            &"/openai/v1/responses".parse().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            longest.as_str(),
+            "https://example.test/proxy/openai/v1/responses"
+        );
+
+        let segment_boundary = target_url(
+            &Url::parse("https://example.test/inference/v10").unwrap(),
+            &"/v1/chat/completions".parse().unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            segment_boundary.as_str(),
+            "https://example.test/inference/v10/v1/chat/completions"
+        );
     }
 
     #[test]

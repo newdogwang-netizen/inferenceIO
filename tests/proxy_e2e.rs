@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, fs, net::SocketAddr, path::Path, time::Duration};
 
+use axum::{Json, Router, routing::post};
 use futures_util::{SinkExt, StreamExt, stream::FuturesUnordered};
 use http::header;
 use iorec::{
@@ -16,6 +17,7 @@ use iorec::{
     transparent::TransparentArtifacts,
 };
 use rustls::pki_types::pem::PemObject as _;
+use serde_json::json;
 use sha2::{Digest, Sha256};
 use tokio_tungstenite::{
     Connector, client_async_tls_with_config, connect_async,
@@ -70,6 +72,66 @@ fn write_test_manifest(path: &Path, run_id: &str, policy: CapturePolicy) {
         policy,
     );
     write_atomic(&path.join("manifest.json"), &manifest).unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn provider_version_prefix_overlap_forwards_to_exact_upstream_path() {
+    let temporary = tempfile::tempdir().unwrap();
+    let (store, _) = RunStore::create(
+        temporary.path(),
+        "provider-prefix",
+        CapturePolicy::default(),
+    )
+    .unwrap();
+    let listener = tokio::net::TcpListener::bind(loopback()).await.unwrap();
+    let upstream_address = listener.local_addr().unwrap();
+    let upstream = tokio::spawn(async move {
+        axum::serve(
+            listener,
+            Router::new().route(
+                "/inference/v1/chat/completions",
+                post(|| async { Json(json!({"id": "exact-provider-path"})) }),
+            ),
+        )
+        .await
+        .unwrap();
+    });
+    let proxy = start_proxy(
+        ProxyConfig {
+            listen: loopback(),
+            upstream: Url::parse(&format!("http://{upstream_address}/inference/v1")).unwrap(),
+        },
+        store.clone(),
+    )
+    .await
+    .unwrap();
+
+    let response = reqwest::Client::new()
+        .post(format!("http://{}/v1/chat/completions", proxy.address))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(r#"{"model":"test","messages":[]}"#)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), http::StatusCode::OK);
+    let response_body: serde_json::Value =
+        serde_json::from_slice(&response.bytes().await.unwrap()).unwrap();
+    assert_eq!(response_body["id"], "exact-provider-path");
+
+    proxy.stop(Duration::from_secs(5)).await.unwrap();
+    store.shutdown().await.unwrap();
+    upstream.abort();
+    let _ = upstream.await;
+
+    assert!(read_events(temporary.path()).iter().any(|event| {
+        event.event == "transport_request_started"
+            && event
+                .normalized
+                .as_ref()
+                .and_then(|value| value.pointer("/upstream/path"))
+                .and_then(serde_json::Value::as_str)
+                == Some("/inference/v1/chat/completions")
+    }));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
