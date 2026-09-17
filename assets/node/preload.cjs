@@ -24,7 +24,7 @@ const MAX_RECORD_BYTES = 4 << 20;
 const MAX_STREAM_BYTES = 64 << 20;
 const MAX_STREAM_CHUNKS = 100_000;
 const SOCKET_TIMEOUT_MS = 500;
-const DRAIN_DEADLINE_MS = 1_000;
+const NO_PROGRESS_DEADLINE_MS = 1_000;
 const PATCH_VERSION = 1;
 const SENSITIVE_KEYS = new Set([
   'authorization', 'api-key', 'cookie', 'set-cookie', 'password',
@@ -215,7 +215,7 @@ function send(encoded) {
 async function drain() {
   if (sending) return;
   sending = true;
-  const deadline = Date.now() + DRAIN_DEADLINE_MS;
+  let deadline = Date.now() + NO_PROGRESS_DEADLINE_MS;
   try {
     while (queue.length > 0) {
       if (Date.now() >= deadline) {
@@ -236,10 +236,12 @@ async function drain() {
           reason: 'runtime_queue_or_submission_loss',
           occurrences: pendingDrops,
         }, undefined, 'incomplete').encoded;
-        if (!await send(gap)) drops += pendingDrops;
+        if (await send(gap)) deadline = Date.now() + NO_PROGRESS_DEADLINE_MS;
+        else drops += pendingDrops;
       }
       const encoded = queue.shift();
-      if (!await send(encoded)) noteDrop();
+      if (await send(encoded)) deadline = Date.now() + NO_PROGRESS_DEADLINE_MS;
+      else noteDrop();
     }
   } catch (_) {
     noteDrop();

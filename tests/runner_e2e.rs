@@ -1109,6 +1109,103 @@ main().catch((error) => {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn node_runtime_queue_deadline_tracks_collector_progress() {
+    let node = std::path::Path::new("/usr/bin/node");
+    assert!(node.is_file(), "Linux support gate requires /usr/bin/node");
+    let temporary = tempfile::tempdir().unwrap();
+    let socket = temporary.path().join("collector.sock");
+    let listener = tokio::net::UnixListener::bind(&socket).unwrap();
+    let events = std::sync::Arc::new(tokio::sync::Mutex::new(Vec::new()));
+    let captured = events.clone();
+    let server = tokio::spawn(async move {
+        loop {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut submission = Vec::new();
+            stream.read_to_end(&mut submission).await.unwrap();
+            tokio::time::sleep(Duration::from_millis(60)).await;
+            captured
+                .lock()
+                .await
+                .push(serde_json::from_slice::<serde_json::Value>(&submission).unwrap());
+            stream.write_all(br#"{"accepted":true}"#).await.unwrap();
+            stream.shutdown().await.unwrap();
+        }
+    });
+
+    let preload = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/node/preload.cjs");
+    let script = r"
+const runtime = globalThis[Symbol.for('iorec.node.runtime.v1')];
+class Stream {
+  [Symbol.asyncIterator]() { return this; }
+  next() { return Promise.resolve({done: true}); }
+}
+class Client {
+  constructor() {
+    this.chat = {completions: {create: (_options) => new Stream()}};
+  }
+}
+const WrappedClient = runtime.wrapOpenAIConstructor(Client);
+const client = new WrappedClient();
+for (let index = 0; index < 20; index += 1) {
+  client.chat.completions.create({model: 'fixture-model', index});
+}
+";
+    let output = tokio::time::timeout(
+        Duration::from_secs(10),
+        tokio::process::Command::new(node)
+            .arg("-e")
+            .arg(script)
+            .env("IOREC_NODE_INJECTION", "1")
+            .env("IOREC_COLLECTOR_SOCKET", &socket)
+            .env("IOREC_COLLECTOR_TOKEN", "fixture-token")
+            .env("NODE_OPTIONS", format!("--require={}", preload.display()))
+            .output(),
+    )
+    .await
+    .expect("Node runtime sender did not drain while the collector made progress")
+    .unwrap();
+    assert!(
+        output.status.success(),
+        "Node fixture failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    server.abort();
+    let events = events.lock().await;
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event["event"] == "node_runtime_ready")
+            .count(),
+        1
+    );
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event["event"] == "model_call_started")
+            .count(),
+        20
+    );
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event["event"] == "model_stream_started")
+            .count(),
+        20
+    );
+    let sender_deadline_gaps = events
+        .iter()
+        .filter(|event| {
+            event["event"] == "runtime_capture_gap"
+                && event["payload"]["reason"] == "runtime_sender_deadline"
+        })
+        .collect::<Vec<_>>();
+    assert!(
+        sender_deadline_gaps.is_empty(),
+        "collector progress triggered sender deadline gaps: {sender_deadline_gaps:#?}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn surviving_descendants_make_the_finished_run_explicitly_incomplete() {
     let temporary = tempfile::tempdir().unwrap();
     let pid_file = temporary.path().join("background.pid");
