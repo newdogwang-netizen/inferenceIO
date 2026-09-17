@@ -2335,6 +2335,8 @@ mod tests {
         fs::write(&path, b"fixture").unwrap();
         fs::set_permissions(&path, fs::Permissions::from_mode(0o700)).unwrap();
         assert!(!validate_root_executable(&path));
-        assert!(validate_root_executable(Path::new("/usr/bin/tshark")));
+        // Keep the positive case independent of the optional tshark package so
+        // this policy unit test is portable across minimal CI hosts.
+        assert!(validate_root_executable(Path::new("/usr/bin/env")));
     }
 }
