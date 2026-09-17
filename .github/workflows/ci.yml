@@ -11,6 +11,11 @@ jobs:
         with:
           toolchain: 1.89.0
           components: rustfmt, clippy
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22.22.2"
+      - name: install Node in the qualified production path
+        run: sudo install -o root -g root -m 0755 "$(command -v node)" /usr/bin/node
       - run: cargo fmt --all -- --check
       - run: cargo clippy --locked --all-features --all-targets -- -D warnings
       - run: cargo test --locked --all-features --all-targets
