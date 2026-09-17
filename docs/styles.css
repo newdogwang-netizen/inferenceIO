@@ -345,6 +345,7 @@ h1 {
 .evidence-primary h2,
 .quickstart-section h2,
 .integrity-section h2,
+.directory-section h2,
 .boundary-section h2 {
   margin: 0;
   font-size: clamp(36px, 5vw, 62px);
@@ -566,6 +567,70 @@ pre span {
   font-size: 14px;
 }
 
+.directory-section {
+  padding: 120px 0;
+  border-top: 1px solid var(--line);
+}
+
+.directory-header {
+  max-width: 760px;
+}
+
+.directory-header > p {
+  margin: 0 0 20px;
+  color: var(--accent);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.directory-grid {
+  margin: 60px 0 0;
+  padding: 1px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--line);
+  list-style: none;
+}
+
+.directory-grid a {
+  min-height: 230px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  background: var(--canvas);
+  text-decoration: none;
+  transition: background-color 160ms ease;
+}
+
+.directory-grid a:hover {
+  background: var(--surface);
+}
+
+.directory-grid a > span {
+  color: var(--accent);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.directory-grid strong {
+  margin-top: 20px;
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+
+.directory-grid small {
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .boundary-section {
   margin: 40px 0 130px;
   padding: clamp(38px, 7vw, 84px);
@@ -721,6 +786,10 @@ pre span {
     grid-template-columns: 1fr 1fr;
   }
 
+  .directory-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .integrity-path li:nth-child(2) {
     border-right: 1px solid var(--line);
   }
@@ -778,7 +847,8 @@ pre span {
   .architecture-section,
   .evidence-section,
   .quickstart-section,
-  .integrity-section {
+  .integrity-section,
+  .directory-section {
     padding: 84px 0;
   }
 
@@ -805,6 +875,14 @@ pre span {
 
   .boundary-section {
     margin-bottom: 90px;
+  }
+
+  .directory-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .directory-grid a {
+    min-height: 180px;
   }
 
   .site-footer {

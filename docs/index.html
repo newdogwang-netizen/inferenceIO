@@ -23,6 +23,7 @@
       <nav class="nav-shell" aria-label="Primary navigation">
         <a class="brand" href="./" aria-label="iorec home">io<span>rec</span></a>
         <div class="nav-links">
+          <a href="#navigate">Navigate</a>
           <a href="#evidence">Evidence</a>
           <a href="#architecture">Architecture</a>
           <a href="#boundaries">Boundaries</a>
@@ -128,7 +129,7 @@
           </div>
         </section>
 
-        <section class="quickstart-section" aria-labelledby="quickstart-title">
+        <section id="quickstart" class="quickstart-section" aria-labelledby="quickstart-title">
           <div>
             <h2 id="quickstart-title">Start with one command.</h2>
             <p>Encrypted recording is the default. The key stays with the operator.</p>
@@ -151,6 +152,23 @@ iorec run \
             <li><strong>Verify</strong><span>Counts, terminals, payloads, and transport boundaries</span></li>
             <li><strong>Retain</strong><span>Audited TTL, class erasure, and remote deletion</span></li>
           </ol>
+        </section>
+
+        <section id="navigate" class="directory-section" aria-labelledby="directory-title">
+          <header class="directory-header">
+            <p>Project map</p>
+            <h2 id="directory-title">Go straight to the evidence you need.</h2>
+          </header>
+          <nav aria-label="Project resources">
+            <ul class="directory-grid">
+              <li><a href="#quickstart"><span>01 · Run</span><strong>Quickstart</strong><small>Create a key and record the first encrypted run.</small></a></li>
+              <li><a href="https://github.com/newdogwang-netizen/inferenceIO#readme"><span>02 · Learn</span><strong>README</strong><small>Understand the recorder, platform, and operating model.</small></a></li>
+              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/PRODUCTION_READINESS.md"><span>03 · Verify</span><strong>Production audit</strong><small>Review release gates, soak evidence, and residual risk.</small></a></li>
+              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/SUPPORT.md"><span>04 · Scope</span><strong>Support matrix</strong><small>See exactly what is qualified and what remains outside scope.</small></a></li>
+              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/SECURITY.md"><span>05 · Defend</span><strong>Security</strong><small>Inspect trust boundaries, secret handling, and reporting.</small></a></li>
+              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/PERFORMANCE.md"><span>06 · Measure</span><strong>Performance</strong><small>Read benchmark method, overhead, and steady-state results.</small></a></li>
+            </ul>
+          </nav>
         </section>
 
         <section id="boundaries" class="boundary-section" aria-labelledby="boundary-title">
