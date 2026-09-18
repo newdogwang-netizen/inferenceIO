@@ -764,6 +764,28 @@ type bodyChunkMetadata struct {
 	SHA256       string `json:"sha256"`
 }
 
+type websocketFrameMetadata struct {
+	Direction       string `json:"direction"`
+	MessageSequence int64  `json:"message_sequence"`
+	Opcode          string `json:"opcode"`
+	ObservedSize    int64  `json:"observed_size"`
+	CapturedSize    int64  `json:"captured_size"`
+	SHA256          string `json:"sha256"`
+}
+
+type websocketFinishMetadata struct {
+	CaptureFailed    bool  `json:"capture_failed"`
+	ClientMessages   int64 `json:"client_messages"`
+	UpstreamMessages int64 `json:"upstream_messages"`
+}
+
+type websocketMessages struct {
+	request  [][]byte
+	response [][]byte
+	complete bool
+	terminal string
+}
+
 // attemptBodyBytes returns an attempt body in wire order. New recorder events
 // intentionally store every transport read as a separate immutable blob, so a
 // multi-chunk body cannot be represented by model_attempts.*_body_ref alone.
@@ -826,6 +848,120 @@ func (d *Deps) attemptBodyBytes(ctx context.Context, project, run, nativeID, chu
 		_, _ = out.Write(part)
 	}
 	return out.Bytes(), true, nil
+}
+
+// attemptWebSocketMessages reconstructs proxy-observed application messages
+// without flattening message boundaries. The transport-audit stage remains the
+// independent wire proof; this reconstruction feeds only the normalized view.
+func (d *Deps) attemptWebSocketMessages(ctx context.Context, project, run, nativeID string) (websocketMessages, error) {
+	events, err := d.loadRunEvents(ctx, run, `and e.attempt_id=$2 and e.event in ('websocket_frame','websocket_connection_finished')`, nativeID)
+	if err != nil {
+		return websocketMessages{}, err
+	}
+	const maximum = 64 << 20
+	result := websocketMessages{}
+	expected := map[string]int64{"client_to_upstream": 1, "upstream_to_client": 1}
+	observed := map[string]int64{"client_to_upstream": 0, "upstream_to_client": 0}
+	var finish *websocketFinishMetadata
+	total := 0
+	for _, event := range events {
+		if event.Event == protocol.EvWebSocketFinished {
+			if finish != nil {
+				return websocketMessages{}, fmt.Errorf("WebSocket attempt has multiple terminal events")
+			}
+			var metadata websocketFinishMetadata
+			if err := json.Unmarshal(event.Payload, &metadata); err != nil {
+				return websocketMessages{}, fmt.Errorf("WebSocket terminal seq %d has invalid metadata: %w", event.Seq, err)
+			}
+			finish = &metadata
+			result.terminal = terminalState(event.TerminalState)
+			continue
+		}
+		var metadata websocketFrameMetadata
+		if err := json.Unmarshal(event.Payload, &metadata); err != nil {
+			return websocketMessages{}, fmt.Errorf("WebSocket frame seq %d has invalid metadata: %w", event.Seq, err)
+		}
+		next, known := expected[metadata.Direction]
+		if !known {
+			return websocketMessages{}, fmt.Errorf("WebSocket frame seq %d has invalid direction %q", event.Seq, metadata.Direction)
+		}
+		if metadata.MessageSequence != next {
+			return websocketMessages{}, fmt.Errorf("WebSocket %s sequence gap: expected %d, got %d", metadata.Direction, next, metadata.MessageSequence)
+		}
+		expected[metadata.Direction]++
+		observed[metadata.Direction]++
+		if metadata.ObservedSize < 0 || metadata.CapturedSize != metadata.ObservedSize || event.RawTruncated {
+			return result, nil
+		}
+		declaredDigest := strings.TrimPrefix(strings.ToLower(metadata.SHA256), "sha256:")
+		if metadata.CapturedSize == 0 {
+			empty := sha256.Sum256(nil)
+			if declaredDigest != "" && declaredDigest != hex.EncodeToString(empty[:]) {
+				return websocketMessages{}, fmt.Errorf("WebSocket frame seq %d has an invalid empty-payload digest", event.Seq)
+			}
+			continue
+		}
+		if len(event.PayloadSHA) == 0 || event.PayloadSize == nil || *event.PayloadSize != metadata.CapturedSize || declaredDigest != hex.EncodeToString(event.PayloadSHA) {
+			return result, nil
+		}
+		part, available, err := d.bodyBytes(ctx, project, nil, event.PayloadSHA)
+		if err != nil {
+			return websocketMessages{}, err
+		}
+		if !available || int64(len(part)) != metadata.CapturedSize || total > maximum-len(part) {
+			return result, nil
+		}
+		total += len(part)
+		if metadata.Opcode != "text" {
+			continue
+		}
+		if metadata.Direction == "client_to_upstream" {
+			result.request = append(result.request, part)
+		} else {
+			result.response = append(result.response, part)
+		}
+	}
+	result.complete = finish != nil && !finish.CaptureFailed && finish.ClientMessages == observed["client_to_upstream"] && finish.UpstreamMessages == observed["upstream_to_client"]
+	return result, nil
+}
+
+func normalizeWebSocketRequest(apiMode string, messages [][]byte) (*Normalized, error) {
+	if len(messages) == 0 {
+		return nil, fmt.Errorf("WebSocket request has no text messages")
+	}
+	if apiMode != "responses" && apiMode != "codex_responses" {
+		return NormalizeRequest(apiMode, messages[0])
+	}
+	var aggregate map[string]any
+	var inputs []any
+	requestMessages := 0
+	for _, message := range messages {
+		var candidate map[string]any
+		if json.Unmarshal(message, &candidate) != nil || candidate["type"] != "response.create" {
+			continue
+		}
+		requestMessages++
+		aggregate = candidate
+		switch input := candidate["input"].(type) {
+		case []any:
+			inputs = append(inputs, input...)
+		case string:
+			inputs = append(inputs, map[string]any{"role": "user", "content": input})
+		}
+	}
+	if aggregate == nil {
+		return nil, fmt.Errorf("WebSocket request has no response.create message")
+	}
+	aggregate["input"] = inputs
+	body, err := json.Marshal(aggregate)
+	if err != nil {
+		return nil, err
+	}
+	n, err := NormalizeRequest(apiMode, body)
+	if err == nil {
+		n.Params["websocket_request_messages"] = requestMessages
+	}
+	return n, err
 }
 
 func headerValue(headers json.RawMessage, name string) string {
@@ -1049,25 +1185,42 @@ func scanStrings(rows pgx.Rows, err error) ([]string, error) {
 }
 
 func (d *Deps) normalizeAttempt(ctx context.Context, j *jobs.Job, run, id string) error {
-	var apiMode, terminal, nativeID, method string
+	var apiMode, terminal, nativeID, method, attemptProtocol string
 	var reqInline, respInline, reqHeaders, respHeaders json.RawMessage
 	var reqRef, respRef []byte
 	var sseCount int
 	var status *int
 	var url *string
-	if err := d.DB.Pool.QueryRow(ctx, `select coalesce(api_mode,'unknown'), terminal_state, request_body, request_body_ref, response_body, response_body_ref, request_headers, response_headers, sse_event_count, url, native_id, coalesce(method,''), status_code from model_attempts where id=$1`, id).
-		Scan(&apiMode, &terminal, &reqInline, &reqRef, &respInline, &respRef, &reqHeaders, &respHeaders, &sseCount, &url, &nativeID, &method, &status); err != nil {
+	if err := d.DB.Pool.QueryRow(ctx, `select coalesce(api_mode,'unknown'), terminal_state, request_body, request_body_ref, response_body, response_body_ref, request_headers, response_headers, sse_event_count, url, native_id, coalesce(method,''), status_code, coalesce(protocol,'') from model_attempts where id=$1`, id).
+		Scan(&apiMode, &terminal, &reqInline, &reqRef, &respInline, &respRef, &reqHeaders, &respHeaders, &sseCount, &url, &nativeID, &method, &status, &attemptProtocol); err != nil {
 		return err
 	}
 	if apiMode == "unknown" && url != nil {
 		apiMode = detectAPIMode(*url)
 	}
-	body, ok, err := d.attemptBodyBytes(ctx, j.ProjectID.String(), run, nativeID, protocol.EvRequestBodyChunk, reqInline, reqRef)
-	if err != nil {
-		return err
+	var ws websocketMessages
+	var body []byte
+	var ok bool
+	var err error
+	if strings.EqualFold(attemptProtocol, "websocket") {
+		ws, err = d.attemptWebSocketMessages(ctx, j.ProjectID.String(), run, nativeID)
+		if err != nil {
+			return err
+		}
+	} else {
+		body, ok, err = d.attemptBodyBytes(ctx, j.ProjectID.String(), run, nativeID, protocol.EvRequestBodyChunk, reqInline, reqRef)
+		if err != nil {
+			return err
+		}
 	}
 	var n *Normalized
-	if !ok {
+	if strings.EqualFold(attemptProtocol, "websocket") && ws.complete {
+		n, err = normalizeWebSocketRequest(apiMode, ws.request)
+		if err != nil {
+			n = &Normalized{APIMode: apiMode, BodyUnavailable: true, Params: map[string]any{"parse_error": err.Error()}}
+			n.finalize()
+		}
+	} else if !ok {
 		n = &Normalized{APIMode: apiMode, BodyUnavailable: requestBodyExpected(apiMode, method, reqHeaders)}
 		n.finalize()
 	} else {
@@ -1080,11 +1233,31 @@ func (d *Deps) normalizeAttempt(ctx context.Context, j *jobs.Job, run, id string
 	// Prefer the complete wire body. Besides supporting chunked bodies, this is
 	// required when an upstream compresses SSE: capture-time SSE parsing sees
 	// encoded bytes, while the platform can safely decode the complete stream.
-	responseBody, responseAvailable, err := d.attemptBodyBytes(ctx, j.ProjectID.String(), run, nativeID, protocol.EvResponseBodyChunk, respInline, respRef)
-	if err != nil {
-		return err
+	var responseBody []byte
+	var responseAvailable bool
+	if !strings.EqualFold(attemptProtocol, "websocket") {
+		responseBody, responseAvailable, err = d.attemptBodyBytes(ctx, j.ProjectID.String(), run, nativeID, protocol.EvResponseBodyChunk, respInline, respRef)
+		if err != nil {
+			return err
+		}
 	}
-	if responseAvailable {
+	if strings.EqualFold(attemptProtocol, "websocket") && ws.complete {
+		stream := make([]string, 0, len(ws.response))
+		for _, message := range ws.response {
+			stream = append(stream, "data: "+string(message)+"\n\n")
+		}
+		ApplyStream(n, stream)
+		if n.Params == nil {
+			n.Params = map[string]any{}
+		}
+		n.Params["websocket_response_messages"] = len(ws.response)
+		// The WebSocket terminal event is the authoritative lifecycle signal.
+		// Keeping it here also prevents an older concurrent normalize job from
+		// downgrading a terminal attempt back to unknown.
+		if ws.terminal != "" && ws.terminal != "unknown" {
+			terminal = ws.terminal
+		}
+	} else if responseAvailable {
 		responseBody, err = decodeContentEncoding(responseBody, headerValue(respHeaders, "content-encoding"))
 		if err != nil {
 			return err
@@ -1155,7 +1328,7 @@ func (d *Deps) normalizeAttempt(ctx context.Context, j *jobs.Job, run, id string
 	}
 	fp, _ := hex.DecodeString(n.Fingerprint)
 	ih, _ := hex.DecodeString(n.InputHash)
-	_, err = d.DB.Pool.Exec(ctx, `update model_attempts set normalized=$2, api_mode=$3, model=coalesce(nullif($4,''), model), usage=coalesce($5::jsonb, usage), response_text=$6, request_fingerprint=$7, input_hash=$8, terminal_state=$9, processor_version=$10, updated_at=now() where id=$1`,
+	_, err = d.DB.Pool.Exec(ctx, `update model_attempts set normalized=$2, api_mode=$3, model=coalesce(nullif($4,''), model), usage=coalesce($5::jsonb, usage), response_text=$6, request_fingerprint=$7, input_hash=$8, terminal_state=case when $9='unknown' then terminal_state else $9 end, processor_version=$10, updated_at=now() where id=$1`,
 		id, nb, n.APIMode, n.Model, usage, nilIfEmpty(truncateStr(n.ResponseText, 200000)), fp, ih, terminal, NormalizerVersion)
 	return err
 }

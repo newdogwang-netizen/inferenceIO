@@ -879,6 +879,28 @@ func TestResponsesAPIStateRefs(t *testing.T) {
 	}
 }
 
+func TestNormalizeWebSocketResponsesMessages(t *testing.T) {
+	request := [][]byte{
+		[]byte(`{"type":"response.create","model":"gpt-ws","stream":true,"input":[{"role":"user","content":"first"}]}`),
+		[]byte(`{"type":"response.create","model":"gpt-ws","stream":true,"input":[{"type":"function_call_output","call_id":"call-1","output":"done"}]}`),
+	}
+	n, err := normalizeWebSocketRequest("responses", request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n.Model != "gpt-ws" || len(n.Messages) != 2 || n.Messages[0].Text != "first" || n.Messages[1].ToolCallID != "call-1" || n.Params["websocket_request_messages"] != 2 {
+		t.Fatalf("unexpected WebSocket request normalization: %+v", n)
+	}
+	ApplyStream(n, []string{
+		"data: {\"type\":\"response.output_text.delta\",\"delta\":\"hello \"}\n\n",
+		"data: {\"type\":\"response.output_text.delta\",\"delta\":\"world\"}\n\n",
+		"data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp-ws\",\"model\":\"gpt-ws\"}}\n\n",
+	})
+	if n.ResponseText != "hello world" || n.ResponseID != "resp-ws" || n.StreamTerminated == nil || !*n.StreamTerminated {
+		t.Fatalf("unexpected WebSocket response normalization: %+v", n)
+	}
+}
+
 func TestDetectAPIMode(t *testing.T) {
 	cases := map[string]string{
 		"https://api.openai.com/v1/chat/completions":                                           "chat_completions",

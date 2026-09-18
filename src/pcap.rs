@@ -28,7 +28,11 @@ const START_TIMEOUT: Duration = Duration::from_secs(2);
 const STOP_TIMEOUT: Duration = Duration::from_secs(5);
 const READER_STOP_TIMEOUT: Duration = Duration::from_secs(5);
 const STDERR_LIMIT: usize = 64 * 1024;
-const CHUNK_BYTES: usize = 64 * 1024;
+// Keep packet ingestion ahead of bursty WebSocket responses. Each persisted
+// chunk requires encrypted blob storage plus a durable event append, so small
+// chunks can back-pressure tcpdump even when average traffic is modest.
+const CHUNK_BYTES: usize = 1024 * 1024;
+const CAPTURE_BUFFER_KIB: usize = 32 * 1024;
 const PCAP_GLOBAL_HEADER_BYTES: usize = 24;
 
 #[derive(Debug, Clone, Serialize)]
@@ -40,6 +44,7 @@ pub struct PcapReport {
     pub packets_received: Option<u64>,
     pub packets_dropped: Option<u64>,
     pub packets_missed: Option<u64>,
+    pub packets_received_minus_captured: Option<u64>,
     pub exit_success: bool,
     pub exit_code: Option<i32>,
     pub termination_signal: Option<i32>,
@@ -108,14 +113,14 @@ impl PcapHandle {
         let stderr = stderr
             .map_err(|error| io::Error::other(format!("pcap stderr task panicked: {error}")))??;
         let statistics = parse_statistics(&String::from_utf8_lossy(&stderr.bytes));
-        let packets_missed = statistics
-            .captured
-            .zip(statistics.received)
-            .and_then(|(captured, received)| received.checked_sub(captured));
-        let observed_packet_loss = statistics
-            .dropped
-            .unwrap_or(0)
-            .max(packets_missed.unwrap_or(0));
+        let packets_received_minus_captured = received_minus_captured(&statistics);
+        // libpcap's "received by filter" counter is OS- and filter-dependent:
+        // it can include packets rejected by the capture filter or packets not
+        // yet processed when statistics are sampled. It is therefore not a
+        // loss counter. Retain the difference as diagnostics, while the
+        // kernel-dropped counter remains the authoritative observed loss.
+        let packets_missed = statistics.captured.zip(statistics.received).map(|_| 0);
+        let observed_packet_loss = statistics.dropped.unwrap_or(0);
         if observed_packet_loss > 0 {
             self.store.note_capture_drops(observed_packet_loss);
         }
@@ -137,6 +142,7 @@ impl PcapHandle {
             packets_received: statistics.received,
             packets_dropped: statistics.dropped,
             packets_missed,
+            packets_received_minus_captured,
             exit_success: status.success(),
             exit_code: status.code(),
             termination_signal: status.signal(),
@@ -438,7 +444,7 @@ fn capture_arguments(interface: &str, filter: String) -> Vec<OsString> {
         OsString::from("-s"),
         OsString::from("0"),
         OsString::from("-B"),
-        OsString::from("4096"),
+        OsString::from(CAPTURE_BUFFER_KIB.to_string()),
         OsString::from("-nn"),
         OsString::from("-w"),
         OsString::from("-"),
@@ -684,6 +690,13 @@ fn parse_statistics(stderr: &str) -> PcapStatistics {
     output
 }
 
+fn received_minus_captured(statistics: &PcapStatistics) -> Option<u64> {
+    statistics
+        .captured
+        .zip(statistics.received)
+        .and_then(|(captured, received)| received.checked_sub(captured))
+}
+
 fn signal_group(pid: u32, signal: Signal) -> io::Result<()> {
     let pid = i32::try_from(pid)
         .map(Pid::from_raw)
@@ -710,6 +723,7 @@ mod tests {
         assert_eq!(parsed.captured, Some(12));
         assert_eq!(parsed.received, Some(14));
         assert_eq!(parsed.dropped, Some(2));
+        assert_eq!(received_minus_captured(&parsed), Some(2));
     }
 
     #[tokio::test]
@@ -764,6 +778,7 @@ mod tests {
         assert!(arguments.windows(2).any(|pair| pair == ["-i", "any"]));
         assert!(arguments.contains(&"--immediate-mode".to_owned()));
         assert!(arguments.contains(&"-U".to_owned()));
+        assert!(arguments.windows(2).any(|pair| pair == ["-B", "32768"]));
         assert_eq!(arguments.last().map(String::as_str), Some("(ip or ip6)"));
     }
 

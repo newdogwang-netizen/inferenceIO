@@ -283,6 +283,20 @@ func (d *Deps) upsertAttempt(ctx context.Context, j *jobs.Job, rec, run, id stri
 			}
 			t := e.WallTime
 			firstByte = &t
+		case protocol.EvWebSocketStarted:
+			var p struct {
+				Status  int             `json:"status"`
+				Headers json.RawMessage `json:"headers"`
+			}
+			if json.Unmarshal(e.Payload, &p) == nil {
+				if p.Status == 0 {
+					p.Status = 101
+				}
+				status = &p.Status
+				respHeaders = p.Headers
+			}
+			t := e.WallTime
+			firstByte = &t
 		case protocol.EvSSEChunk, protocol.EvSSEEvent:
 			sseCount++
 			if firstByte == nil {
@@ -322,6 +336,9 @@ func (d *Deps) upsertAttempt(ctx context.Context, j *jobs.Job, rec, run, id stri
 			}
 			if terminal == "error" {
 				class := p.ErrorKind
+				if class == "" {
+					class = p.Reason
+				}
 				if class == "" {
 					class = "error"
 				}

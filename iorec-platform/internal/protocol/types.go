@@ -67,7 +67,9 @@ const (
 	EvResponseBodyChunk        = "response_body_chunk"
 	EvSSEEvent                 = "sse_event"
 	EvTransportAttemptFinished = "transport_attempt_finished"
+	EvWebSocketStarted         = "websocket_connection_started"
 	EvWebSocketFrame           = "websocket_frame"
+	EvWebSocketFinished        = "websocket_connection_finished"
 )
 
 // IDs carries the identifiers the capture side knows for certain.

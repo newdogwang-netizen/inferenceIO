@@ -23,10 +23,10 @@ import (
 // Processor versions.
 const (
 	DecoderVersion        = "decoder-v1"
-	AssemblerVersion      = "assembler-v1"
-	NormalizerVersion     = "normalizer-v1"
+	AssemblerVersion      = "assembler-v2"
+	NormalizerVersion     = "normalizer-v3"
 	ResolverVersion       = "resolver-v1"
-	TransportAuditVersion = "transport-audit-v1"
+	TransportAuditVersion = "transport-audit-v2"
 	CoverageVersion       = "coverage-v3"
 	RulesVersion          = "rules-v1"
 )

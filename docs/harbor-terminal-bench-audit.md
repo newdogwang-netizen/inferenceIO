@@ -22,9 +22,10 @@ iorec records three complementary evidence layers:
 2. encrypted task-network pcap captured by `tcpdump`;
 3. encrypted NSS TLS key-log material for post-run decryption.
 
-`iorec transport-audit` decrypts the captured traffic with TShark and compares
-the reconstructed HTTP bodies with the proxy evidence. Codex's own session log
-is useful for semantics, but it is not treated as independent transport proof.
+`iorec transport-audit` decrypts the captured traffic with TShark, reconstructs
+HTTP/1.1, HTTP/2, and WebSocket application messages, and compares their
+canonical byte streams with the proxy evidence. Codex's own session log is
+useful for semantics, but it is not treated as independent transport proof.
 
 ## Why the outer container is privileged
 
@@ -119,34 +120,40 @@ Accept the run only when:
 
 ## Qualification result: 2026-09-18
 
-The first real `html-js-filter` audit run produced capture run
-`run-01a0b25e-602b-7448-92e0-39096eda7045`:
+The final `html-js-filter` qualification produced capture run
+`run-01a0b3b8-621f-7335-a60b-1c0f2056fa48`:
 
-- Codex 0.154.0 ran for about 12 minutes as UID/GID 10001 and exited zero;
-- all 35,714 events and 35,472 encrypted blobs authenticated, with no missing
+- Codex 0.154.0 ran for 12 minutes as UID/GID 10001 and exited zero;
+- all 14,093 events and 13,929 encrypted blobs authenticated, with no missing
   or corrupt objects;
-- task pcap contained 22,708 records / 6,666,632 bytes and five TLS key
-  records; TShark 4.4.18 decrypted the one observed TLS stream;
-- the enforced boundary reported zero unknown egress and zero model-bypass
-  connections;
-- Harbor preserved all 12 clean HTML fixtures, but one XSS family executed, so
-  the benchmark reward was correctly reported as `0.0`.
+- the task pcap was 7,327,049 bytes in eight encrypted evidence chunks, and the
+  run contained five TLS key records / 938 bytes;
+- pinned TShark 4.4.18 decrypted one TLS stream and decoded 13,780 WebSocket
+  wire rows without decoder stderr;
+- 54 client messages / 105,775 bytes and 13,726 server messages / 4,641,287
+  bytes matched the proxy-reassembled streams exactly by canonical length and
+  SHA-256, with no missing, extra, or ambiguous attempt;
+- task-network enforcement reported zero kernel drops, unknown egress, model
+  bypass, parser gap, or QUIC possibility; schema-v4 transport audit returned
+  `complete: true` with an empty gap list;
+- the controlled platform import independently repeated the audit as
+  `transport-audit-v2=verified`, normalized 24 semantic messages, retained a
+  1,478-character response text, and reported `body_unavailable=0`;
+- Harbor's verifier completed independently and awarded `0.0`. That score is
+  the agent's task-correctness result, not a transport-capture result.
 
-This run is deliberately classified **incomplete**, not transport-complete.
-Codex 0.154.0 negotiated an HTTP `101` WebSocket connection. The current
-transport audit reconstructs HTTP/1.1 and HTTP/2 bodies but does not yet pair
-wire-level WebSocket messages with proxy-reassembled messages. The capture also
-reported 120 kernel packet drops. It therefore proves that the model connection
-used the enforced, decryptable path, but not that every WebSocket payload byte
-was independently accounted for.
+The final capture uses a 32 MiB tcpdump buffer and coalesces the capture pipe
+into 1 MiB encrypted chunks. `tcpdump` reported 29,082 captured, 29,202
+received-by-filter, and zero dropped packets. The 120-packet diagnostic
+`received_minus_captured` is deliberately not interpreted as loss: the
+received counter has operating-system and filter-dependent semantics, while
+the explicit dropped counter is the capture-loss signal documented by the
+[tcpdump manual](https://github.com/the-tcpdump-group/tcpdump/blob/master/tcpdump.1.in).
 
-The run exposed a capture-pressure issue as well: immediate-mode tcpdump pipe
-reads were being persisted as individual encrypted blobs, often one per packet.
-The recorder now coalesces those reads into 64 KiB evidence chunks before
-encryption and append, reducing object count and writer backpressure. A future
-qualification must still demonstrate zero drops and implement wire-level
-WebSocket framing/correlation before this Codex cell can be promoted beyond
-best-effort.
+This result qualifies only the named target-network-namespace IP boundary and
+the pinned Linux x86-64/Codex/TShark cell. It does not claim visibility into
+provider-hidden state, same-user Unix IPC, other agent versions, other
+operating systems, or HTTP/3.
 
 ## Handling and cleanup
 

@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-18T09:19:46Z",
+  "subject": "real Harbor-managed Codex WebSocket transport capture",
+  "status": "transport_qualified_task_failed",
+  "passed": true,
+  "qualification_scope": "target-network-namespace-ip-transport",
+  "environment": {
+    "os": "Linux",
+    "arch": "x86_64",
+    "kernel": "6.12.94+deb13-cloud-amd64",
+    "harbor": "0.22.0",
+    "docker_server": "29.3.0",
+    "agent": "codex",
+    "agent_version": "0.154.0",
+    "agent_sha256": "3188814c35471432d4123203e0eb38e5bddc60226e3d7ddf0e59e649ea140022",
+    "model": "openai/gpt-6-astra",
+    "task": "html-js-filter"
+  },
+  "run": {
+    "run_id": "run-01a0b3b8-621f-7335-a60b-1c0f2056fa48",
+    "started_at": "2026-09-18T08:53:21.299379831Z",
+    "finished_at": "2026-09-18T09:05:21.393304578Z",
+    "target_exit_code": 0,
+    "events": 14093,
+    "encrypted_blobs": 13929,
+    "missing_blobs": 0,
+    "corrupt_blobs": 0,
+    "harbor_trial": "html-js-filter__y8q6zZk",
+    "harbor_reward": 0.0,
+    "harbor_completed_trials": 1,
+    "harbor_errored_trials": 0
+  },
+  "capture": {
+    "pcap_bytes": 7327049,
+    "encrypted_pcap_chunks": 8,
+    "packets_captured": 29082,
+    "packets_received_by_filter": 29202,
+    "packets_received_minus_captured_diagnostic": 120,
+    "packets_dropped": 0,
+    "tls_key_records": 5,
+    "tls_key_bytes": 938,
+    "unknown_egress": 0,
+    "model_bypass_connections": 0,
+    "possible_quic_connections": 0
+  },
+  "transport_audit": {
+    "schema_version": 4,
+    "complete": true,
+    "decoder": {
+      "path": "/usr/bin/tshark",
+      "version": "TShark (Wireshark) 4.4.18.",
+      "sha256": "261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074",
+      "stderr_bytes": 0
+    },
+    "decoded_rows": 28962,
+    "decoded_streams": 1,
+    "tls_decrypted_streams": 1,
+    "websocket_rows": 13780,
+    "websocket_streams": 1,
+    "proxy_attempts": 1,
+    "proxy_attempts_eligible": 1,
+    "matched_attempts": 1,
+    "missing_from_wire": 0,
+    "extra_on_wire": 0,
+    "ambiguous_signature_groups": 0,
+    "payload_diff_passed": true,
+    "gaps": [],
+    "stream": {
+      "protocol": "websocket",
+      "status": 101,
+      "path": "/v1/responses",
+      "request_messages": 54,
+      "request_bytes": 105775,
+      "request_sha256": "aa73a7483d08d531b04341975791d114f1c154042e0c11992d46383fe2e3ddca",
+      "response_messages": 13726,
+      "response_bytes": 4641287,
+      "response_sha256": "15ca85359ab45590d723930967db0584a5bacd763d777926189dc8c5b0bdc256",
+      "request_end_observed": true,
+      "response_end_observed": true
+    }
+  },
+  "platform_validation": {
+    "recording_id": "run-01a0b3b8-621f-7335-a60b-1c0f2056fa48#0000",
+    "durable_seq": 14093,
+    "parsed_seq": 14093,
+    "transport_proof_status": "verified",
+    "transport_proof_version": "transport-audit-v2",
+    "capture_drops": 0,
+    "body_unavailable": 0,
+    "all_attempts_have_terminal_state": true,
+    "attempt_protocol": "websocket",
+    "attempt_status": 101,
+    "attempt_terminal_state": "error",
+    "attempt_error_class": "client_read",
+    "normalized_response_text_characters": 1478,
+    "normalized_response_text_bytes": 1488,
+    "normalized_messages": 24,
+    "normalizer_version": "normalizer-v3"
+  },
+  "artifacts": {
+    "iorec_release": {
+      "version": "iorec 0.1.0",
+      "bytes": 16278464,
+      "sha256": "af78222d7b9029790d361579126fd880a037822a9550f9d3a840b3013fbd172e"
+    },
+    "private_evidence_digests": {
+      "transport_audit_sha256": "d0f93666ab9eaf1bb4afb440cdde5f1a6ade4bff544c732fe844bcc5f3fb5d4c",
+      "integrity_verification_sha256": "ccafd101cd50969ac815bc918768a23156e6881f0617596598bf7472fbcb2596",
+      "inspect_sha256": "5269d7828dbe8077a8c7256d86c27a776c17a33649ca7dc0e483863908d8dbc3",
+      "harbor_result_sha256": "70a411b1b1a1e1636fb1667283cab9d6719b9856d4da941f838b682880b22c0d",
+      "private_files_committed": false
+    },
+    "source_files": {
+      "src/transport_audit.rs": "12af0d8c5fddbb9a36ce97cfc8f82daf4c8f5003012246218a9f95011f802a6b",
+      "src/inspect.rs": "f0021daf6f8aeae534046a87314914c5c7d80f1aa1f77ea0e0b63e8bdc97a5dd",
+      "src/pcap.rs": "382c0e800815c67c8ca2af95259a95d170f960bdc29d91ba23c3a3dda7c36921",
+      "iorec-platform/internal/pipeline/transport_audit.go": "9c082634e596781f5dd8ff0311f5d93e99387071645524a23b24b9cabeef1d42",
+      "iorec-platform/internal/pipeline/normalize.go": "2d40c950a666422f0cd97edb99d3573972ce5cd0807db5321797c2721e64a6ba"
+    }
+  },
+  "strict_checks": {
+    "harbor_trial_finished": true,
+    "target_finished_successfully": true,
+    "encrypted_storage_integrity": true,
+    "zero_kernel_capture_drops": true,
+    "task_egress_boundary_verified": true,
+    "tls_stream_decrypted": true,
+    "websocket_messages_reassembled": true,
+    "exact_bidirectional_payload_agreement": true,
+    "no_missing_extra_or_ambiguous_attempt": true,
+    "platform_transport_proof_verified": true,
+    "platform_normalized_body_available": true,
+    "plaintext_bundle_deleted_after_import": true
+  },
+  "limitations": [
+    "The passing result qualifies transport capture, not the agent's Terminal-Bench task answer; Harbor independently awarded reward 0.0.",
+    "The completeness boundary is IP traffic from the isolated target network namespace to the recorder proxy, not host-wide traffic, Unix IPC, or provider-hidden state.",
+    "The compatibility claim is limited to the exact Linux x86-64, Codex, TShark, helper, and source identities recorded here.",
+    "QUIC/HTTP3 is fail-closed but not decoded; this run used one decrypted WSS connection."
+  ]
+}

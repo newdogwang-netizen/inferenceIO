@@ -39,6 +39,99 @@ func hasGap(gaps []string, want string) bool {
 	return false
 }
 
+func websocketEKFrame(fin bool, opcode byte, masked bool, payload []byte) map[string]any {
+	length := byte(len(payload))
+	finValue := "0"
+	if fin {
+		finValue = "1"
+	}
+	maskValue := "0"
+	if masked {
+		maskValue = "1"
+	}
+	return map[string]any{
+		"websocket_websocket_fin_raw":            finValue,
+		"websocket_websocket_rsv_raw":            "0",
+		"websocket_websocket_opcode_raw":         fmt.Sprintf("%X", opcode),
+		"websocket_websocket_mask_raw":           maskValue,
+		"websocket_websocket_payload_length_raw": fmt.Sprintf("%X", length),
+		"websocket_websocket_payload_raw":        hex.EncodeToString(payload),
+	}
+}
+
+func websocketEKLine(t *testing.T, stream uint64, frames any) string {
+	t.Helper()
+	encoded, err := json.Marshal(map[string]any{
+		"timestamp": "0",
+		"layers": map[string]any{
+			"tcp":       map[string]any{"tcp_tcp_stream": strconv.FormatUint(stream, 10)},
+			"websocket": frames,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(encoded)
+}
+
+func TestWebSocketWireDecoderPreservesMessageBoundariesAndMatchesProxy(t *testing.T) {
+	decoder := newWebSocketWireDecoder()
+	if err := decoder.processEKLine(websocketEKLine(t, 9, websocketEKFrame(false, 1, true, []byte("hel")))); err != nil {
+		t.Fatal(err)
+	}
+	frames := []any{
+		websocketEKFrame(true, 0, true, []byte("lo")),
+		websocketEKFrame(true, 1, false, []byte("world")),
+	}
+	if err := decoder.processEKLine(websocketEKLine(t, 9, frames)); err != nil {
+		t.Fatal(err)
+	}
+	websockets, gaps := decoder.finish()
+	if len(gaps) != 0 || len(websockets) != 1 || !websockets[0].EligibleForDiff {
+		t.Fatalf("WebSocket reconstruction failed: streams=%+v gaps=%+v", websockets, gaps)
+	}
+	if websockets[0].Request.Bytes != 5 || websockets[0].Request.Chunks != 1 || websockets[0].Response.Bytes != 5 || websockets[0].Response.Chunks != 1 {
+		t.Fatalf("WebSocket message accounting is wrong: %+v", websockets[0])
+	}
+
+	streams := mergeDecodedWebSockets([]decodedStream{{
+		Protocol: "http/1.1", TCPStream: 9, Method: "GET", Path: "/v1/responses", Status: 101,
+		Request: (&bodyAccumulator{}).finish(), Response: (&bodyAccumulator{}).finish(), EligibleForDiff: true,
+	}}, websockets, gaps)
+	attempt := newProxyAttempt()
+	attempt.method, attempt.path, attempt.status = "GET", "/v1/responses", 101
+	attempt.modelTraffic, attempt.requestFinished, attempt.attemptFinished = 1, true, true
+	attempt.websocket = true
+	if err := attempt.websocketRequest.appendMessage(1, []byte("hello")); err != nil {
+		t.Fatal(err)
+	}
+	if err := attempt.websocketResponse.appendMessage(1, []byte("world")); err != nil {
+		t.Fatal(err)
+	}
+	comparison := compareTransportEvidence(map[string]*proxyAttempt{"attempt": attempt}, streams)
+	if comparison.Eligible != 1 || comparison.Matched != 1 || comparison.Missing != 0 || comparison.Extra != 0 {
+		t.Fatalf("WebSocket comparison failed: %+v", comparison)
+	}
+
+	left, right := &websocketBodyAccumulator{}, &websocketBodyAccumulator{}
+	_ = left.appendMessage(1, []byte("ab"))
+	_ = left.appendMessage(1, []byte("c"))
+	_ = right.appendMessage(1, []byte("a"))
+	_ = right.appendMessage(1, []byte("bc"))
+	if left.finish().SHA256 == right.finish().SHA256 {
+		t.Fatal("WebSocket digest did not preserve message boundaries")
+	}
+}
+
+func TestWebSocketWireDecoderRejectsLengthConflict(t *testing.T) {
+	frame := websocketEKFrame(true, 1, true, []byte("abc"))
+	frame["websocket_websocket_payload_length_raw"] = "04"
+	decoder := newWebSocketWireDecoder()
+	if err := decoder.processEKLine(websocketEKLine(t, 1, frame)); err == nil {
+		t.Fatal("WebSocket payload length conflict was accepted")
+	}
+}
+
 func TestWireDecoderReconstructsHTTP2RequestAndResponse(t *testing.T) {
 	request := [tsharkColumnCount]string{
 		"4", "0", "127.0.0.1", "", "50000", "127.0.0.1", "", "8443",

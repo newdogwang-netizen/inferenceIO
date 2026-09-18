@@ -29,7 +29,7 @@ use crate::{
     storage::{MAX_SINGLE_BLOB_BYTES, StorageError, for_each_run_event_with_key},
 };
 
-const REPORT_SCHEMA_VERSION: u32 = 3;
+const REPORT_SCHEMA_VERSION: u32 = 4;
 const COMPLETENESS_BOUNDARY: &str = "target-network-namespace-ip-transport";
 const MIN_TSHARK_MAJOR: u64 = 4;
 const MIN_TSHARK_MINOR: u64 = 4;
@@ -37,6 +37,7 @@ const MAX_TSHARK_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_TSHARK_VERSION_BYTES: usize = 64 * 1024;
 const MAX_TSHARK_STDERR_TAIL: usize = 64 * 1024;
 const MAX_TSHARK_LINE_BYTES: usize = 129 * 1024 * 1024;
+const MAX_TSHARK_EK_LINE_BYTES: usize = 4 * MAX_SINGLE_BLOB_BYTES + 8 * 1024 * 1024;
 const MAX_TSHARK_STDOUT_BYTES: u64 = 4 * 1024 * 1024 * 1024;
 const MAX_DECODED_ROWS: u64 = 10_000_000;
 const MAX_DECODED_STREAMS: usize = 100_000;
@@ -81,11 +82,13 @@ pub struct TransportAuditReport {
     pub tls_key_records: u64,
     pub tls_key_bytes: u64,
     pub decoded_rows: u64,
+    pub websocket_rows: u64,
     pub tcp_streams_observed: u64,
     pub tcp_streams_without_http_decode: u64,
     pub decoded_streams: u64,
     pub http1_streams: u64,
     pub http2_streams: u64,
+    pub websocket_streams: u64,
     pub tls_decrypted_streams: u64,
     pub proxy_attempts: u64,
     pub proxy_attempts_non_model_excluded: u64,
@@ -112,6 +115,9 @@ pub struct TsharkReport {
     pub stderr_bytes: u64,
     pub stderr_sha256: String,
     pub stderr_tail_omitted_bytes: u64,
+    pub websocket_stderr_bytes: u64,
+    pub websocket_stderr_sha256: String,
+    pub websocket_stderr_tail_omitted_bytes: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -294,11 +300,23 @@ struct ProxyAttempt {
     status: Option<u16>,
     request: BodyAccumulator,
     response: BodyAccumulator,
+    websocket_request: WebSocketBodyAccumulator,
+    websocket_response: WebSocketBodyAccumulator,
     next_request_chunk: u64,
     next_response_chunk: u64,
     request_finished: bool,
     attempt_finished: bool,
     model_traffic: Option<bool>,
+    websocket: bool,
+    websocket_started: u64,
+    websocket_finished: u64,
+    transport_finished: u64,
+    next_websocket_request: u64,
+    next_websocket_response: u64,
+    websocket_request_messages: u64,
+    websocket_response_messages: u64,
+    websocket_terminal: Option<TerminalState>,
+    transport_terminal: Option<TerminalState>,
     gaps: BTreeSet<String>,
 }
 
@@ -324,6 +342,7 @@ struct Comparison {
     ambiguous: u64,
 }
 
+#[derive(Default)]
 struct StderrReport {
     bytes: u64,
     sha256: String,
@@ -335,6 +354,80 @@ struct DecodeResult {
     tcp_streams: u64,
     tcp_streams_without_http_decode: u64,
     streams: Vec<DecodedStream>,
+    gaps: BTreeMap<String, u64>,
+    stderr: StderrReport,
+    websocket_rows: u64,
+    websocket_stderr: StderrReport,
+}
+
+#[derive(Default)]
+struct WebSocketBodyAccumulator {
+    digest: Sha256,
+    bytes: u64,
+    messages: u64,
+}
+
+impl WebSocketBodyAccumulator {
+    fn append_message(&mut self, opcode: u8, payload: &[u8]) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            matches!(opcode, 1 | 2 | 8 | 9 | 10),
+            "unsupported WebSocket message opcode"
+        );
+        let length = u64::try_from(payload.len()).context("WebSocket payload is oversized")?;
+        self.bytes = self
+            .bytes
+            .checked_add(length)
+            .context("WebSocket payload byte count overflow")?;
+        self.messages = self.messages.saturating_add(1);
+        self.digest.update(b"iorec-websocket-message-v1\0");
+        self.digest.update([opcode]);
+        self.digest.update(length.to_be_bytes());
+        self.digest.update(payload);
+        Ok(())
+    }
+
+    fn finish(&self) -> BodyDigest {
+        BodyDigest {
+            bytes: self.bytes,
+            sha256: format!("sha256:{}", hex::encode(self.digest.clone().finalize())),
+            chunks: self.messages,
+        }
+    }
+}
+
+#[derive(Default)]
+struct WebSocketDirection {
+    body: WebSocketBodyAccumulator,
+    fragmented_opcode: Option<u8>,
+    fragmented_payload: Vec<u8>,
+    closed: bool,
+}
+
+#[derive(Default)]
+struct WebSocketStreamBuilder {
+    request: WebSocketDirection,
+    response: WebSocketDirection,
+    gaps: BTreeSet<String>,
+}
+
+struct WebSocketDecodedStream {
+    tcp_stream: u64,
+    request: BodyDigest,
+    response: BodyDigest,
+    eligible_for_diff: bool,
+    gaps: Vec<String>,
+}
+
+#[derive(Default)]
+struct WebSocketDecoder {
+    rows: u64,
+    streams: BTreeMap<u64, WebSocketStreamBuilder>,
+    gaps: BTreeMap<String, u64>,
+}
+
+struct WebSocketDecodeResult {
+    rows: u64,
+    streams: Vec<WebSocketDecodedStream>,
     gaps: BTreeMap<String, u64>,
     stderr: StderrReport,
 }
@@ -435,10 +528,15 @@ pub async fn audit_transport(
     };
     let tshark_path = trusted_tshark_path().context("no trusted tshark executable is installed")?;
     let (version, executable_sha256) = inspect_tshark(&tshark_path, temporary.path()).await?;
-    let decode = tokio::time::timeout(
-        timeout,
-        decode_capture(&tshark_path, &pcap_path, &keys_path, temporary.path()),
-    )
+    let decode = tokio::time::timeout(timeout, async {
+        let mut decoded =
+            decode_capture(&tshark_path, &pcap_path, &keys_path, temporary.path()).await?;
+        let websocket =
+            decode_websocket_capture(&tshark_path, &pcap_path, &keys_path, temporary.path())
+                .await?;
+        merge_websocket_streams(&mut decoded, websocket);
+        Ok::<DecodeResult, anyhow::Error>(decoded)
+    })
     .await
     .map_err(|_| anyhow::anyhow!("tshark decoding exceeded its deadline"))??;
     let proxy = collect_proxy_attempts(&run_dir, &inspection.manifest.run_id, &effective_key)?;
@@ -453,7 +551,11 @@ pub async fn audit_transport(
         .iter()
         .any(|source| source == "network:task-netns-proxy-only");
     let wire_boundary_replaces_polling = task_egress_pcap
-        && proxy_only_egress_enforced
+        && (proxy_only_egress_enforced
+            || manifest_coverage
+                .capture_sources
+                .iter()
+                .any(|source| source == "network:task-netns-transparent"))
         && decode.tcp_streams > 0
         && decode.tcp_streams_without_http_decode == 0;
     let source_coverage = SourceCoverageReport {
@@ -495,6 +597,9 @@ pub async fn audit_transport(
     let mut gaps = decode.gaps;
     if decode.stderr.bytes > 0 {
         add_gap(&mut gaps, "tshark_diagnostic_output", 1);
+    }
+    if decode.websocket_stderr.bytes > 0 {
+        add_gap(&mut gaps, "tshark_websocket_diagnostic_output", 1);
     }
     if inspection.manifest.coverage.capture_drops > 0 {
         add_gap(
@@ -568,7 +673,16 @@ pub async fn audit_transport(
         .iter()
         .filter(|stream| stream.protocol == "http/1.1")
         .count();
-    let http2_streams = decode.streams.len().saturating_sub(http1_streams);
+    let http2_streams = decode
+        .streams
+        .iter()
+        .filter(|stream| stream.protocol == "http/2")
+        .count();
+    let websocket_streams = decode
+        .streams
+        .iter()
+        .filter(|stream| stream.protocol == "websocket")
+        .count();
     let report = TransportAuditReport {
         schema_version: REPORT_SCHEMA_VERSION,
         run_id: inspection.manifest.run_id.clone(),
@@ -580,17 +694,22 @@ pub async fn audit_transport(
             stderr_bytes: decode.stderr.bytes,
             stderr_sha256: decode.stderr.sha256,
             stderr_tail_omitted_bytes: decode.stderr.omitted,
+            websocket_stderr_bytes: decode.websocket_stderr.bytes,
+            websocket_stderr_sha256: decode.websocket_stderr.sha256,
+            websocket_stderr_tail_omitted_bytes: decode.websocket_stderr.omitted,
         },
         pcap_records: pcap.records,
         pcap_bytes: pcap.bytes,
         tls_key_records: keys.records,
         tls_key_bytes: keys.bytes,
         decoded_rows: decode.rows,
+        websocket_rows: decode.websocket_rows,
         tcp_streams_observed: decode.tcp_streams,
         tcp_streams_without_http_decode: decode.tcp_streams_without_http_decode,
         decoded_streams: u64::try_from(decode.streams.len()).unwrap_or(u64::MAX),
         http1_streams: u64::try_from(http1_streams).unwrap_or(u64::MAX),
         http2_streams: u64::try_from(http2_streams).unwrap_or(u64::MAX),
+        websocket_streams: u64::try_from(websocket_streams).unwrap_or(u64::MAX),
         tls_decrypted_streams: u64::try_from(tls_decrypted_streams).unwrap_or(u64::MAX),
         proxy_attempts: comparison.proxy_attempts,
         proxy_attempts_non_model_excluded: comparison.proxy_non_model_excluded,
@@ -653,7 +772,7 @@ fn add_source_coverage_gaps(
     // not a transport-integrity condition: this audit independently pairs the
     // complete proxy-attempt and wire-stream multisets by their body signatures.
     let wire_boundary_proves_no_unaccounted_traffic =
-        coverage.task_egress_pcap && coverage.proxy_only_egress_enforced && all_tcp_streams_decoded;
+        coverage.task_egress_pcap && model_egress_enforced && all_tcp_streams_decoded;
     let unknown_tls_surfaces =
         if coverage.transparent_egress_enforced || wire_boundary_proves_no_unaccounted_traffic {
             0
@@ -954,7 +1073,445 @@ async fn decode_capture(
         streams,
         gaps,
         stderr,
+        websocket_rows: 0,
+        websocket_stderr: StderrReport::default(),
     })
+}
+
+async fn decode_websocket_capture(
+    tshark: &Path,
+    pcap: &Path,
+    keylog: &Path,
+    private_home: &Path,
+) -> anyhow::Result<WebSocketDecodeResult> {
+    let keylog_preference = format!("tls.keylog_file:{}", keylog.display());
+    let mut child = Command::new(tshark);
+    child
+        .arg("-n")
+        .arg("-2")
+        .arg("-r")
+        .arg(pcap)
+        .arg("-o")
+        .arg(keylog_preference)
+        .arg("-Y")
+        .arg("websocket")
+        .arg("-T")
+        .arg("ek")
+        .arg("-x")
+        .arg("-J")
+        .arg("tcp websocket")
+        .arg("--temp-dir")
+        .arg(private_home)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true)
+        .env_clear()
+        .env("LC_ALL", "C")
+        .env("HOME", private_home)
+        .env("XDG_CONFIG_HOME", private_home)
+        .current_dir(private_home);
+    let mut child = child
+        .spawn()
+        .context("start trusted tshark WebSocket decoder")?;
+    let stdout = child
+        .stdout
+        .take()
+        .context("tshark WebSocket stdout is unavailable")?;
+    let stderr = child
+        .stderr
+        .take()
+        .context("tshark WebSocket stderr is unavailable")?;
+    let stderr_task = tokio::spawn(drain_stderr(stderr));
+    let mut stdout = BufReader::new(stdout);
+    let mut decoder = WebSocketDecoder::default();
+    let mut line = Vec::new();
+    let mut stdout_bytes = 0_u64;
+    loop {
+        line.clear();
+        let bytes = read_bounded_line(&mut stdout, &mut line, MAX_TSHARK_EK_LINE_BYTES).await?;
+        if bytes == 0 {
+            break;
+        }
+        stdout_bytes = stdout_bytes
+            .checked_add(u64::try_from(bytes).unwrap_or(u64::MAX))
+            .context("tshark WebSocket stdout byte count overflow")?;
+        anyhow::ensure!(
+            stdout_bytes <= MAX_TSHARK_STDOUT_BYTES,
+            "tshark WebSocket stdout exceeded its byte limit"
+        );
+        while matches!(line.last(), Some(b'\n' | b'\r')) {
+            line.pop();
+        }
+        if !line.is_empty() {
+            decoder.process_ek_line(&line)?;
+        }
+    }
+    let status = child.wait().await?;
+    let stderr = stderr_task
+        .await
+        .context("tshark WebSocket diagnostic task failed")??;
+    anyhow::ensure!(
+        status.success(),
+        "trusted tshark WebSocket decoder exited unsuccessfully"
+    );
+    let rows = decoder.rows;
+    let (streams, gaps) = decoder.finish();
+    Ok(WebSocketDecodeResult {
+        rows,
+        streams,
+        gaps,
+        stderr,
+    })
+}
+
+fn merge_websocket_streams(decoded: &mut DecodeResult, websocket: WebSocketDecodeResult) {
+    decoded.websocket_rows = websocket.rows;
+    decoded.websocket_stderr = websocket.stderr;
+    for (reason, occurrences) in websocket.gaps {
+        add_gap(&mut decoded.gaps, &reason, occurrences);
+    }
+    for websocket in websocket.streams {
+        let matching: Vec<usize> = decoded
+            .streams
+            .iter()
+            .enumerate()
+            .filter_map(|(index, stream)| {
+                (stream.protocol == "http/1.1"
+                    && stream.tcp_stream == websocket.tcp_stream
+                    && stream.status == Some(101))
+                .then_some(index)
+            })
+            .collect();
+        if matching.len() != 1 {
+            add_gap(
+                &mut decoded.gaps,
+                if matching.is_empty() {
+                    "websocket_stream_without_unique_upgrade"
+                } else {
+                    "websocket_stream_upgrade_ambiguous"
+                },
+                1,
+            );
+            continue;
+        }
+        let stream = &mut decoded.streams[matching[0]];
+        stream.protocol = "websocket";
+        stream.request = websocket.request;
+        stream.response = websocket.response;
+        stream.request_end_observed = true;
+        stream.response_end_observed = true;
+        stream.eligible_for_diff &= websocket.eligible_for_diff;
+        for gap in websocket.gaps {
+            if !stream.gaps.contains(&gap) {
+                stream.gaps.push(gap);
+            }
+        }
+        stream.gaps.sort();
+    }
+}
+
+impl WebSocketDecoder {
+    fn process_ek_line(&mut self, line: &[u8]) -> anyhow::Result<()> {
+        let document: serde_json::Value =
+            serde_json::from_slice(line).context("tshark emitted invalid WebSocket EK JSON")?;
+        let Some(layers) = document
+            .get("layers")
+            .and_then(serde_json::Value::as_object)
+        else {
+            anyhow::ensure!(
+                document.get("index").is_some(),
+                "tshark WebSocket EK document has no layers"
+            );
+            return Ok(());
+        };
+        let tcp = ek_single_object(
+            layers
+                .get("tcp")
+                .context("tshark WebSocket EK document has no TCP layer")?,
+            "TCP",
+        )?;
+        let tcp_stream = ek_u64(
+            tcp.get("tcp_tcp_stream")
+                .context("tshark WebSocket EK document has no TCP stream")?,
+            "TCP stream",
+        )?;
+        let websocket = layers
+            .get("websocket")
+            .context("tshark WebSocket EK document has no WebSocket layer")?;
+        let frames = ek_objects(websocket, "WebSocket")?;
+        anyhow::ensure!(!frames.is_empty(), "tshark WebSocket EK layer is empty");
+        for frame in frames {
+            self.rows = self.rows.saturating_add(1);
+            anyhow::ensure!(
+                self.rows <= MAX_DECODED_ROWS,
+                "decoded WebSocket frame-row limit exceeded"
+            );
+            let fin = ek_bool(frame, "websocket_websocket_fin_raw", "WebSocket FIN")?;
+            let masked = ek_bool(frame, "websocket_websocket_mask_raw", "WebSocket mask")?;
+            let rsv = ek_raw_u8(
+                frame
+                    .get("websocket_websocket_rsv_raw")
+                    .context("tshark WebSocket frame has no RSV value")?,
+                "WebSocket RSV",
+            )?;
+            let opcode = ek_raw_u8(
+                frame
+                    .get("websocket_websocket_opcode_raw")
+                    .context("tshark WebSocket frame has no opcode")?,
+                "WebSocket opcode",
+            )?;
+            let payload = websocket_payload(frame)?;
+            let stream = self.streams.entry(tcp_stream).or_default();
+            if rsv != 0 {
+                stream.gaps.insert("websocket_rsv_nonzero".to_owned());
+            }
+            let direction = if masked {
+                &mut stream.request
+            } else {
+                &mut stream.response
+            };
+            process_websocket_frame(direction, opcode, fin, &payload, &mut stream.gaps)?;
+        }
+        anyhow::ensure!(
+            self.streams.len() <= MAX_DECODED_STREAMS,
+            "decoded WebSocket stream limit exceeded"
+        );
+        Ok(())
+    }
+
+    fn finish(mut self) -> (Vec<WebSocketDecodedStream>, BTreeMap<String, u64>) {
+        let mut streams = Vec::with_capacity(self.streams.len());
+        for (tcp_stream, mut builder) in self.streams {
+            for direction in [&builder.request, &builder.response] {
+                if direction.fragmented_opcode.is_some() {
+                    builder
+                        .gaps
+                        .insert("websocket_fragment_end_missing".to_owned());
+                }
+            }
+            let gaps: Vec<String> = builder.gaps.into_iter().collect();
+            for reason in &gaps {
+                add_gap(&mut self.gaps, reason, 1);
+            }
+            streams.push(WebSocketDecodedStream {
+                tcp_stream,
+                request: builder.request.body.finish(),
+                response: builder.response.body.finish(),
+                eligible_for_diff: gaps.is_empty(),
+                gaps,
+            });
+        }
+        (streams, self.gaps)
+    }
+}
+
+fn process_websocket_frame(
+    direction: &mut WebSocketDirection,
+    opcode: u8,
+    fin: bool,
+    payload: &[u8],
+    gaps: &mut BTreeSet<String>,
+) -> anyhow::Result<()> {
+    if direction.closed {
+        gaps.insert("websocket_frame_after_close".to_owned());
+    }
+    match opcode {
+        0 => {
+            let Some(message_opcode) = direction.fragmented_opcode else {
+                gaps.insert("websocket_continuation_without_start".to_owned());
+                return Ok(());
+            };
+            append_websocket_fragment(&mut direction.fragmented_payload, payload)?;
+            if fin {
+                direction
+                    .body
+                    .append_message(message_opcode, &direction.fragmented_payload)?;
+                direction.fragmented_opcode = None;
+                direction.fragmented_payload.clear();
+            }
+        }
+        1 | 2 => {
+            if direction.fragmented_opcode.take().is_some() {
+                direction.fragmented_payload.clear();
+                gaps.insert("websocket_new_data_before_fragment_end".to_owned());
+            }
+            if fin {
+                direction.body.append_message(opcode, payload)?;
+            } else {
+                direction.fragmented_opcode = Some(opcode);
+                append_websocket_fragment(&mut direction.fragmented_payload, payload)?;
+            }
+        }
+        8..=10 => {
+            if !fin {
+                gaps.insert("websocket_control_frame_fragmented".to_owned());
+            }
+            if payload.len() > 125 {
+                gaps.insert("websocket_control_frame_oversized".to_owned());
+            }
+            if opcode == 8 {
+                if payload.len() == 1 {
+                    gaps.insert("websocket_close_payload_invalid".to_owned());
+                }
+                direction.closed = true;
+            }
+            direction.body.append_message(opcode, payload)?;
+        }
+        _ => {
+            gaps.insert("websocket_opcode_unsupported".to_owned());
+        }
+    }
+    Ok(())
+}
+
+fn append_websocket_fragment(target: &mut Vec<u8>, payload: &[u8]) -> anyhow::Result<()> {
+    let length = target
+        .len()
+        .checked_add(payload.len())
+        .context("WebSocket fragmented payload length overflow")?;
+    anyhow::ensure!(
+        length <= MAX_SINGLE_BLOB_BYTES,
+        "WebSocket fragmented payload exceeded its limit"
+    );
+    target.extend_from_slice(payload);
+    Ok(())
+}
+
+fn websocket_payload(
+    frame: &serde_json::Map<String, serde_json::Value>,
+) -> anyhow::Result<Vec<u8>> {
+    let indicator = ek_raw_u8(
+        frame
+            .get("websocket_websocket_payload_length_raw")
+            .context("tshark WebSocket frame has no payload-length byte")?,
+        "WebSocket payload-length byte",
+    )?;
+    anyhow::ensure!(indicator <= 127, "WebSocket payload-length byte is invalid");
+    let declared = match indicator {
+        0..=125 => u64::from(indicator),
+        126 => {
+            let bytes = ek_hex_bytes(
+                frame
+                    .get("websocket_websocket_payload_length_ext_16_raw")
+                    .context("WebSocket 16-bit payload length is missing")?,
+                "WebSocket 16-bit payload length",
+                2,
+            )?;
+            u64::from(u16::from_be_bytes([bytes[0], bytes[1]]))
+        }
+        127 => {
+            let bytes = ek_hex_bytes(
+                frame
+                    .get("websocket_websocket_payload_length_ext_64_raw")
+                    .context("WebSocket 64-bit payload length is missing")?,
+                "WebSocket 64-bit payload length",
+                8,
+            )?;
+            let value = u64::from_be_bytes(bytes.try_into().expect("validated eight bytes"));
+            anyhow::ensure!(
+                value & (1_u64 << 63) == 0,
+                "WebSocket payload length is invalid"
+            );
+            value
+        }
+        _ => unreachable!(),
+    };
+    anyhow::ensure!(
+        declared <= u64::try_from(MAX_SINGLE_BLOB_BYTES).unwrap_or(u64::MAX),
+        "WebSocket payload exceeded its audit limit"
+    );
+    let payload = match frame.get("websocket_websocket_payload_raw") {
+        Some(value) => ek_hex_bytes(
+            value,
+            "WebSocket payload",
+            usize::try_from(declared).context("WebSocket payload is oversized")?,
+        )?,
+        None if declared == 0 => Vec::new(),
+        None => anyhow::bail!("tshark WebSocket frame has no decoded payload"),
+    };
+    anyhow::ensure!(
+        payload.len() == usize::try_from(declared).unwrap_or(usize::MAX),
+        "WebSocket payload length does not match its header"
+    );
+    Ok(payload)
+}
+
+fn ek_single_object<'a>(
+    value: &'a serde_json::Value,
+    name: &str,
+) -> anyhow::Result<&'a serde_json::Map<String, serde_json::Value>> {
+    match value {
+        serde_json::Value::Object(object) => Ok(object),
+        serde_json::Value::Array(values) if values.len() == 1 => values[0]
+            .as_object()
+            .with_context(|| format!("tshark {name} layer is not an object")),
+        _ => anyhow::bail!("tshark {name} layer is ambiguous"),
+    }
+}
+
+fn ek_objects<'a>(
+    value: &'a serde_json::Value,
+    name: &str,
+) -> anyhow::Result<Vec<&'a serde_json::Map<String, serde_json::Value>>> {
+    match value {
+        serde_json::Value::Object(object) => Ok(vec![object]),
+        serde_json::Value::Array(values) => values
+            .iter()
+            .map(|value| {
+                value
+                    .as_object()
+                    .with_context(|| format!("tshark {name} layer is not an object"))
+            })
+            .collect(),
+        _ => anyhow::bail!("tshark {name} layer is not an object or array"),
+    }
+}
+
+fn ek_u64(value: &serde_json::Value, name: &str) -> anyhow::Result<u64> {
+    value
+        .as_u64()
+        .or_else(|| value.as_str()?.parse().ok())
+        .with_context(|| format!("tshark emitted an invalid {name}"))
+}
+
+fn ek_bool(
+    object: &serde_json::Map<String, serde_json::Value>,
+    field: &str,
+    name: &str,
+) -> anyhow::Result<bool> {
+    match ek_u64(
+        object
+            .get(field)
+            .with_context(|| format!("tshark WebSocket frame has no {name}"))?,
+        name,
+    )? {
+        0 => Ok(false),
+        1 => Ok(true),
+        _ => anyhow::bail!("tshark emitted an invalid {name}"),
+    }
+}
+
+fn ek_raw_u8(value: &serde_json::Value, name: &str) -> anyhow::Result<u8> {
+    let value = value
+        .as_str()
+        .with_context(|| format!("tshark emitted an invalid {name}"))?;
+    anyhow::ensure!(
+        !value.is_empty() && value.len() <= 2,
+        "tshark emitted an invalid {name}"
+    );
+    u8::from_str_radix(value, 16).with_context(|| format!("tshark emitted an invalid {name}"))
+}
+
+fn ek_hex_bytes(value: &serde_json::Value, name: &str, length: usize) -> anyhow::Result<Vec<u8>> {
+    let value = value
+        .as_str()
+        .with_context(|| format!("tshark {name} is not hexadecimal text"))?;
+    anyhow::ensure!(
+        value.len() == length.saturating_mul(2),
+        "tshark {name} length is invalid"
+    );
+    hex::decode(value).with_context(|| format!("tshark {name} is invalid hexadecimal text"))
 }
 
 async fn read_bounded_line<R: AsyncBufRead + Unpin>(
@@ -1501,6 +2058,8 @@ fn collect_proxy_attempts(
                 .or_insert_with(|| ProxyAttempt {
                     next_request_chunk: 1,
                     next_response_chunk: 1,
+                    next_websocket_request: 1,
+                    next_websocket_response: 1,
                     ..ProxyAttempt::default()
                 });
             match event.event.as_str() {
@@ -1526,6 +2085,15 @@ fn collect_proxy_attempts(
                             "other" => Some(false),
                             _ => None,
                         });
+                    attempt.websocket = event
+                        .normalized
+                        .as_ref()
+                        .and_then(|value| value.get("protocol"))
+                        .and_then(serde_json::Value::as_str)
+                        == Some("websocket");
+                    if attempt.websocket {
+                        attempt.request_finished = true;
+                    }
                 }
                 "transport_response_started" => {
                     attempt.status = event
@@ -1534,6 +2102,47 @@ fn collect_proxy_attempts(
                         .and_then(|value| value.get("status"))
                         .and_then(serde_json::Value::as_u64)
                         .and_then(|value| u16::try_from(value).ok());
+                }
+                "websocket_connection_started" => {
+                    attempt.websocket_started = attempt.websocket_started.saturating_add(1);
+                    attempt.status = event
+                        .normalized
+                        .as_ref()
+                        .and_then(|value| value.get("status"))
+                        .and_then(serde_json::Value::as_u64)
+                        .and_then(|value| u16::try_from(value).ok());
+                }
+                "websocket_frame" => append_proxy_websocket_frame(run_dir, &event, key, attempt)?,
+                "websocket_connection_finished" => {
+                    attempt.websocket_finished = attempt.websocket_finished.saturating_add(1);
+                    attempt.websocket_terminal.clone_from(&event.terminal_state);
+                    let metadata = event.normalized.as_ref();
+                    let request_messages = metadata
+                        .and_then(|value| value.get("client_messages"))
+                        .and_then(serde_json::Value::as_u64);
+                    let response_messages = metadata
+                        .and_then(|value| value.get("upstream_messages"))
+                        .and_then(serde_json::Value::as_u64);
+                    let capture_failed = metadata
+                        .and_then(|value| value.get("capture_failed"))
+                        .and_then(serde_json::Value::as_bool);
+                    if request_messages != Some(attempt.websocket_request_messages)
+                        || response_messages != Some(attempt.websocket_response_messages)
+                    {
+                        attempt
+                            .gaps
+                            .insert("proxy_websocket_message_count_mismatch".to_owned());
+                    }
+                    if capture_failed != Some(false) {
+                        attempt
+                            .gaps
+                            .insert("proxy_websocket_capture_incomplete".to_owned());
+                    }
+                    if attempt.websocket_terminal.is_none() {
+                        attempt
+                            .gaps
+                            .insert("proxy_websocket_terminal_missing".to_owned());
+                    }
                 }
                 "request_body_chunk" => append_proxy_chunk(
                     run_dir,
@@ -1559,9 +2168,14 @@ fn collect_proxy_attempts(
                     }
                 }
                 "transport_attempt_finished" => {
-                    attempt.attempt_finished =
-                        event.terminal_state == Some(TerminalState::Complete);
-                    if !attempt.attempt_finished {
+                    attempt.transport_finished = attempt.transport_finished.saturating_add(1);
+                    attempt.transport_terminal.clone_from(&event.terminal_state);
+                    attempt.attempt_finished = if attempt.websocket {
+                        event.terminal_state.is_some()
+                    } else {
+                        event.terminal_state == Some(TerminalState::Complete)
+                    };
+                    if !attempt.attempt_finished && !attempt.websocket {
                         attempt.gaps.insert("proxy_response_incomplete".to_owned());
                     }
                 }
@@ -1570,7 +2184,145 @@ fn collect_proxy_attempts(
             Ok(())
         },
     )?;
+    for attempt in attempts.values_mut().filter(|attempt| attempt.websocket) {
+        if attempt.websocket_started != 1 {
+            attempt
+                .gaps
+                .insert("proxy_websocket_start_not_unique".to_owned());
+        }
+        if attempt.websocket_finished != 1 {
+            attempt
+                .gaps
+                .insert("proxy_websocket_finish_not_unique".to_owned());
+        }
+        if attempt.transport_finished != 1 {
+            attempt
+                .gaps
+                .insert("proxy_attempt_finish_not_unique".to_owned());
+        }
+        if attempt.websocket_terminal.is_none()
+            || attempt.websocket_terminal != attempt.transport_terminal
+        {
+            attempt
+                .gaps
+                .insert("proxy_websocket_terminal_mismatch".to_owned());
+        }
+    }
     Ok(attempts)
+}
+
+fn append_proxy_websocket_frame(
+    run_dir: &Path,
+    event: &EventEnvelope,
+    key: &EncryptionKey,
+    attempt: &mut ProxyAttempt,
+) -> Result<(), StorageError> {
+    let metadata = event.normalized.as_ref();
+    let direction = metadata
+        .and_then(|value| value.get("direction"))
+        .and_then(serde_json::Value::as_str);
+    let (body, expected_sequence, messages) = match direction {
+        Some("client_to_upstream") => (
+            &mut attempt.websocket_request,
+            &mut attempt.next_websocket_request,
+            &mut attempt.websocket_request_messages,
+        ),
+        Some("upstream_to_client") => (
+            &mut attempt.websocket_response,
+            &mut attempt.next_websocket_response,
+            &mut attempt.websocket_response_messages,
+        ),
+        _ => {
+            attempt
+                .gaps
+                .insert("proxy_websocket_direction_invalid".to_owned());
+            return Ok(());
+        }
+    };
+    *messages = messages.saturating_add(1);
+    let sequence = metadata
+        .and_then(|value| value.get("message_sequence"))
+        .and_then(serde_json::Value::as_u64);
+    if sequence != Some(*expected_sequence) {
+        attempt
+            .gaps
+            .insert("proxy_websocket_sequence_gap".to_owned());
+    }
+    *expected_sequence = expected_sequence.saturating_add(1);
+    let opcode = metadata
+        .and_then(|value| value.get("opcode"))
+        .and_then(serde_json::Value::as_str)
+        .and_then(websocket_opcode);
+    let Some(opcode) = opcode else {
+        attempt
+            .gaps
+            .insert("proxy_websocket_opcode_invalid".to_owned());
+        return Ok(());
+    };
+    let observed = metadata
+        .and_then(|value| value.get("observed_size"))
+        .and_then(serde_json::Value::as_u64);
+    let mut payload = match event.raw.as_ref() {
+        Some(reference) if !reference.truncated => load_blob(run_dir, reference, key)?,
+        None if observed == Some(0) => Vec::new(),
+        _ => {
+            attempt
+                .gaps
+                .insert("proxy_websocket_payload_not_captured".to_owned());
+            return Ok(());
+        }
+    };
+    if observed != Some(u64::try_from(payload.len()).unwrap_or(u64::MAX)) {
+        attempt
+            .gaps
+            .insert("proxy_websocket_payload_size_mismatch".to_owned());
+        return Ok(());
+    }
+    let expected_sha256 = metadata
+        .and_then(|value| value.get("sha256"))
+        .and_then(serde_json::Value::as_str);
+    let actual_sha256 = format!("sha256:{}", hex::encode(Sha256::digest(&payload)));
+    if expected_sha256 != Some(actual_sha256.as_str()) {
+        attempt
+            .gaps
+            .insert("proxy_websocket_payload_digest_mismatch".to_owned());
+        return Ok(());
+    }
+    if opcode == 8 {
+        let close_code = metadata
+            .and_then(|value| value.get("close_code"))
+            .and_then(serde_json::Value::as_u64)
+            .and_then(|value| u16::try_from(value).ok());
+        if let Some(close_code) = close_code {
+            let mut wire_payload = Vec::with_capacity(payload.len().saturating_add(2));
+            wire_payload.extend_from_slice(&close_code.to_be_bytes());
+            wire_payload.append(&mut payload);
+            payload = wire_payload;
+        } else if !payload.is_empty() {
+            attempt
+                .gaps
+                .insert("proxy_websocket_close_code_missing".to_owned());
+            return Ok(());
+        }
+    }
+    body.append_message(opcode, &payload).map_err(|error| {
+        StorageError::Io(io::Error::new(
+            io::ErrorKind::InvalidData,
+            error.to_string(),
+        ))
+    })?;
+    Ok(())
+}
+
+fn websocket_opcode(value: &str) -> Option<u8> {
+    match value {
+        "text" => Some(1),
+        "binary" => Some(2),
+        "close" => Some(8),
+        "ping" => Some(9),
+        "pong" => Some(10),
+        _ => None,
+    }
 }
 
 fn append_proxy_chunk(
@@ -1669,8 +2421,14 @@ fn compare_attempts(
         ) else {
             continue;
         };
-        let request = attempt.request.finish();
-        let response = attempt.response.finish();
+        let (request, response) = if attempt.websocket {
+            (
+                attempt.websocket_request.finish(),
+                attempt.websocket_response.finish(),
+            )
+        } else {
+            (attempt.request.finish(), attempt.response.finish())
+        };
         let signature = Signature {
             method: method.clone(),
             path: target.path.clone(),
@@ -1934,6 +2692,170 @@ mod tests {
         let mut row = columns.join("\t");
         row.push('\t');
         row
+    }
+
+    fn websocket_frame(fin: bool, opcode: u8, masked: bool, payload: &[u8]) -> serde_json::Value {
+        assert!(payload.len() <= 125);
+        let length = u8::try_from(payload.len()).unwrap();
+        serde_json::json!({
+            "websocket_websocket_fin_raw": if fin { "1" } else { "0" },
+            "websocket_websocket_rsv_raw": "0",
+            "websocket_websocket_opcode_raw": opcode.to_string(),
+            "websocket_websocket_mask_raw": if masked { "1" } else { "0" },
+            "websocket_websocket_payload_length_raw": format!("{length:x}"),
+            "websocket_websocket_payload_raw": hex::encode(payload),
+        })
+    }
+
+    fn websocket_ek_line(tcp_stream: u64, frames: Vec<serde_json::Value>) -> Vec<u8> {
+        serde_json::to_vec(&serde_json::json!({
+            "timestamp": "0",
+            "layers": {
+                "tcp": {"tcp_tcp_stream": tcp_stream},
+                "websocket": if frames.len() == 1 {
+                    frames.into_iter().next().unwrap()
+                } else {
+                    serde_json::Value::Array(frames)
+                },
+            }
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn reconstructs_websocket_messages_and_preserves_boundaries() {
+        let mut decoder = WebSocketDecoder::default();
+        decoder
+            .process_ek_line(&websocket_ek_line(
+                7,
+                vec![websocket_frame(false, 1, true, b"hel")],
+            ))
+            .unwrap();
+        decoder
+            .process_ek_line(&websocket_ek_line(
+                7,
+                vec![
+                    websocket_frame(true, 0, true, b"lo"),
+                    websocket_frame(true, 1, false, b"world"),
+                ],
+            ))
+            .unwrap();
+        let (streams, gaps) = decoder.finish();
+        assert!(gaps.is_empty(), "{gaps:?}");
+        assert_eq!(streams.len(), 1);
+        assert_eq!(streams[0].request.bytes, 5);
+        assert_eq!(streams[0].request.chunks, 1);
+        assert_eq!(streams[0].response.bytes, 5);
+        assert_eq!(streams[0].response.chunks, 1);
+        assert!(streams[0].eligible_for_diff);
+
+        let mut left = WebSocketBodyAccumulator::default();
+        left.append_message(1, b"ab").unwrap();
+        left.append_message(1, b"c").unwrap();
+        let mut right = WebSocketBodyAccumulator::default();
+        right.append_message(1, b"a").unwrap();
+        right.append_message(1, b"bc").unwrap();
+        assert_ne!(left.finish().sha256, right.finish().sha256);
+    }
+
+    #[test]
+    fn websocket_wire_and_proxy_messages_compare_exactly() {
+        let mut websocket = WebSocketDecoder::default();
+        websocket
+            .process_ek_line(&websocket_ek_line(
+                3,
+                vec![websocket_frame(true, 1, true, b"request")],
+            ))
+            .unwrap();
+        websocket
+            .process_ek_line(&websocket_ek_line(
+                3,
+                vec![websocket_frame(true, 1, false, b"response")],
+            ))
+            .unwrap();
+        let rows = websocket.rows;
+        let (streams, gaps) = websocket.finish();
+        let mut decoded = DecodeResult {
+            rows: 2,
+            tcp_streams: 1,
+            tcp_streams_without_http_decode: 0,
+            streams: vec![DecodedStream {
+                protocol: "http/1.1",
+                tcp_stream: 3,
+                http2_stream_id: None,
+                method: Some("GET".to_owned()),
+                target: Some(safe_target("/v1/responses").unwrap()),
+                status: Some(101),
+                request: BodyAccumulator::default().finish(),
+                response: BodyAccumulator::default().finish(),
+                tls_decrypted: true,
+                request_end_observed: true,
+                response_end_observed: true,
+                eligible_for_diff: true,
+                gaps: Vec::new(),
+            }],
+            gaps: BTreeMap::new(),
+            stderr: StderrReport::default(),
+            websocket_rows: 0,
+            websocket_stderr: StderrReport::default(),
+        };
+        merge_websocket_streams(
+            &mut decoded,
+            WebSocketDecodeResult {
+                rows,
+                streams,
+                gaps,
+                stderr: StderrReport::default(),
+            },
+        );
+        assert_eq!(decoded.streams[0].protocol, "websocket");
+        assert!(decoded.streams[0].eligible_for_diff);
+
+        let mut attempt = ProxyAttempt {
+            method: Some("GET".to_owned()),
+            target: Some(safe_target("/v1/responses").unwrap()),
+            status: Some(101),
+            request_finished: true,
+            attempt_finished: true,
+            model_traffic: Some(true),
+            websocket: true,
+            websocket_started: 1,
+            websocket_finished: 1,
+            transport_finished: 1,
+            next_websocket_request: 1,
+            next_websocket_response: 1,
+            websocket_terminal: Some(TerminalState::Complete),
+            transport_terminal: Some(TerminalState::Complete),
+            ..ProxyAttempt::default()
+        };
+        attempt
+            .websocket_request
+            .append_message(1, b"request")
+            .unwrap();
+        attempt
+            .websocket_response
+            .append_message(1, b"response")
+            .unwrap();
+        let comparison = compare_attempts(
+            &BTreeMap::from([("websocket".to_owned(), attempt)]),
+            &decoded.streams,
+        );
+        assert_eq!(comparison.proxy_eligible, 1);
+        assert_eq!(comparison.matched, 1);
+        assert_eq!(comparison.missing, 0);
+        assert_eq!(comparison.extra, 0);
+    }
+
+    #[test]
+    fn rejects_websocket_payload_length_conflicts() {
+        let mut invalid = websocket_frame(true, 1, true, b"abc");
+        invalid["websocket_websocket_payload_length_raw"] = serde_json::json!("04");
+        let mut decoder = WebSocketDecoder::default();
+        assert!(
+            decoder
+                .process_ek_line(&websocket_ek_line(1, vec![invalid]))
+                .is_err()
+        );
     }
 
     #[test]

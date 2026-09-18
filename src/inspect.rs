@@ -489,6 +489,7 @@ struct EventSummary {
     referenced_blobs: BTreeMap<String, u64>,
     terminal_attempts: u64,
     model_attempts: BTreeSet<String>,
+    websocket_attempts: BTreeSet<String>,
     complete_request_payloads: BTreeSet<String>,
     complete_response_payloads: BTreeSet<String>,
     incomplete_request_payloads: BTreeSet<String>,
@@ -704,6 +705,9 @@ fn summarize_events(
                         .and_then(|value| value.get("protocol"))
                         .and_then(serde_json::Value::as_str)
                         .unwrap_or("unknown");
+                    if protocol == "websocket" {
+                        summary.websocket_attempts.insert(attempt_id.clone());
+                    }
                     *summary.protocols.entry(protocol.to_owned()).or_default() += 1;
                 }
             }
@@ -885,6 +889,10 @@ fn enforce_summary_limits(
         (inference_models.len(), "inspection model index"),
         (inference_aliases.len(), "inspection correlation index"),
         (summary.model_attempts.len(), "inspection attempt index"),
+        (
+            summary.websocket_attempts.len(),
+            "inspection WebSocket-attempt index",
+        ),
         (
             summary.complete_request_payloads.len(),
             "inspection complete-request index",
@@ -1079,6 +1087,9 @@ fn update_payload_coverage(event: &EventEnvelope, summary: &mut EventSummary) {
             return;
         }
         "transport_attempt_finished" => {
+            if summary.websocket_attempts.contains(attempt_id) {
+                return;
+            }
             match event.terminal_state {
                 Some(TerminalState::Complete) => {
                     summary
@@ -1090,6 +1101,27 @@ fn update_payload_coverage(event: &EventEnvelope, summary: &mut EventSummary) {
                         .incomplete_response_payloads
                         .insert(attempt_id.clone());
                 }
+            }
+            return;
+        }
+        "websocket_connection_finished" => {
+            let capture_failed = event
+                .normalized
+                .as_ref()
+                .and_then(|value| value.get("capture_failed"))
+                .and_then(serde_json::Value::as_bool);
+            if event.terminal_state.is_some() && capture_failed == Some(false) {
+                summary.complete_request_payloads.insert(attempt_id.clone());
+                summary
+                    .complete_response_payloads
+                    .insert(attempt_id.clone());
+            } else {
+                summary
+                    .incomplete_request_payloads
+                    .insert(attempt_id.clone());
+                summary
+                    .incomplete_response_payloads
+                    .insert(attempt_id.clone());
             }
             return;
         }
@@ -1387,6 +1419,37 @@ mod tests {
         )
         .unwrap();
         assert!(inventory.corrupt.contains(&format!("sha256:{hash}")));
+    }
+
+    #[test]
+    fn websocket_transport_errors_can_still_have_complete_captured_payloads() {
+        let attempt = "ws-attempt".to_owned();
+        let mut summary = EventSummary::default();
+        summary.model_attempts.insert(attempt.clone());
+        summary.websocket_attempts.insert(attempt.clone());
+
+        let mut finished = PendingEvent::new("run", "proxy", "websocket_connection_finished");
+        finished.ids.attempt_id = Some(attempt.clone());
+        finished.terminal_state = Some(TerminalState::Error);
+        finished.normalized = Some(json!({"capture_failed": false}));
+        update_payload_coverage(&EventEnvelope::from_pending(1, finished), &mut summary);
+
+        let mut transport = PendingEvent::new("run", "proxy", "transport_attempt_finished");
+        transport.ids.attempt_id = Some(attempt.clone());
+        transport.terminal_state = Some(TerminalState::Error);
+        update_payload_coverage(&EventEnvelope::from_pending(2, transport), &mut summary);
+        assert!(summary.complete_request_payloads.contains(&attempt));
+        assert!(summary.complete_response_payloads.contains(&attempt));
+        assert!(summary.incomplete_request_payloads.is_empty());
+        assert!(summary.incomplete_response_payloads.is_empty());
+
+        let mut failed = PendingEvent::new("run", "proxy", "websocket_connection_finished");
+        failed.ids.attempt_id = Some(attempt.clone());
+        failed.terminal_state = Some(TerminalState::Error);
+        failed.normalized = Some(json!({"capture_failed": true}));
+        update_payload_coverage(&EventEnvelope::from_pending(3, failed), &mut summary);
+        assert!(summary.incomplete_request_payloads.contains(&attempt));
+        assert!(summary.incomplete_response_payloads.contains(&attempt));
     }
 
     #[test]

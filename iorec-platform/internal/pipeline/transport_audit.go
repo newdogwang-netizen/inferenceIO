@@ -46,6 +46,7 @@ const (
 	maxTSharkVersionBytes   = int64(64 << 10)
 	maxTSharkStderrBytes    = int64(64 << 10)
 	maxTSharkLineBytes      = 129 << 20
+	maxTSharkEKLineBytes    = 264 << 20
 	maxTSharkStdoutBytes    = int64(4 << 30)
 	maxMethodBytes          = 64
 	maxPathBytes            = 16 << 10
@@ -785,6 +786,52 @@ type bodyAccumulator struct {
 	chunks int64
 }
 
+type websocketBodyAccumulator struct {
+	digest   hash.Hash
+	bytes    int64
+	messages int64
+}
+
+func (body *websocketBodyAccumulator) appendMessage(opcode byte, payload []byte) error {
+	if opcode != 1 && opcode != 2 && opcode != 8 && opcode != 9 && opcode != 10 {
+		return fmt.Errorf("unsupported WebSocket message opcode")
+	}
+	if int64(len(payload)) > maxAuditArtifactBytes-body.bytes {
+		return fmt.Errorf("WebSocket payload byte limit exceeded")
+	}
+	if body.digest == nil {
+		body.digest = sha256.New()
+	}
+	if _, err := body.digest.Write([]byte("iorec-websocket-message-v1\x00")); err != nil {
+		return err
+	}
+	if _, err := body.digest.Write([]byte{opcode}); err != nil {
+		return err
+	}
+	length := uint64(len(payload))
+	lengthBytes := [8]byte{
+		byte(length >> 56), byte(length >> 48), byte(length >> 40), byte(length >> 32),
+		byte(length >> 24), byte(length >> 16), byte(length >> 8), byte(length),
+	}
+	if _, err := body.digest.Write(lengthBytes[:]); err != nil {
+		return err
+	}
+	if _, err := body.digest.Write(payload); err != nil {
+		return err
+	}
+	body.bytes += int64(len(payload))
+	body.messages++
+	return nil
+}
+
+func (body *websocketBodyAccumulator) finish() bodyDigest {
+	digest := sha256.Sum256(nil)
+	if body.digest != nil {
+		copy(digest[:], body.digest.Sum(nil))
+	}
+	return bodyDigest{Bytes: body.bytes, SHA256: hex.EncodeToString(digest[:]), Chunks: body.messages}
+}
+
 func (body *bodyAccumulator) appendBytes(value []byte) error {
 	if body.digest == nil {
 		body.digest = sha256.New()
@@ -878,23 +925,34 @@ func (body *bodyAccumulator) finish() bodyDigest {
 }
 
 type proxyAttempt struct {
-	method, path      string
-	status            uint16
-	request, response bodyAccumulator
-	nextRequestChunk  int64
-	nextResponseChunk int64
-	requestFinished   bool
-	attemptFinished   bool
-	modelTraffic      int
-	requestStarted    int
-	responseStarted   int
-	requestEnded      int
-	responseEnded     int
-	gaps              map[string]struct{}
+	method, path       string
+	status             uint16
+	request, response  bodyAccumulator
+	websocketRequest   websocketBodyAccumulator
+	websocketResponse  websocketBodyAccumulator
+	nextRequestChunk   int64
+	nextResponseChunk  int64
+	nextWSRequest      int64
+	nextWSResponse     int64
+	wsRequestMessages  int64
+	wsResponseMessages int64
+	requestFinished    bool
+	attemptFinished    bool
+	websocketTerminal  string
+	attemptTerminal    string
+	websocket          bool
+	modelTraffic       int
+	requestStarted     int
+	responseStarted    int
+	requestEnded       int
+	responseEnded      int
+	websocketStarted   int
+	websocketEnded     int
+	gaps               map[string]struct{}
 }
 
 func newProxyAttempt() *proxyAttempt {
-	return &proxyAttempt{nextRequestChunk: 1, nextResponseChunk: 1, gaps: make(map[string]struct{})}
+	return &proxyAttempt{nextRequestChunk: 1, nextResponseChunk: 1, nextWSRequest: 1, nextWSResponse: 1, gaps: make(map[string]struct{})}
 }
 
 func (d *Deps) collectProxyAttempts(ctx context.Context, projectID uuid.UUID, run string) (map[string]*proxyAttempt, map[string]int64, error) {
@@ -902,7 +960,8 @@ func (d *Deps) collectProxyAttempts(ctx context.Context, projectID uuid.UUID, ru
 		from recording_events e join recordings r on r.id=e.recording_id
 		where r.capture_run_id=$1 and e.source='proxy' and e.event in
 		('transport_request_started','transport_response_started','request_body_chunk',
-		 'response_body_chunk','request_body_finished','transport_attempt_finished')
+		 'response_body_chunk','request_body_finished','transport_attempt_finished',
+		 'websocket_connection_started','websocket_frame','websocket_connection_finished')
 		order by e.seq, e.recording_id limit $2`, run, maxAuditProxyEvents+1)
 	if err != nil {
 		return nil, nil, err
@@ -955,6 +1014,11 @@ func (d *Deps) collectProxyAttempts(ctx context.Context, projectID uuid.UUID, ru
 				default:
 					attempt.modelTraffic = 0
 				}
+				protocol, _ := metadata["protocol"].(string)
+				attempt.websocket = protocol == "websocket"
+				if attempt.websocket {
+					attempt.requestFinished = true
+				}
 			}
 		case "transport_response_started":
 			attempt.responseStarted++
@@ -963,6 +1027,32 @@ func (d *Deps) collectProxyAttempts(ctx context.Context, projectID uuid.UUID, ru
 				if status > 0 && status <= 65535 {
 					attempt.status = uint16(status)
 				}
+			}
+		case "websocket_connection_started":
+			attempt.websocketStarted++
+			attempt.responseStarted++
+			if attempt.websocketStarted == 1 {
+				status := jsonInteger(metadata["status"])
+				if status > 0 && status <= 65535 {
+					attempt.status = uint16(status)
+				}
+			}
+		case "websocket_frame":
+			if err := d.appendProxyWebSocketFrame(ctx, projectID, attempt, metadata, digest, size, truncated); err != nil {
+				return nil, nil, err
+			}
+		case "websocket_connection_finished":
+			attempt.websocketEnded++
+			attempt.websocketTerminal = terminal
+			if jsonInteger(metadata["client_messages"]) != attempt.wsRequestMessages || jsonInteger(metadata["upstream_messages"]) != attempt.wsResponseMessages {
+				attempt.gaps["proxy_websocket_message_count_mismatch"] = struct{}{}
+			}
+			captureFailed, ok := metadata["capture_failed"].(bool)
+			if !ok || captureFailed {
+				attempt.gaps["proxy_websocket_capture_incomplete"] = struct{}{}
+			}
+			if attempt.websocketTerminal == "" {
+				attempt.gaps["proxy_websocket_terminal_missing"] = struct{}{}
 			}
 		case "request_body_chunk":
 			if err := d.appendProxyChunk(ctx, projectID, attempt, true, metadata, digest, size, truncated); err != nil {
@@ -980,8 +1070,9 @@ func (d *Deps) collectProxyAttempts(ctx context.Context, projectID uuid.UUID, ru
 			}
 		case "transport_attempt_finished":
 			attempt.responseEnded++
-			attempt.attemptFinished = terminal == "complete"
-			if !attempt.attemptFinished {
+			attempt.attemptTerminal = terminal
+			attempt.attemptFinished = terminal == "complete" || (attempt.websocket && terminal != "")
+			if !attempt.attemptFinished && !attempt.websocket {
 				attempt.gaps["proxy_response_incomplete"] = struct{}{}
 			}
 		}
@@ -990,15 +1081,35 @@ func (d *Deps) collectProxyAttempts(ctx context.Context, projectID uuid.UUID, ru
 		return nil, nil, err
 	}
 	for _, attempt := range attempts {
-		for _, required := range []struct {
+		requiredEvents := []struct {
 			count  int
 			reason string
 		}{
 			{attempt.requestStarted, "proxy_request_start_not_unique"},
 			{attempt.responseStarted, "proxy_response_start_not_unique"},
-			{attempt.requestEnded, "proxy_request_finish_not_unique"},
 			{attempt.responseEnded, "proxy_attempt_finish_not_unique"},
-		} {
+		}
+		if attempt.websocket {
+			requiredEvents = append(requiredEvents,
+				struct {
+					count  int
+					reason string
+				}{attempt.websocketStarted, "proxy_websocket_start_not_unique"},
+				struct {
+					count  int
+					reason string
+				}{attempt.websocketEnded, "proxy_websocket_finish_not_unique"},
+			)
+			if attempt.websocketTerminal == "" || attempt.websocketTerminal != attempt.attemptTerminal {
+				attempt.gaps["proxy_websocket_terminal_mismatch"] = struct{}{}
+			}
+		} else {
+			requiredEvents = append(requiredEvents, struct {
+				count  int
+				reason string
+			}{attempt.requestEnded, "proxy_request_finish_not_unique"})
+		}
+		for _, required := range requiredEvents {
 			if required.count != 1 {
 				attempt.gaps[required.reason] = struct{}{}
 			}
@@ -1055,6 +1166,93 @@ func (d *Deps) appendProxyChunk(ctx context.Context, projectID uuid.UUID, attemp
 	return nil
 }
 
+func (d *Deps) appendProxyWebSocketFrame(ctx context.Context, projectID uuid.UUID, attempt *proxyAttempt, metadata map[string]any, digest []byte, size *int64, truncated bool) error {
+	direction, _ := metadata["direction"].(string)
+	body := &attempt.websocketResponse
+	expected := &attempt.nextWSResponse
+	messages := &attempt.wsResponseMessages
+	switch direction {
+	case "client_to_upstream":
+		body, expected, messages = &attempt.websocketRequest, &attempt.nextWSRequest, &attempt.wsRequestMessages
+	case "upstream_to_client":
+	default:
+		attempt.gaps["proxy_websocket_direction_invalid"] = struct{}{}
+		return nil
+	}
+	*messages++
+	if jsonInteger(metadata["message_sequence"]) != *expected {
+		attempt.gaps["proxy_websocket_sequence_gap"] = struct{}{}
+	}
+	*expected++
+	opcodeName, _ := metadata["opcode"].(string)
+	opcode, ok := websocketOpcode(opcodeName)
+	if !ok {
+		attempt.gaps["proxy_websocket_opcode_invalid"] = struct{}{}
+		return nil
+	}
+	observed, observedOK := jsonIntegerValue(metadata["observed_size"])
+	var payload []byte
+	switch {
+	case observedOK && observed == 0 && len(digest) == 0 && size == nil && !truncated:
+		payload = []byte{}
+	case len(digest) == sha256.Size && size != nil && *size >= 0 && *size <= maxAuditBlobBytes && !truncated:
+		value, err := d.readVerifiedBlob(ctx, projectID, digest, *size)
+		if err != nil {
+			if errors.Is(err, errSensitiveEvidenceUnavailable) {
+				attempt.gaps["proxy_websocket_payload_unavailable"] = struct{}{}
+				return nil
+			}
+			return fmt.Errorf("proxy WebSocket payload blob: %w", err)
+		}
+		payload = value
+	default:
+		attempt.gaps["proxy_websocket_payload_not_captured"] = struct{}{}
+		return nil
+	}
+	if !observedOK || observed != int64(len(payload)) {
+		attempt.gaps["proxy_websocket_payload_size_mismatch"] = struct{}{}
+		return nil
+	}
+	expectedDigest, _ := metadata["sha256"].(string)
+	actualDigest := sha256.Sum256(payload)
+	if expectedDigest != "sha256:"+hex.EncodeToString(actualDigest[:]) {
+		attempt.gaps["proxy_websocket_payload_digest_mismatch"] = struct{}{}
+		return nil
+	}
+	if opcode == 8 {
+		closeCode, closeCodeOK := jsonIntegerValue(metadata["close_code"])
+		if closeCodeOK && closeCode > 0 && closeCode <= 65535 {
+			wirePayload := make([]byte, 2, len(payload)+2)
+			wirePayload[0], wirePayload[1] = byte(closeCode>>8), byte(closeCode)
+			payload = append(wirePayload, payload...)
+		} else if len(payload) > 0 {
+			attempt.gaps["proxy_websocket_close_code_missing"] = struct{}{}
+			return nil
+		}
+	}
+	if err := body.appendMessage(opcode, payload); err != nil {
+		return fmt.Errorf("proxy WebSocket payload: %w", err)
+	}
+	return nil
+}
+
+func websocketOpcode(value string) (byte, bool) {
+	switch value {
+	case "text":
+		return 1, true
+	case "binary":
+		return 2, true
+	case "close":
+		return 8, true
+	case "ping":
+		return 9, true
+	case "pong":
+		return 10, true
+	default:
+		return 0, false
+	}
+}
+
 type transportSignature struct {
 	Method, Path, RequestSHA, ResponseSHA string
 	Status                                uint16
@@ -1076,6 +1274,9 @@ func compareTransportEvidence(attempts map[string]*proxyAttempt, streams []decod
 		}
 		signature := transportSignature{Method: attempt.method, Path: attempt.path, Status: attempt.status}
 		request, response := attempt.request.finish(), attempt.response.finish()
+		if attempt.websocket {
+			request, response = attempt.websocketRequest.finish(), attempt.websocketResponse.finish()
+		}
 		signature.RequestBytes, signature.RequestSHA = request.Bytes, request.SHA256
 		signature.ResponseBytes, signature.ResponseSHA = response.Bytes, response.SHA256
 		if attempt.modelTraffic == 1 {
@@ -1311,7 +1512,422 @@ func (decoder *TSharkDecoder) DecodeTransport(ctx context.Context, pcapPath, key
 		return nil, fmt.Errorf("trusted tshark decoder exited unsuccessfully: %w", waitErr)
 	}
 	streams, gaps := parser.finish()
-	return &transportDecodeResult{Rows: parser.rows, Streams: streams, Gaps: gaps, StderrBytes: stderrReport.total}, nil
+	websockets, websocketGaps, websocketStderr, err := decoder.decodeWebSockets(ctx, pcapPath, keysPath, privateHome)
+	if err != nil {
+		return nil, err
+	}
+	mergeProofGaps(gaps, websocketGaps)
+	streams = mergeDecodedWebSockets(streams, websockets, gaps)
+	stderrBytes := stderrReport.total
+	if websocketStderr > math.MaxInt64-stderrBytes {
+		stderrBytes = math.MaxInt64
+	} else {
+		stderrBytes += websocketStderr
+	}
+	return &transportDecodeResult{Rows: parser.rows, Streams: streams, Gaps: gaps, StderrBytes: stderrBytes}, nil
+}
+
+type websocketDirection struct {
+	body              websocketBodyAccumulator
+	fragmentedOpcode  byte
+	fragmentedPayload []byte
+	closed            bool
+}
+
+type websocketStreamBuilder struct {
+	request, response websocketDirection
+	gaps              map[string]struct{}
+}
+
+type decodedWebSocketStream struct {
+	TCPStream       uint64
+	Request         bodyDigest
+	Response        bodyDigest
+	EligibleForDiff bool
+	Gaps            []string
+}
+
+type websocketWireDecoder struct {
+	rows    int64
+	streams map[uint64]*websocketStreamBuilder
+	gaps    map[string]int64
+}
+
+func newWebSocketWireDecoder() *websocketWireDecoder {
+	return &websocketWireDecoder{streams: make(map[uint64]*websocketStreamBuilder), gaps: make(map[string]int64)}
+}
+
+func (decoder *TSharkDecoder) decodeWebSockets(ctx context.Context, pcapPath, keysPath, privateHome string) ([]decodedWebSocketStream, map[string]int64, int64, error) {
+	arguments := []string{
+		"-n", "-2", "-r", pcapPath, "-o", "tls.keylog_file:" + keysPath,
+		"-Y", "websocket", "-T", "ek", "-x", "-J", "tcp websocket", "--temp-dir", privateHome,
+	}
+	command := exec.CommandContext(ctx, decoder.path, arguments...)
+	command.Env = []string{"LC_ALL=C", "HOME=" + privateHome, "XDG_CONFIG_HOME=" + privateHome}
+	command.Dir = privateHome
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	stderr, err := command.StderrPipe()
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	if err := command.Start(); err != nil {
+		return nil, nil, 0, err
+	}
+	stderrResult := make(chan boundedDrainResult, 1)
+	go func() { stderrResult <- drainBounded(stderr, maxTSharkStderrBytes) }()
+	abort := func(cause error) ([]decodedWebSocketStream, map[string]int64, int64, error) {
+		_ = command.Process.Kill()
+		_ = command.Wait()
+		<-stderrResult
+		return nil, nil, 0, cause
+	}
+	parser := newWebSocketWireDecoder()
+	reader := bufio.NewReaderSize(stdout, 64<<10)
+	var stdoutBytes int64
+	for {
+		line, consumed, readErr := readBoundedLine(reader, maxTSharkEKLineBytes)
+		stdoutBytes += int64(consumed)
+		if stdoutBytes > maxTSharkStdoutBytes {
+			return abort(fmt.Errorf("tshark WebSocket stdout exceeded its byte limit"))
+		}
+		if line != "" {
+			line = strings.TrimRight(line, "\r\n")
+			if line != "" {
+				if processErr := parser.processEKLine(line); processErr != nil {
+					return abort(processErr)
+				}
+			}
+		}
+		if errors.Is(readErr, io.EOF) {
+			break
+		}
+		if readErr != nil {
+			return abort(readErr)
+		}
+	}
+	waitErr := command.Wait()
+	stderrReport := <-stderrResult
+	if stderrReport.err != nil {
+		return nil, nil, 0, stderrReport.err
+	}
+	if waitErr != nil {
+		return nil, nil, 0, fmt.Errorf("trusted tshark WebSocket decoder exited unsuccessfully: %w", waitErr)
+	}
+	streams, gaps := parser.finish()
+	return streams, gaps, stderrReport.total, nil
+}
+
+func (decoder *websocketWireDecoder) processEKLine(line string) error {
+	jsonDecoder := json.NewDecoder(strings.NewReader(line))
+	jsonDecoder.UseNumber()
+	var document map[string]any
+	if err := jsonDecoder.Decode(&document); err != nil {
+		return fmt.Errorf("tshark emitted invalid WebSocket EK JSON: %w", err)
+	}
+	layers, ok := document["layers"].(map[string]any)
+	if !ok {
+		if _, index := document["index"]; index {
+			return nil
+		}
+		return fmt.Errorf("tshark WebSocket EK document has no layers")
+	}
+	tcp, err := ekSingleObject(layers["tcp"], "TCP")
+	if err != nil {
+		return err
+	}
+	tcpStream, err := ekUint(tcp["tcp_tcp_stream"], "TCP stream")
+	if err != nil {
+		return err
+	}
+	frames, err := ekObjects(layers["websocket"], "WebSocket")
+	if err != nil || len(frames) == 0 {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("tshark WebSocket EK layer is empty")
+	}
+	stream := decoder.streams[tcpStream]
+	if stream == nil {
+		if len(decoder.streams) == maxDecodedStreams {
+			return fmt.Errorf("decoded WebSocket stream limit exceeded")
+		}
+		stream = &websocketStreamBuilder{gaps: make(map[string]struct{})}
+		decoder.streams[tcpStream] = stream
+	}
+	for _, frame := range frames {
+		decoder.rows++
+		if decoder.rows > maxDecodedRows {
+			return fmt.Errorf("decoded WebSocket frame-row limit exceeded")
+		}
+		fin, err := ekBool(frame["websocket_websocket_fin_raw"], "WebSocket FIN")
+		if err != nil {
+			return err
+		}
+		masked, err := ekBool(frame["websocket_websocket_mask_raw"], "WebSocket mask")
+		if err != nil {
+			return err
+		}
+		rsv, err := ekRawUint8(frame["websocket_websocket_rsv_raw"], "WebSocket RSV")
+		if err != nil {
+			return err
+		}
+		opcode, err := ekRawUint8(frame["websocket_websocket_opcode_raw"], "WebSocket opcode")
+		if err != nil {
+			return fmt.Errorf("tshark emitted an invalid WebSocket opcode")
+		}
+		payload, err := decodeWebSocketPayload(frame)
+		if err != nil {
+			return err
+		}
+		if rsv != 0 {
+			stream.gaps["websocket_rsv_nonzero"] = struct{}{}
+		}
+		direction := &stream.response
+		if masked {
+			direction = &stream.request
+		}
+		if err := processWebSocketFrame(direction, opcode, fin, payload, stream.gaps); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (decoder *websocketWireDecoder) finish() ([]decodedWebSocketStream, map[string]int64) {
+	streams := make([]decodedWebSocketStream, 0, len(decoder.streams))
+	for tcpStream, builder := range decoder.streams {
+		if builder.request.fragmentedOpcode != 0 || builder.response.fragmentedOpcode != 0 {
+			builder.gaps["websocket_fragment_end_missing"] = struct{}{}
+		}
+		gaps := make([]string, 0, len(builder.gaps))
+		for gap := range builder.gaps {
+			gaps = append(gaps, gap)
+			addProofGap(decoder.gaps, gap, 1)
+		}
+		sort.Strings(gaps)
+		streams = append(streams, decodedWebSocketStream{
+			TCPStream: tcpStream, Request: builder.request.body.finish(), Response: builder.response.body.finish(),
+			EligibleForDiff: len(gaps) == 0, Gaps: gaps,
+		})
+	}
+	sort.Slice(streams, func(i, j int) bool { return streams[i].TCPStream < streams[j].TCPStream })
+	return streams, decoder.gaps
+}
+
+func processWebSocketFrame(direction *websocketDirection, opcode byte, fin bool, payload []byte, gaps map[string]struct{}) error {
+	if direction.closed {
+		gaps["websocket_frame_after_close"] = struct{}{}
+	}
+	switch opcode {
+	case 0:
+		if direction.fragmentedOpcode == 0 {
+			gaps["websocket_continuation_without_start"] = struct{}{}
+			return nil
+		}
+		if err := appendWebSocketFragment(&direction.fragmentedPayload, payload); err != nil {
+			return err
+		}
+		if fin {
+			if err := direction.body.appendMessage(direction.fragmentedOpcode, direction.fragmentedPayload); err != nil {
+				return err
+			}
+			direction.fragmentedOpcode = 0
+			direction.fragmentedPayload = direction.fragmentedPayload[:0]
+		}
+	case 1, 2:
+		if direction.fragmentedOpcode != 0 {
+			direction.fragmentedOpcode = 0
+			direction.fragmentedPayload = direction.fragmentedPayload[:0]
+			gaps["websocket_new_data_before_fragment_end"] = struct{}{}
+		}
+		if fin {
+			return direction.body.appendMessage(opcode, payload)
+		}
+		direction.fragmentedOpcode = opcode
+		return appendWebSocketFragment(&direction.fragmentedPayload, payload)
+	case 8, 9, 10:
+		if !fin {
+			gaps["websocket_control_frame_fragmented"] = struct{}{}
+		}
+		if len(payload) > 125 {
+			gaps["websocket_control_frame_oversized"] = struct{}{}
+		}
+		if opcode == 8 {
+			if len(payload) == 1 {
+				gaps["websocket_close_payload_invalid"] = struct{}{}
+			}
+			direction.closed = true
+		}
+		return direction.body.appendMessage(opcode, payload)
+	default:
+		gaps["websocket_opcode_unsupported"] = struct{}{}
+	}
+	return nil
+}
+
+func appendWebSocketFragment(target *[]byte, payload []byte) error {
+	if len(payload) > int(maxAuditBlobBytes)-len(*target) {
+		return fmt.Errorf("WebSocket fragmented payload exceeded its limit")
+	}
+	*target = append(*target, payload...)
+	return nil
+}
+
+func decodeWebSocketPayload(frame map[string]any) ([]byte, error) {
+	indicator, err := ekRawUint8(frame["websocket_websocket_payload_length_raw"], "WebSocket payload-length byte")
+	if err != nil {
+		return nil, err
+	}
+	if indicator > 127 {
+		return nil, fmt.Errorf("WebSocket payload-length byte is invalid")
+	}
+	declared := uint64(indicator)
+	if indicator == 126 {
+		extended, err := ekHexBytes(frame["websocket_websocket_payload_length_ext_16_raw"], "WebSocket 16-bit payload length", 2)
+		if err != nil {
+			return nil, err
+		}
+		declared = uint64(extended[0])<<8 | uint64(extended[1])
+	} else if indicator == 127 {
+		extended, err := ekHexBytes(frame["websocket_websocket_payload_length_ext_64_raw"], "WebSocket 64-bit payload length", 8)
+		if err != nil {
+			return nil, err
+		}
+		declared = 0
+		for _, value := range extended {
+			declared = declared<<8 | uint64(value)
+		}
+		if declared&(uint64(1)<<63) != 0 {
+			return nil, fmt.Errorf("WebSocket payload length is invalid")
+		}
+	}
+	if declared > uint64(maxAuditBlobBytes) {
+		return nil, fmt.Errorf("WebSocket payload exceeded its audit limit")
+	}
+	payloadValue, present := frame["websocket_websocket_payload_raw"]
+	if !present && declared == 0 {
+		return []byte{}, nil
+	}
+	if !present {
+		return nil, fmt.Errorf("tshark WebSocket frame has no decoded payload")
+	}
+	return ekHexBytes(payloadValue, "WebSocket payload", int(declared))
+}
+
+func ekSingleObject(value any, name string) (map[string]any, error) {
+	if object, ok := value.(map[string]any); ok {
+		return object, nil
+	}
+	if values, ok := value.([]any); ok && len(values) == 1 {
+		if object, ok := values[0].(map[string]any); ok {
+			return object, nil
+		}
+	}
+	return nil, fmt.Errorf("tshark %s layer is ambiguous", name)
+}
+
+func ekObjects(value any, name string) ([]map[string]any, error) {
+	if object, ok := value.(map[string]any); ok {
+		return []map[string]any{object}, nil
+	}
+	values, ok := value.([]any)
+	if !ok {
+		return nil, fmt.Errorf("tshark %s layer is not an object or array", name)
+	}
+	objects := make([]map[string]any, 0, len(values))
+	for _, value := range values {
+		object, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("tshark %s layer is not an object", name)
+		}
+		objects = append(objects, object)
+	}
+	return objects, nil
+}
+
+func ekUint(value any, name string) (uint64, error) {
+	var text string
+	switch value := value.(type) {
+	case json.Number:
+		text = value.String()
+	case string:
+		text = value
+	default:
+		return 0, fmt.Errorf("tshark emitted an invalid %s", name)
+	}
+	parsed, err := strconv.ParseUint(text, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("tshark emitted an invalid %s", name)
+	}
+	return parsed, nil
+}
+
+func ekBool(value any, name string) (bool, error) {
+	parsed, err := ekUint(value, name)
+	if err != nil {
+		return false, err
+	}
+	switch parsed {
+	case 0:
+		return false, nil
+	case 1:
+		return true, nil
+	default:
+		return false, fmt.Errorf("tshark emitted an invalid %s", name)
+	}
+}
+
+func ekRawUint8(value any, name string) (byte, error) {
+	text, ok := value.(string)
+	if !ok || text == "" || len(text) > 2 {
+		return 0, fmt.Errorf("tshark emitted an invalid %s", name)
+	}
+	parsed, err := strconv.ParseUint(text, 16, 8)
+	if err != nil {
+		return 0, fmt.Errorf("tshark emitted an invalid %s", name)
+	}
+	return byte(parsed), nil
+}
+
+func ekHexBytes(value any, name string, length int) ([]byte, error) {
+	text, ok := value.(string)
+	if !ok || len(text) != length*2 {
+		return nil, fmt.Errorf("tshark %s length is invalid", name)
+	}
+	decoded, err := hex.DecodeString(text)
+	if err != nil {
+		return nil, fmt.Errorf("tshark %s is invalid hexadecimal text", name)
+	}
+	return decoded, nil
+}
+
+func mergeDecodedWebSockets(streams []decodedStream, websockets []decodedWebSocketStream, gaps map[string]int64) []decodedStream {
+	for _, websocket := range websockets {
+		matches := make([]int, 0, 1)
+		for index := range streams {
+			if streams[index].Protocol == "http/1.1" && streams[index].TCPStream == websocket.TCPStream && streams[index].Status == 101 {
+				matches = append(matches, index)
+			}
+		}
+		if len(matches) != 1 {
+			reason := "websocket_stream_without_unique_upgrade"
+			if len(matches) > 1 {
+				reason = "websocket_stream_upgrade_ambiguous"
+			}
+			addProofGap(gaps, reason, 1)
+			continue
+		}
+		stream := &streams[matches[0]]
+		stream.Protocol = "websocket"
+		stream.Request, stream.Response = websocket.Request, websocket.Response
+		stream.EligibleForDiff = stream.EligibleForDiff && websocket.EligibleForDiff
+		stream.Gaps = append(stream.Gaps, websocket.Gaps...)
+		sort.Strings(stream.Gaps)
+	}
+	return streams
 }
 
 type boundedDrainResult struct {
