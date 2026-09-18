@@ -247,6 +247,9 @@ class ProcessBridgeTests(unittest.TestCase):
                 ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                # communicate() reads file descriptors directly. Do not let the
+                # readiness readline prefetch evidence into a BufferedReader.
+                bufsize=0,
             )
             assert process.stdout is not None
             first = json.loads(process.stdout.readline())
@@ -359,8 +362,12 @@ class ProcessBridgeTests(unittest.TestCase):
                 ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
+                bufsize=0,
             )
             assert process.stdout is not None
+            # Exercise the scheduling window where both readiness and evidence
+            # are available before the parent first reads stdout.
+            time.sleep(0.15)
             ready = json.loads(process.stdout.readline())
             self.assertIn("go_tls_plaintext", ready["capabilities"])
             process.send_signal(signal.SIGTERM)

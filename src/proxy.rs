@@ -60,6 +60,7 @@ use crate::{
 };
 
 const BODY_CHANNEL_CAPACITY: usize = 16;
+const WEBSOCKET_CLOSE_TIMEOUT: Duration = Duration::from_secs(3);
 const MAX_NORMALIZED_REQUEST_BYTES: usize = 8 * 1024 * 1024;
 const MAX_CONCURRENT_REQUEST_NORMALIZATIONS: usize = 16;
 const MAX_PAYLOAD_DEPENDENCY_NODES: usize = 1_000_000;
@@ -539,6 +540,9 @@ async fn bridge_websocket(
     let mut terminal = TerminalState::Incomplete;
     let mut reason = "connection_ended";
     let mut error_detail = None;
+    let mut client_close_received = false;
+    let mut upstream_close_received = false;
+    let mut close_deadline = None;
     let capture_failed = Arc::new(AtomicBool::new(false));
     let (capture_sender, capture_receiver) = tokio::sync::mpsc::channel(BODY_CHANNEL_CAPACITY);
     let capture_task = tokio::spawn(capture_websocket_stream(
@@ -551,7 +555,18 @@ async fn bridge_websocket(
 
     loop {
         tokio::select! {
-            next = downstream_rx.next() => {
+            () = async {
+                match close_deadline {
+                    Some(deadline) => tokio::time::sleep_until(deadline).await,
+                    None => std::future::pending::<()>().await,
+                }
+            } => {
+                terminal = TerminalState::Incomplete;
+                reason = "close_handshake_timeout";
+                error_detail = Some(json!({"schema_version": 1, "category": "timeout"}));
+                break;
+            }
+            next = downstream_rx.next(), if !client_close_received => {
                 match next {
                     Some(Ok(message)) => {
                         downstream_sequence = downstream_sequence.saturating_add(1);
@@ -563,15 +578,42 @@ async fn bridge_websocket(
                             store.note_capture_drop();
                             capture_failed.store(true, Ordering::Release);
                         }
+                        if is_close {
+                            client_close_received = true;
+                            if close_deadline.is_none() {
+                                reason = "client_close";
+                                close_deadline = Some(tokio::time::Instant::now() + WEBSOCKET_CLOSE_TIMEOUT);
+                            }
+                            // Receiving Close queues an automatic reply. It must
+                            // reach the wire before dropping this endpoint.
+                            if let Err(detail) = websocket_close_io(downstream_tx.flush()).await {
+                                terminal = TerminalState::Error;
+                                reason = "client_close_flush";
+                                error_detail = Some(detail);
+                                break;
+                            }
+                            if upstream_close_received {
+                                terminal = TerminalState::Complete;
+                                break;
+                            }
+                            if let Err(detail) = websocket_close_io(upstream_tx.send(message)).await {
+                                terminal = TerminalState::Error;
+                                reason = "upstream_close_write";
+                                error_detail = Some(detail);
+                                break;
+                            }
+                            continue;
+                        }
+                        // Closing endpoints cannot accept application messages.
+                        // Still retain any already-in-flight peer messages as
+                        // observations; do not claim they reached the client.
+                        if close_deadline.is_some() {
+                            continue;
+                        }
                         if let Err(error) = upstream_tx.send(message).await {
                             terminal = TerminalState::Error;
                             reason = "upstream_write";
                             error_detail = Some(websocket_error_detail(&error));
-                            break;
-                        }
-                        if is_close {
-                            terminal = TerminalState::Complete;
-                            reason = "client_close";
                             break;
                         }
                     }
@@ -584,7 +626,7 @@ async fn bridge_websocket(
                     None => break,
                 }
             }
-            next = upstream_rx.next() => {
+            next = upstream_rx.next(), if !upstream_close_received => {
                 match next {
                     Some(Ok(message)) => {
                         upstream_sequence = upstream_sequence.saturating_add(1);
@@ -600,15 +642,37 @@ async fn bridge_websocket(
                             store.note_capture_drop();
                             capture_failed.store(true, Ordering::Release);
                         }
+                        if is_close {
+                            upstream_close_received = true;
+                            if close_deadline.is_none() {
+                                reason = "upstream_close";
+                                close_deadline = Some(tokio::time::Instant::now() + WEBSOCKET_CLOSE_TIMEOUT);
+                            }
+                            if let Err(detail) = websocket_close_io(upstream_tx.flush()).await {
+                                terminal = TerminalState::Error;
+                                reason = "upstream_close_flush";
+                                error_detail = Some(detail);
+                                break;
+                            }
+                            if client_close_received {
+                                terminal = TerminalState::Complete;
+                                break;
+                            }
+                            if let Err(detail) = websocket_close_io(downstream_tx.send(message)).await {
+                                terminal = TerminalState::Error;
+                                reason = "client_close_write";
+                                error_detail = Some(detail);
+                                break;
+                            }
+                            continue;
+                        }
+                        if close_deadline.is_some() {
+                            continue;
+                        }
                         if let Err(error) = downstream_tx.send(message).await {
                             terminal = TerminalState::Cancelled;
                             reason = "client_write";
                             error_detail = Some(websocket_error_detail(&error));
-                            break;
-                        }
-                        if is_close {
-                            terminal = TerminalState::Complete;
-                            reason = "upstream_close";
                             break;
                         }
                     }
@@ -647,6 +711,8 @@ async fn bridge_websocket(
         "reason": reason,
         "error_detail": error_detail,
         "capture_failed": capture_failed,
+        "client_close_received": client_close_received,
+        "upstream_close_received": upstream_close_received,
         "client_messages": downstream_sequence,
         "upstream_messages": upstream_sequence,
     }));
@@ -663,11 +729,25 @@ async fn bridge_websocket(
             "reason": reason,
             "error_detail": error_detail,
             "capture_failed": capture_failed,
+            "client_close_received": client_close_received,
+            "upstream_close_received": upstream_close_received,
             "client_messages": downstream_sequence,
             "upstream_messages": upstream_sequence,
         }),
     )
     .await;
+}
+
+async fn websocket_close_io<F, E>(future: F) -> Result<(), Value>
+where
+    F: std::future::Future<Output = Result<(), E>>,
+    E: std::error::Error + 'static,
+{
+    match tokio::time::timeout(WEBSOCKET_CLOSE_TIMEOUT, future).await {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(error)) => Err(websocket_error_detail(&error)),
+        Err(_) => Err(json!({"schema_version": 1, "category": "timeout"})),
+    }
 }
 
 // Never store Display/Debug of a provider error: it may contain URLs, headers,

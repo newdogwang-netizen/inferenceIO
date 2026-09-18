@@ -573,6 +573,12 @@ async fn websocket_reconnects_share_logical_id_and_preserve_both_directions() {
         let echoed = socket.next().await.unwrap().unwrap();
         assert_eq!(echoed, Message::Text(payload.to_owned().into()));
         socket.close(None).await.unwrap();
+        let acknowledgement = tokio::time::timeout(Duration::from_secs(2), socket.next())
+            .await
+            .expect("proxy must finish the closing handshake")
+            .expect("close acknowledgement missing")
+            .expect("proxy dropped TCP before the close acknowledgement");
+        assert_eq!(acknowledgement, Message::Close(None));
     }
 
     proxy.stop(Duration::from_secs(5)).await.unwrap();
@@ -628,6 +634,110 @@ async fn websocket_reconnects_share_logical_id_and_preserve_both_directions() {
             .coverage
             .all_attempts_have_terminal_state
     );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn websocket_close_handshake_requires_both_peers_and_is_bounded() {
+    use tokio_tungstenite::tungstenite::protocol::{CloseFrame, frame::coding::CloseCode};
+    for scenario in ["client", "upstream", "missing_ack", "reset"] {
+        let temporary = tempfile::tempdir().unwrap();
+        let policy = CapturePolicy::default();
+        write_test_manifest(temporary.path(), scenario, policy.clone());
+        let (store, _) = RunStore::create(temporary.path(), scenario, policy).unwrap();
+        let listener = tokio::net::TcpListener::bind(loopback()).await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let close = CloseFrame {
+            code: CloseCode::Normal,
+            reason: "fixture-done".into(),
+        };
+        let server_close = close.clone();
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let mut socket = tokio_tungstenite::accept_async(stream).await.unwrap();
+            if scenario == "upstream" {
+                socket
+                    .send(Message::Close(Some(server_close)))
+                    .await
+                    .unwrap();
+            }
+            let received = tokio::time::timeout(Duration::from_secs(5), socket.next())
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            assert!(matches!(received, Message::Close(_)));
+            match scenario {
+                "missing_ack" => tokio::time::sleep(Duration::from_secs(10)).await,
+                "reset" => {} // Drop without flushing the queued acknowledgement.
+                _ => socket.flush().await.unwrap(),
+            }
+        });
+        let proxy = start_proxy(
+            ProxyConfig {
+                listen: loopback(),
+                upstream: Url::parse(&format!("http://{address}")).unwrap(),
+            },
+            store.clone(),
+        )
+        .await
+        .unwrap();
+        let (mut socket, _) = connect_async(format!("ws://{}/v1/responses", proxy.address))
+            .await
+            .unwrap();
+        if scenario != "upstream" {
+            socket
+                .send(Message::Close(Some(close.clone())))
+                .await
+                .unwrap();
+        }
+        let received = tokio::time::timeout(Duration::from_secs(2), socket.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        assert_eq!(received, Message::Close(Some(close)));
+        socket.flush().await.unwrap();
+        proxy.stop(Duration::from_secs(5)).await.unwrap();
+        if scenario == "missing_ack" {
+            server.abort();
+            let _ = server.await;
+        } else {
+            server.await.unwrap();
+        }
+        store.shutdown().await.unwrap();
+        let events = read_events(temporary.path());
+        let end = events
+            .iter()
+            .find(|event| event.event == "websocket_connection_finished")
+            .unwrap();
+        let detail = end.normalized.as_ref().unwrap();
+        assert_eq!(detail["client_close_received"], true, "{scenario}");
+        if matches!(scenario, "client" | "upstream") {
+            assert_eq!(
+                end.terminal_state,
+                Some(TerminalState::Complete),
+                "{scenario}"
+            );
+            assert_eq!(detail["upstream_close_received"], true);
+        } else {
+            assert_ne!(
+                end.terminal_state,
+                Some(TerminalState::Complete),
+                "{scenario}"
+            );
+            assert_eq!(detail["upstream_close_received"], false);
+            if scenario == "missing_ack" {
+                assert_eq!(detail["reason"], "close_handshake_timeout");
+                assert_eq!(detail["error_detail"]["category"], "timeout");
+            } else {
+                assert_eq!(detail["reason"], "upstream_read");
+                assert_eq!(
+                    detail["error_detail"]["protocol_kind"],
+                    "reset_without_closing_handshake"
+                );
+            }
+        }
+    }
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

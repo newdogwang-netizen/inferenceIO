@@ -11,7 +11,7 @@ use axum::{
     routing::any,
 };
 use bytes::Bytes;
-use futures_util::StreamExt;
+use futures_util::{SinkExt, StreamExt};
 use http::{StatusCode, header};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
@@ -147,7 +147,12 @@ async fn echo_websocket(mut socket: WebSocket) {
                     return;
                 }
             }
-            Message::Close(_) => return,
+            Message::Close(_) => {
+                // The protocol implementation queues the acknowledgement;
+                // dropping the socket before flushing loses it on the wire.
+                let _ = socket.flush().await;
+                return;
+            }
             Message::Ping(_) | Message::Pong(_) => {}
         }
     }
