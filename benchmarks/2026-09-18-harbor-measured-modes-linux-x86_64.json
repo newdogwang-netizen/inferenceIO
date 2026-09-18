@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-18T20:25:48Z",
+  "subject": "Shared Harbor recorder-on/off observer and fail-closed baseline reporting",
+  "source_baseline": "33f602b",
+  "observer_and_installation_checks_passed": true,
+  "real_provider_trials_run": 0,
+  "real_paired_comparison_qualified": false,
+  "m3_complete": false,
+  "scope": "Local subprocess regression fixtures and no-provider install-only checks in the pinned TB2 cancel-async-tasks image. Not real-agent task execution, capture qualification or a performance comparison.",
+  "task": {
+    "name": "cancel-async-tasks",
+    "package_sha256": "7c230a29f27c49c2fff88f4721165f4241e456bd87a94cd525be05ae98c6cbbb",
+    "image": "alexgshaw/cancel-async-tasks@sha256:84c7fae6b256dcc56a350790e2a9715eefc7dad662a9d8e8a472363aa71ef18d",
+    "agent_version": "0.154.0",
+    "observer_python_version": "3.11.2",
+    "same_package_inventory_sha256": "2e0d2f2b140a432b528a63ae46c42528bd30c5a3d694ded073aa68ad876c7155",
+    "same_tools_including_python_sha256": "2abe9bc111f679221a0b472498b9bf91711fd877b298a9f17b13377c91c2cb7b"
+  },
+  "installation_checks": [
+    {
+      "recording_mode": "off",
+      "job": "iorec-tb2-codex-measured-off-install-v2",
+      "trial": "cancel-async-tasks__92V8TBD",
+      "install_only": true,
+      "provider_credentials_passed": false,
+      "exception": null,
+      "agent_execution": null,
+      "verifier_result": null,
+      "result_sha256": "433e120e6cdded57f16fb34f85aad9062b44bfff787bde9ef9acdf224cca7a3a",
+      "synthetic_bin_true_observer_exit": 0,
+      "synthetic_observer_result_sha256": "081379d282aef2f9b0ba7e71759bcdf9b0f0d648d183d1b27e2cd1a349fda258",
+      "workflow_preflight_report_sha256": "1be80b239de0d8804936250ea96f48b37d0a26e3e8b8cc5c1d6f076d2b2eb9c0",
+      "workflow_fresh_inputs_sha256": "b1f211a1d956d7621a3d801069551e6fc220653f293cc12b468a489faace0424"
+    },
+    {
+      "recording_mode": "on",
+      "job": "iorec-tb2-codex-measured-on-install-v2",
+      "trial": "cancel-async-tasks__WprKBpP",
+      "install_only": true,
+      "provider_credentials_passed": false,
+      "exception": null,
+      "agent_execution": null,
+      "verifier_result": null,
+      "result_sha256": "03117c5977b388b9a41e2730fbddce3b61c7d19244e44246e7ae6b533033ad65",
+      "synthetic_bin_true_observer_exit": 0,
+      "synthetic_observer_result_sha256": "9d19652f2ac70443eeb1ec290f906aecdf743fec33b9fc0a4b399760589820a6",
+      "workflow_preflight_report_sha256": "d63e581ccfcec02a9453d3558f355366531f8e73a345c87ebf843a32814c405c",
+      "workflow_fresh_inputs_sha256": "2458e091665a6480cc5f31d4a8881cf1aa13792c474c59be3dc94ad92d6e83d2"
+    }
+  ],
+  "validation": {
+    "python_tests_with_real_encrypted_export_fixture": 125,
+    "test_failures": 0,
+    "tests_skipped": 0,
+    "argv_stdin_stdout_stderr_and_exit_code_preserved": true,
+    "child_signal_exit_including_sigkill_preserved": true,
+    "observer_sigterm_forwarded_to_child_group": true,
+    "waited_descendant_cpu_and_peak_rss_observed": true,
+    "version_help_and_exact_hermes_export_bypass_observer": true,
+    "private_atomic_non_overwriting_artifacts": true,
+    "no_argv_environment_or_payload_in_metrics": true,
+    "missing_duplicate_nonregular_oversize_or_invalid_measurements_rejected": true,
+    "fresh_on_and_off_workflows_require_complete_measurement": true,
+    "baseline_resume_does_not_relaunch_or_import_or_claim_capture_qualification": true,
+    "baseline_rejects_capture_artifacts": true,
+    "benchmark_and_unknown_cost_retained_on_measurement_failure": true,
+    "measurement_code_and_mode_bound_to_fresh_inputs": true,
+    "preflight_created_no_job_or_launch_intent": true,
+    "five_hour_bound_recorder_images_and_harness_unchanged": true
+  },
+  "measurement_limits": [
+    "Wall time spans command launch through reap, including recorder startup/flush in on mode; installation, verifier, Harbor orchestration and observer initialization are excluded.",
+    "Linux wait4 CPU includes the waited child and descendants whose usage it collected, not detached/unwaited descendants or the observer's own CPU.",
+    "max_rss_kib is the largest individual process peak, not simultaneous process-tree memory; pre-exec inherited memory can contribute.",
+    "Off and on share the privileged audit envelope and UID, but differ in recorder namespace, capability removal and network restrictions. A single pair cannot establish causal overhead or task-score effects.",
+    "Metrics are target-owned observer output, not independent tamper-proof evidence. declared_network_mode is configuration, not network attestation.",
+    "SIGKILL or host failure can prevent final metrics and signal forwarding; missing results fail validation and container teardown remains the final cleanup boundary.",
+    "The installer probe measures /bin/true in a separate directory; it never qualifies a provider call or a real on/off pair."
+  ],
+  "intermediate_checks_retained": {
+    "jobs": ["iorec-tb2-codex-measured-off-install-v1", "iorec-tb2-codex-measured-on-install-v1"],
+    "observer_sha256": "abab3cddd74b71bcf033dfa3b5414a4b18b02ff8633c02f930e129f04b280772",
+    "reason_for_final_v2": "Clarified the wall-time scope label and documented pre-exec memory; reran both installation checks against the final observer."
+  },
+  "source_files": {
+    "examples/harbor_audit_measure.py": "08e6a07514e5eb282635085344a3a024c7d167c04e702e154adfc04274299333",
+    "examples/harbor_audit_inputs.py": "4d3b03300f789a35114542499f502536dcdb13abe843167887748ceba4e6d825",
+    "examples/harbor_iorec_audit_base.py": "32adfbd922d14c5e6681c3d3b993c0348c51563a7d7056fb9b6e68b138ef6b10",
+    "tools/harbor_audit_workflow.py": "68644b0b0e3a532d006b3a1aaef53ef69a15db42560581b62394b3f69c865b02",
+    "tools/harbor_input_provenance.py": "66a5b9955c2bcff2a807f9f83815ff3e78892a93f671d3922235817e2b69c370",
+    "tools/test_harbor_measurements.py": "0e912e333a66b0bad7afd616b267c1b92d08d0dcdbc3fe3981dd2d98f050d551"
+  },
+  "pending": [
+    "Actual approved models, monetary limits and effective provider caps.",
+    "Fresh full-chain real trial, twelve real matrix cases and two extra real off/on runs.",
+    "Final compatible-candidate five-hour completion, drain/reconciliation and release acceptance."
+  ]
+}

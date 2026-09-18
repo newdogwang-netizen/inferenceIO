@@ -27,7 +27,7 @@ class NativeProfileTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
 
-    def run_wrapper(self, agent, argv, input_text="prompt\n'\"$()"):
+    def run_wrapper(self, agent, argv, input_text="prompt\n'\"$()", mode="on"):
         # Real Bash executes the generated wrapper with isolated fake binaries.
         # No namespace/network/provider is used; only fixed path prefixes change.
         agent_dir, runtime = self.root / "agent", self.root / "runtime"
@@ -39,9 +39,12 @@ class NativeProfileTests(unittest.TestCase):
                             + "'route':" + repr(route) + ", 'argv':sys.argv[1:], 'stdin':sys.stdin.read(),"
                             + "'autoupdater':os.getenv('DISABLE_AUTOUPDATER')}))\nsys.exit(17)\n")
             path.chmod(0o700)
-        text = definitions.cli_wrapper(agent, definitions.AGENTS[agent]["upstream"])
+        import shutil
+        shutil.copyfile(workflow.ROOT / "examples/harbor_audit_measure.py", agent_dir / "measure.py")
+        text = definitions.cli_wrapper(agent, definitions.AGENTS[agent]["upstream"], mode)
         text = text.replace("/opt/iorec-agent", str(agent_dir)).replace("/tmp/iorec-runtime", str(runtime))
         text = text.replace("/tmp/iorec-bin", str(self.root / "iorec"))
+        text = text.replace("/logs/agent/iorec-measurements", str(self.root / "measurements"))
         wrapper = self.root / "wrapper"
         wrapper.write_text(text)
         result = subprocess.run(["/bin/bash", str(wrapper), *argv], input=input_text, text=True,
@@ -73,9 +76,22 @@ class NativeProfileTests(unittest.TestCase):
     def test_claude_self_exec_hooks_require_native_recorder_entry(self):
         claude = definitions.cli_wrapper("claude", definitions.AGENTS["claude"]["upstream"])
         codex = definitions.cli_wrapper("codex", definitions.AGENTS["codex"]["upstream"])
-        self.assertIn("exec /tmp/iorec-bin run", claude)
+        self.assertIn(" -- /tmp/iorec-bin run", claude)
         self.assertNotIn("ld-linux", claude)
         self.assertIn("ld-linux", codex)
+
+    def test_off_is_exact_native_invocation_with_same_observer(self):
+        argv = ["chat", "--", "", "prompt $(false)\n中文"]
+        for agent in definitions.AGENTS:
+            output = self.run_wrapper(agent, argv, mode="off")
+            self.assertEqual(output["route"], "native")
+            self.assertEqual(output["argv"], argv)
+            wrapper = definitions.cli_wrapper(agent, definitions.AGENTS[agent]["upstream"], "off")
+            self.assertIn("/usr/bin/python3 -I -B /opt/iorec-agent/measure.py", wrapper)
+            self.assertNotIn("--task-netns", wrapper)
+            self.assertNotIn("/tmp/iorec-bin", wrapper)
+        with self.assertRaisesRegex(ValueError, "invalid_recording_mode"):
+            definitions.cli_wrapper("codex", definitions.AGENTS["codex"]["upstream"], "unknown")
 
     def test_hermes_version_and_exact_session_export_only_bypass(self):
         export = ["sessions", "export", "/logs/agent/hermes-session.jsonl", "--source", "cli"]

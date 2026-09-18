@@ -117,7 +117,8 @@ class InputTests(unittest.TestCase):
         runtime.return_value = self.runtime
         identity = inputs.fresh_identity(self.args)
         uploads = identity["uploads"]
-        self.assertEqual(len(uploads), 13)
+        self.assertEqual(len(uploads), 14)
+        self.assertIn("/opt/iorec-agent/measure.py", uploads)
         for remote in ("/tmp/iorec-runtime/libc.so.6", "/tmp/iorec-runtime/libselinux.so.1",
                        "/usr/bin/unshare", "/tmp/iorec-runtime/unshare",
                        "/opt/iorec-agent/codex-code-mode-host"):
@@ -127,6 +128,16 @@ class InputTests(unittest.TestCase):
         self.assertNotIn(hashlib.sha256(self.args.key_file.read_bytes()).hexdigest(), json.dumps(identity))
         (self.base / "codex-code-mode-host").write_text("changed helper")
         self.assertNotEqual(inputs.fresh_identity(self.args), identity)
+
+    @mock.patch.object(inputs, "harbor_runtime")
+    def test_recording_mode_is_bound_in_manifest_and_wrapper(self, runtime):
+        runtime.return_value = self.runtime
+        on = inputs.fresh_identity(self.args)
+        self.args.recording_mode = "off"
+        off = inputs.fresh_identity(self.args)
+        self.assertNotEqual(on["cli_wrapper_sha256"], off["cli_wrapper_sha256"])
+        self.assertEqual(on["uploads"], off["uploads"])
+        self.assertEqual(off["recording_mode"], "off")
 
     @mock.patch.object(inputs, "harbor_runtime")
     def test_hermes_bundle_launcher_and_verifier_are_actual_bound_inputs(self, runtime):

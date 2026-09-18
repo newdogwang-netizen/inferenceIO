@@ -28,7 +28,7 @@ import sys
 import time
 from urllib.parse import quote, urlsplit
 
-from harbor_input_provenance import InputFailure, audit_definitions, fresh_identity, harbor_environment, image_compose, file_identity
+from harbor_input_provenance import InputFailure, audit_definitions, fresh_identity, harbor_environment, image_compose, file_identity, measurement_definitions
 
 ROOT = Path(__file__).resolve().parents[1]
 IDENTIFIER = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:/@+~-]{0,255}\Z")
@@ -223,6 +223,9 @@ class Workflow:
         atomic_json(self.work.path / "report.json", {
             "schema_version": 1, "generated_at": now(), "workflow_status": self.state.get("status"),
             "qualification_passed": self.state.get("status") == "completed",
+            "recording_mode": getattr(self.a, "recording_mode", "on"),
+            "baseline_completed": self.state.get("status") == "baseline_completed",
+            "trial_summary": self.state.get("trial_summary"),
             "benchmark_score_is_separate": True,
             "plaintext_staging_cleaned": self.state.get("plaintext_staging_cleaned", False),
             "source": self.state.get("source_identity"), "stages": self.state["stages"],
@@ -265,6 +268,8 @@ class Workflow:
         return output
 
     def preflight(self):
+        if getattr(self.a, "recording_mode", "on") == "off" and not self.a.task:
+            raise Failure("baseline_requires_fresh_task_or_same_workspace_resume")
         private_path(self.a.key_file)
         raw_key = self.a.key_file.read_bytes()
         if len(raw_key) != 32 and not re.fullmatch(rb"[0-9a-fA-F]{64}\s*", raw_key):
@@ -274,6 +279,8 @@ class Workflow:
                   "verifier_timeout": getattr(self.a, "verifier_timeout", 300),
                   "iorec_sha256": digest(self.a.iorec), "key_fingerprint": hashlib.sha256(raw_key).hexdigest(),
                   "mode": "existing_trial" if self.a.from_trial else "fresh_trial"}
+        if self.a.task:
+            config["recording_mode"] = getattr(self.a, "recording_mode", "on")
         if self.a.task:
             config.update(agent=self.a.agent, upstream=self.a.upstream, agent_budget_usd=self.a.agent_budget_usd)
             # Match the profile's actual upload set, not a parallel hand-written
@@ -341,7 +348,8 @@ class Workflow:
                 atomic_json(config_path, harbor_config(self.a, self.work.path))
                 env = harbor_environment()
                 env.update(IOREC_HARBOR_BIN=str(self.a.iorec), IOREC_HARBOR_KEY_FILE=str(self.a.key_file),
-                           IOREC_HARBOR_UPSTREAM=self.a.upstream)
+                           IOREC_HARBOR_UPSTREAM=self.a.upstream,
+                           IOREC_HARBOR_RECORDING_MODE=getattr(self.a, "recording_mode", "on"))
                 if self.a.agent == "hermes":
                     env["IOREC_HARBOR_HERMES_BUNDLE"] = str(self.a.hermes_bundle)
                 else:
@@ -372,7 +380,26 @@ class Workflow:
             # keep its evidence and launch intent, and never auto-resubmit it.
             self.assert_fresh_inputs()
         benchmark, provenance = benchmark_from_trial(trial)
+        self.state["trial_summary"] = {"benchmark": benchmark, **provenance}
+        self.save()
+        measurement = None
+        mode = getattr(self.a, "recording_mode", "on")
+        if self.a.task:
+            try:
+                measurement = measurement_definitions().read_trial_measurement(trial, mode)
+            except (ValueError, OSError, TypeError, KeyError):
+                raise Failure("fresh_trial_measurement_missing_or_invalid") from None
         runs = list((trial / "agent/iorec-runs").glob("run-*/manifest.json"))
+        if mode == "off":
+            if runs or any((trial / "agent/iorec-runs").iterdir() if (trial / "agent/iorec-runs").exists() else ()):
+                raise Failure("baseline_unexpected_recording_artifacts")
+            identity = {"benchmark": benchmark, "measurement": measurement, "recording_mode": "off"}
+            if self.state.get("source_identity") not in (None, identity):
+                raise Failure("source_evidence_changed")
+            self.state["source_identity"] = identity
+            self.save()
+            return {**identity, **provenance, "fresh_trial": True, "fresh_inputs_unchanged": True,
+                    "capture_qualification": "not_applicable_recorder_off"}
         if len(runs) != 1:
             raise Failure("expected_exactly_one_encrypted_capture")
         run = runs[0].parent
@@ -383,6 +410,8 @@ class Workflow:
             raise Failure("invalid_capture_identifier")
         identity = {"run_id": manifest["run_id"], "manifest_sha256": digest(run / "manifest.json"),
                     "events_sha256": digest(run / "events.jsonl"), "benchmark": benchmark}
+        if measurement is not None:
+            identity["measurement"] = measurement
         if self.state.get("source_identity") not in (None, identity):
             raise Failure("source_evidence_changed")
         self.state["source_identity"] = identity
@@ -461,6 +490,9 @@ class Workflow:
                 self.state["status"] = "preflight_only"
                 return
             self.stage("record", self.record)
+            if getattr(self.a, "recording_mode", "on") == "off":
+                self.state["status"] = "baseline_completed"
+                return
             self.stage("integrity", self.integrity)
             self.stage("transport_audit", self.audit)
             self.stage("import", self.import_run)
@@ -485,6 +517,8 @@ def parser():
     source.add_argument("--task", type=Path)
     source.add_argument("--from-trial", type=Path)
     p.add_argument("--model", default="")
+    p.add_argument("--recording-mode", choices=("on", "off"), default="on",
+                   help="off is a measured native-network baseline, never capture-qualified or imported")
     p.add_argument("--agent", choices=("codex", "claude", "hermes"), default="codex")
     p.add_argument("--upstream", default="", help="explicit non-loopback HTTPS provider endpoint; defaults to the agent's native provider")
     p.add_argument("--agent-budget-usd", type=float, help="Claude's native per-run budget flag; not a cross-agent or provider-side hard cap")
@@ -537,8 +571,9 @@ def main():
         if args.task and args.agent == "hermes" and not args.hermes_bundle:
             raise Failure("fresh_hermes_trial_requires_pinned_runtime_bundle")
         with Workspace(args.work_dir) as work:
-            Workflow(args, work).run()
-        print(json.dumps({"status": "preflight_only" if args.preflight_only else "completed",
+            workflow = Workflow(args, work)
+            workflow.run()
+        print(json.dumps({"status": workflow.state["status"],
                           "report": str(args.work_dir.absolute() / "report.json")}))
         return 0
     except BaseException as error:

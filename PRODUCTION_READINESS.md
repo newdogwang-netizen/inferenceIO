@@ -17,6 +17,11 @@ adds a pinned installed Python/dependency bundle, a no-provider Harbor install
 check, and a passing 180-second/20-collector mixed-protocol calibration. It does
 not close the fresh-provider, 12-run, paired-overhead or five-hour gates above.
 
+The [on/off measurement checks](benchmarks/2026-09-18-harbor-measured-modes-linux-x86_64.json)
+add a shared observer and a non-importing baseline workflow. CPU/RSS have explicit
+Linux wait4 limits; network/confinement differences remain part of the comparison.
+Synthetic observer and install-only results do not qualify real paired overhead.
+
 `iorec 0.1.0` is release-hardened for local, best-effort recording on Linux x86-64. It is not a host-wide or transport-complete inference monitor. Every manifest claim remains `best-effort`, regardless of process exit status or verifier profile.
 
 ## Shipped boundary

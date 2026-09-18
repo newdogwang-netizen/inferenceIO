@@ -33,6 +33,8 @@ TB2 快照里**。历史录制、reward 和传输证明保留，但不得改称 
   不占用上面的 12 次。顺序预先固定为 off → on，记录顺序偏差和模型非确定性。
 - 录制开关对照分别报告 agent 执行耗时、CPU/内存、网络限制与外部依赖失败；安装
   时间单列，不把单次 reward 或耗时变化解释为 recorder 的因果效应。
+  工作流的 `--recording-mode on|off` 已实现同一计量器；off 只生成基线报告，
+  不冒充采集验收。计量口径和隔离差异见[对照运行说明](harbor-terminal-bench-audit.md#measured-recorder-offon-comparison)。
 - 单 agent 900 秒、verifier 900 秒，保持两题发布的时间上限；安装 600 秒。
   串行、无自动重试。发生录制缺口、未分类失败、费用未知/超限时停止后续启动。
   保留失败试验和证据，不重复启动状态不明的付费进程。

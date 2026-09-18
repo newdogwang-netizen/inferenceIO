@@ -25,6 +25,9 @@ class IorecAuditMixin:
     AUDIT_AGENT = ""
 
     def __init__(self, *args, **kwargs):
+        self.recording_mode = os.environ.get("IOREC_HARBOR_RECORDING_MODE", "on")
+        if self.recording_mode not in ("on", "off"):
+            raise ValueError("invalid_recording_mode")
         self.audit_upstream = upstream_url(os.environ.get(
             "IOREC_HARBOR_UPSTREAM", AGENTS[self.AUDIT_AGENT]["upstream"]))
         extra = dict(kwargs.pop("extra_env", None) or {})
@@ -55,7 +58,7 @@ class IorecAuditMixin:
         await self.exec_as_root(environment, command=(
             "set -eu; export DEBIAN_FRONTEND=noninteractive; "
             "apt-get update && apt-get install -y --no-install-recommends "
-            "bash ca-certificates iproute2 nftables procps slirp4netns tcpdump uidmap util-linux; "
+            "bash ca-certificates iproute2 nftables procps python3 slirp4netns tcpdump uidmap util-linux; "
             "if ! id -u iorecagent >/dev/null 2>&1; then useradd -m -u 10001 -s /bin/bash iorecagent; fi; "
             "test $(id -u iorecagent) -eq 10001; test $(id -g iorecagent) -eq 10001; "
             "usermod --add-subuids 100000-165535 iorecagent; "
@@ -66,7 +69,7 @@ class IorecAuditMixin:
             await environment.upload_file(local, remote)
         with tempfile.TemporaryDirectory(prefix="iorec-harbor-wrapper-") as temp:
             wrapper = Path(temp) / self.AUDIT_AGENT
-            wrapper.write_text(cli_wrapper(self.AUDIT_AGENT, self.audit_upstream))
+            wrapper.write_text(cli_wrapper(self.AUDIT_AGENT, self.audit_upstream, self.recording_mode))
             wrapper.chmod(0o600)
             await environment.upload_file(wrapper, "/usr/local/bin/" + self.AUDIT_AGENT)
         destinations = [remote for remote in uploads.values() if remote != "/tmp/iorec.key"]
@@ -79,11 +82,18 @@ class IorecAuditMixin:
             "chown 10001:10001 /tmp/iorec.key; chmod 600 /tmp/iorec.key; "
             "dpkg-query -W -f='${Package}\t${Version}\n' > /logs/agent/audit-package-inventory.tsv; "
             'sha256sum "$(command -v tcpdump)" "$(command -v nft)" "$(command -v slirp4netns)" '
-            '"$(command -v newuidmap)" "$(command -v newgidmap)" > /logs/agent/audit-tool-sha256.txt; '
+            '"$(command -v newuidmap)" "$(command -v newgidmap)" /usr/bin/python3 > /logs/agent/audit-tool-sha256.txt; '
             "/tmp/iorec-runtime/ld-linux-x86-64.so.2 --library-path /tmp/iorec-runtime /tmp/iorec-bin --version"
         ), timeout_sec=30)
         await self.prepare_agent_runtime(environment)
         await self.exec_as_agent(environment, command="/usr/local/bin/" + self.AUDIT_AGENT + " --version", timeout_sec=30)
+        # Synthetic observer-only check; kept outside actual trial measurements.
+        # The mode is a declaration, NOT proof that this /bin/true used a proxy.
+        await self.exec_as_agent(environment, command=(
+            "/usr/bin/python3 -I -B /opt/iorec-agent/measure.py "
+            "--output /logs/agent/iorec-measure-preflight/agent/iorec-measurements "
+            "--mode " + self.recording_mode + " -- /bin/true"
+        ), timeout_sec=30)
         if self.AUDIT_AGENT == "claude":
             # Fail during setup, before paid inference, if this container cannot
             # execute the recorder and its lifecycle self-exec hook natively.

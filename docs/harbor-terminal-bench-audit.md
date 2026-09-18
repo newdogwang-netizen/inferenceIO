@@ -233,6 +233,57 @@ Hermes also bypasses recording for its exact `version` command and Harbor's
 exact local session-export command; exporting after a chat must not create a
 second recorded agent run.
 
+### Measured recorder-off/on comparison
+
+Fresh trials now use the same small, pinned Python observer around the actual
+CLI command in both modes. `--recording-mode on` is the default. An additional
+fresh workflow with `--recording-mode off` runs the same pinned native CLI without
+iorec or its task network namespace. Use **different empty work directories**;
+the mode and generated wrapper hash are part of the immutable input identity.
+Changing mode cannot reuse a paid trial. The extra pair is not part of the
+12 recorded M3 cases and still requires explicit model/budget approval.
+
+The observer preserves argv and inherited stdin/stdout/stderr, forwards
+TERM/INT/HUP/QUIT to the child's process group, and preserves normal exit codes
+and signal termination. It stores no command arguments, environment or payloads.
+Each invocation has owner-only, atomic, non-overwriting `started.json` and
+`result.json` under `agent/iorec-measurements/<id>/`. Version/help and exact Hermes
+session export bypass both recording and measurement. Setup runs `/bin/true`
+through the observer in the separate `agent/iorec-measure-preflight` directory;
+this is a synthetic installation check, not model execution or proxy proof.
+
+Measurements include monotonic CLI wall time (including recorder startup and
+flush in on mode), Linux `wait4` user/system CPU, and `max_rss_kib`. **RSS is the
+largest individual process peak, not simultaneous process-tree memory.** CPU
+includes only the waited child and descendants whose usage it collected; escaped
+or unwaited descendants are not guaranteed. The wall clock spans command launch
+through reap, including launch overhead; the observer's initial setup, Harbor
+orchestration, agent installation and verifier execution are excluded. Child
+pre-exec inherited memory can contribute to RSS, so it is not pure agent memory.
+The observer process's own CPU is not in the child's `wait4` usage. Use Harbor's own stage
+timestamps for setup and verifier time. The Python runtime package inventory and
+interpreter hash are retained alongside the trial.
+
+The observer creates a child process group to forward signals. SIGKILL/host
+failure can prevent final publication and cannot be forwarded by the observer;
+Harbor's disposable-container teardown is the final process-cleanup boundary.
+A missing, duplicate, oversized or invalid measurement fails fresh-trial
+qualification. It never becomes zero time/resource/cost. Benchmark and reported
+cost metadata are retained even if measurement/capture validation fails.
+
+Off completes as `baseline_completed`, with `qualification_passed=false`, no
+recording import and no fabricated integrity or transport proof. Actual capture
+artifacts in an off trial are rejected. The report's `declared_network_mode` is
+configuration, not an independent network attestation. These target-owned
+measurement files are not tamper-proof evidence against a hostile same-UID agent.
+
+Both runs retain the same audit-only outer container and UID, but on mode adds
+the recorder's namespace, capability removal and restricted egress. Report
+external-dependency failures and this confinement difference explicitly: this
+pair measures the whole audit configuration, not isolated recorder CPU overhead.
+A single off→on pair does not control order effects or model nondeterminism and
+does not establish a causal reward/performance regression.
+
 ### Pinned Hermes runtime (no personal state)
 
 Do not copy the venv launcher alone: its absolute Python shebang is not portable.

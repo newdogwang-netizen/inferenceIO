@@ -185,18 +185,28 @@ def audit_definitions():
     return module
 
 
+def measurement_definitions():
+    import importlib.util
+    path = ROOT / "examples/harbor_audit_measure.py"
+    spec = importlib.util.spec_from_file_location("iorec_audit_measure", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def fresh_identity(args, launcher: Path | None = None):
     module = audit_definitions()
     path = ROOT / "examples/harbor_audit_inputs.py"
     agent = getattr(args, "agent", "codex")
+    recording_mode = getattr(args, "recording_mode", "on")
     upstream = getattr(args, "upstream", "") or module.AGENTS[agent]["upstream"]
     bundle = getattr(args, "hermes_bundle", None) if agent == "hermes" else None
     executable = ROOT / "examples/harbor-audit-hermes" if agent == "hermes" else getattr(args, agent)
     uploads = module.native_uploads(agent=agent, executable=executable,
                                     iorec=args.iorec, key=args.key_file, hermes_bundle=bundle)
     result = {"task": tree_identity(args.task, ignored_names=(".git",)),
-            "agent": agent, "upstream": module.upstream_url(upstream),
-            "cli_wrapper_sha256": hashlib.sha256(module.cli_wrapper(agent, upstream).encode()).hexdigest(),
+            "agent": agent, "upstream": module.upstream_url(upstream), "recording_mode": recording_mode,
+            "cli_wrapper_sha256": hashlib.sha256(module.cli_wrapper(agent, upstream, recording_mode).encode()).hexdigest(),
             "uploads": {remote: file_identity(local) for local, remote in uploads.items()
                         if remote != "/tmp/iorec.key"},
             "harbor": harbor_runtime(launcher),

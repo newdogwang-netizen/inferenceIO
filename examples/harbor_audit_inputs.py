@@ -59,6 +59,7 @@ def native_uploads(*, agent: str, executable: Path, iorec: Path, key: Path,
     executable = executable.resolve(strict=True)
     inputs = [
         (executable, "/opt/iorec-agent/" + agent),
+        (examples / "harbor_audit_measure.py", "/opt/iorec-agent/measure.py"),
         (iorec, "/tmp/iorec-bin"),
         (key, "/tmp/iorec.key"),
         (unshare or Path("/usr/bin/unshare"), "/tmp/iorec-runtime/unshare"),
@@ -84,10 +85,12 @@ def native_uploads(*, agent: str, executable: Path, iorec: Path, key: Path,
     return result
 
 
-def cli_wrapper(agent: str, upstream: str) -> str:
+def cli_wrapper(agent: str, upstream: str, recording_mode: str = "on") -> str:
     """Fixed executable boundary: prompt strings are never searched/replaced."""
     if agent not in AGENTS:
         raise ValueError("unsupported_native_audit_agent")
+    if recording_mode not in ("on", "off"):
+        raise ValueError("invalid_recording_mode")
     upstream = upstream_url(upstream)
     cli = "/opt/iorec-agent/" + agent
     flags = ["run", "--runs-dir", "/logs/agent/iorec-runs", "--upstream", upstream,
@@ -115,4 +118,7 @@ def cli_wrapper(agent: str, upstream: str) -> str:
     # any model run. Codex has no recorder self-exec hook in this profile.
     launcher = ("/tmp/iorec-runtime/ld-linux-x86-64.so.2 --library-path /tmp/iorec-runtime /tmp/iorec-bin"
                 if agent == "codex" else "/tmp/iorec-bin")
-    return prefix + "exec " + launcher + " " + shlex.join(flags) + ' "$@"\n'
+    target = launcher + " " + shlex.join(flags) if recording_mode == "on" else shlex.quote(cli)
+    observer = ("/usr/bin/python3 -I -B /opt/iorec-agent/measure.py "
+                "--output /logs/agent/iorec-measurements --mode " + recording_mode + " -- ")
+    return prefix + "exec " + observer + target + ' "$@"\n'

@@ -19,6 +19,10 @@ artifacts, not every newer worktree.
 The [M3 experiment declaration](docs/m3-experiment-plan.md) pins an explicit
 Terminal-Bench 2 snapshot, two task packages and immutable image references;
 its 12 real trials plus two on/off runs remain unapproved and unexecuted.
+The [shared on/off observer checks](benchmarks/2026-09-18-harbor-measured-modes-linux-x86_64.json)
+verify CLI argument/signal handling, bounded resource reports and no-provider
+container installation. An off run is only a baseline, never capture-qualified;
+these checks are not a real paired performance result.
 
 For the **local development** platform (unauthenticated, loopback-only, with
 development database durability settings):

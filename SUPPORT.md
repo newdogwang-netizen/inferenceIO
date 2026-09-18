@@ -7,6 +7,11 @@ Status meanings:
 - `unsupported`: deliberately not implemented in this release.
 - `unknown`: not exercised against the required real target here.
 
+Harbor's experimental `--recording-mode off` is a measured native-CLI baseline,
+not a recording mode with capture coverage. It never imports or reports transport
+qualification. The [observer/install checks](benchmarks/2026-09-18-harbor-measured-modes-linux-x86_64.json)
+do not upgrade any real-agent/provider/version support cell.
+
 The authoritative machine-readable companion is [`support-matrix.v1.json`](support-matrix.v1.json), also embedded in `iorec support --json`. It is fail-closed: unlisted combinations default to `unknown`, verified cells cannot use wildcard Agent/runtime/TLS dimensions, and their source/artifact evidence is checked automatically (artifacts are SHA-256 pinned). This prose table gives the broader operator-facing surface summary without upgrading any exact matrix cell.
 
 September 18 development scope: the [M1 real-capture report](benchmarks/2026-09-18-websocket-call-projection-linux-x86_64.json)
