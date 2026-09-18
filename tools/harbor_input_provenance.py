@@ -1,0 +1,140 @@
+"""Bounded input identity checks for fresh Harbor audit experiments.
+
+This is drift detection, not attestation against a malicious host. Harbor's
+own package and upload bytes are pinned; its transitive Python dependencies,
+Docker daemon and apt-resolved container tooling are NOT qualified by this
+identity alone. No provider call is made here.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import stat
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[1]
+MAX_FILE_BYTES = 1 << 30
+MAX_TREE_BYTES = 2 << 30
+MAX_TREE_FILES = 100000
+
+
+class InputFailure(Exception):
+    """Fixed error codes only; never propagate a subprocess's raw output."""
+
+
+def file_identity(path: Path):
+    # Resolve system-library symlinks, but record the resolved destination too.
+    resolved = path.resolve(strict=True)
+    fd = os.open(resolved, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_FILE_BYTES:
+            raise InputFailure("input_not_regular_or_too_large")
+        h, count = hashlib.sha256(), 0
+        for block in iter(lambda: stream.read(1 << 20), b""):
+            count += len(block)
+            if count > MAX_FILE_BYTES:
+                raise InputFailure("input_file_limit_exceeded")
+            h.update(block)
+        after = os.fstat(stream.fileno())
+    signature = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns, s.st_mode)
+    if signature(before) != signature(after) or signature(after) != signature(resolved.stat()):
+        raise InputFailure("input_changed_while_hashing")
+    return {"path": str(resolved), "sha256": h.hexdigest(), "bytes": count,
+            "mode": stat.S_IMODE(after.st_mode)}
+
+
+def tree_identity(root: Path, *, ignored_names=()):
+    root = root.resolve(strict=True)
+    if not root.is_dir():
+        raise InputFailure("input_tree_not_directory")
+    h, count, total = hashlib.sha256(), 0, 0
+    # os.walk never traverses a symlink. Explicitly reject even dangling ones.
+    def unreadable(_):
+        raise InputFailure("input_tree_unreadable")
+    for current, dirs, files in os.walk(root, followlinks=False, onerror=unreadable):
+        dirs[:] = sorted(name for name in dirs if name not in ignored_names)
+        for name in sorted(dirs + [n for n in files if n not in ignored_names]):
+            path = Path(current) / name
+            relative = path.relative_to(root).as_posix()
+            if path.is_symlink():
+                raise InputFailure("input_tree_symlinks_not_allowed")
+            if path.is_dir():
+                item = {"path": relative, "directory": True, "mode": stat.S_IMODE(path.stat().st_mode)}
+            else:
+                item = file_identity(path)
+                item["path"] = relative
+                total += item["bytes"]
+            count += 1
+            if count > MAX_TREE_FILES or total > MAX_TREE_BYTES:
+                raise InputFailure("input_tree_limit_exceeded")
+            h.update(json.dumps(item, sort_keys=True, separators=(",", ":")).encode() + b"\n")
+    if count == 0:
+        raise InputFailure("input_tree_empty")
+    return {"path": str(root), "sha256": h.hexdigest(), "entries": count, "bytes": total,
+            "ignored_names": sorted(ignored_names)}
+
+
+def harbor_environment():
+    # An inherited PYTHONPATH could shadow either Harbor or our audit profile.
+    env = {k: v for k, v in os.environ.items()
+           if not k.startswith(("IOREC_HARBOR_", "PYTHON"))}
+    env["PYTHONPATH"] = str(ROOT / "examples")
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    return env
+
+
+def harbor_runtime(launcher: Path | None = None):
+    launcher = (launcher or Path(shutil.which("harbor") or "/missing/harbor")).resolve(strict=True)
+    with launcher.open("rb") as stream:
+        first = stream.readline(512).decode("ascii", errors="strict").strip()
+    # Do not guess which interpreter /usr/bin/env or a shell wrapper will use.
+    if not re.fullmatch(r"#!/[^\s]+/python[0-9.]*", first):
+        raise InputFailure("harbor_requires_explicit_python_shebang")
+    interpreter = Path(first[2:]).resolve(strict=True)
+    probe = """
+import importlib.metadata, importlib.util, json, pathlib, sys
+sys.path[0] = sys.argv[1]
+d = importlib.metadata.distribution('harbor')
+s = importlib.util.find_spec('harbor')
+p = pathlib.Path(d.locate_file('harbor')).resolve()
+if s is None or pathlib.Path(s.origin).resolve().parent != p:
+    raise RuntimeError('harbor_import_shadowed')
+print(json.dumps({'version': d.version, 'package': str(p)}))
+"""
+    result = subprocess.run([str(interpreter), "-c", probe, str(launcher.parent)],
+                            env=harbor_environment(), stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=30,
+                            cwd=ROOT / "examples", check=False)
+    if result.returncode or len(result.stdout) > 8192:
+        raise InputFailure("harbor_runtime_probe_failed")
+    info = json.loads(result.stdout)
+    if not re.fullmatch(r"[0-9][a-zA-Z0-9.+_-]{0,63}", info["version"]):
+        raise InputFailure("invalid_harbor_package_version")
+    return {"launcher": file_identity(launcher), "interpreter": file_identity(interpreter),
+            "package_version": info["version"],
+            "package": tree_identity(Path(info["package"]), ignored_names=("__pycache__",)),
+            "scope": "launcher_interpreter_harbor_package_not_transitive_python_or_OS_dependencies"}
+
+
+def fresh_identity(args, launcher: Path | None = None):
+    # Load exactly this checkout's stdlib-only upload definition. No inherited
+    # Python module search path is used to resolve it.
+    import importlib.util
+    path = ROOT / "examples/harbor_audit_inputs.py"
+    spec = importlib.util.spec_from_file_location("iorec_audit_inputs", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    uploads = module.codex_uploads(codex=args.codex, iorec=args.iorec, key=args.key_file)
+    return {"task": tree_identity(args.task, ignored_names=(".git",)),
+            "uploads": {remote: file_identity(local) for local, remote in uploads.items()
+                        if remote != "/tmp/iorec.key"},
+            "harbor": harbor_runtime(launcher),
+            "controller": {str(p.relative_to(ROOT)): file_identity(p) for p in (
+                Path(__file__), ROOT / "tools/harbor_audit_workflow.py", path,
+                ROOT / "examples/harbor_iorec_codex_audit.py",
+                ROOT / "examples/harbor-audit-compose.yaml")}}

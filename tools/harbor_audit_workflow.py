@@ -28,6 +28,8 @@ import sys
 import time
 from urllib.parse import quote, urlsplit
 
+from harbor_input_provenance import InputFailure, fresh_identity, harbor_environment
+
 ROOT = Path(__file__).resolve().parents[1]
 IDENTIFIER = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:/@+~-]{0,255}\Z")
 MAX_JSON = 64 << 20
@@ -264,31 +266,24 @@ class Workflow:
                   "iorec_sha256": digest(self.a.iorec), "key_fingerprint": hashlib.sha256(raw_key).hexdigest(),
                   "mode": "existing_trial" if self.a.from_trial else "fresh_trial"}
         if self.a.task:
-            # Pin the task definition and all fixtures, excluding repository metadata.
-            task_hash = hashlib.sha256()
-            for p in sorted(self.a.task.rglob("*")):
-                if ".git" in p.relative_to(self.a.task).parts:
-                    continue
-                if p.is_symlink():
-                    raise Failure("task_symlinks_not_allowed")
-                if p.is_file():
-                    task_hash.update(str(p.relative_to(self.a.task)).encode()+b"\0"+digest(p).encode()+b"\0")
-            config["task_sha256"] = task_hash.hexdigest()
-            config["codex_sha256"] = digest(self.a.codex)
-            config["audit_profile_sha256"] = {
-                str(p.relative_to(ROOT)): digest(p) for p in [Path(__file__).resolve(), ROOT / "examples/harbor_iorec_codex_audit.py",
-                    ROOT / "examples/harbor-audit-compose.yaml", ROOT / "examples/harbor-audit-unshare", ROOT / "examples/harbor-audit-nsenter"]}
-            config["helpers_sha256"] = {}
-            for p in [self.a.codex.with_name("codex-code-mode-host"), Path("/usr/bin/unshare"), Path("/usr/bin/nsenter")]:
-                if not p.is_file():
-                    raise Failure("missing_harbor_audit_helper")
-                config["helpers_sha256"][str(p)] = digest(p)
+            # Match the profile's actual upload set, not a parallel hand-written
+            # subset. A dependency change cannot silently reuse a paid trial.
+            config["fresh_inputs"] = fresh_identity(self.a)
+            config["fresh_inputs_sha256"] = hashlib.sha256(
+                json.dumps(config["fresh_inputs"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
             self.command(["docker", "info", "--format", "{{.ServerVersion}}"], timeout=30)
-            version_path = self.command(["harbor", "--version"], timeout=30)
+            launcher = config["fresh_inputs"]["harbor"]["launcher"]["path"]
+            version_path = self.command([launcher, "--version"], timeout=30, env=harbor_environment())
             version = version_path.read_text().strip()
             if len(version) > 128 or not re.fullmatch(r"[A-Za-z0-9., +_-]+", version):
                 raise Failure("unexpected_harbor_version_output")
             config["harbor_version"] = version
+            config_path = self.work.path / "scratch/harbor-preflight-config.json"
+            atomic_json(config_path, harbor_config(self.a, self.work.path))
+            # Harbor returns before constructing a job in print-config mode.
+            # Validate the installed schema without installing or running an agent.
+            self.command([launcher, "run", "--config", config_path, "--print-config", "--yes"],
+                         timeout=30, env=harbor_environment())
         previous = self.state.get("config")
         if previous and previous != config:
             raise Failure("workflow_inputs_changed_use_new_work_directory")
@@ -298,6 +293,15 @@ class Workflow:
             if api_request(origin, path, token).get("ok") is not True:
                 raise Failure("platform_preflight_not_healthy")
         return {k: v for k, v in config.items() if k.endswith("sha256") or k == "mode"}
+
+    def assert_fresh_inputs(self):
+        private_path(self.a.key_file)
+        expected = self.state.get("config", {}).get("fresh_inputs")
+        if not expected:
+            raise Failure("fresh_trial_requires_current_input_preflight")
+        current = fresh_identity(self.a, Path(expected["harbor"]["launcher"]["path"]))
+        if current != expected or digest(self.a.key_file) != self.state["config"]["key_fingerprint"]:
+            raise Failure("fresh_trial_inputs_changed_no_launch_or_qualification")
 
     def record(self):
         if self.a.from_trial:
@@ -313,16 +317,17 @@ class Workflow:
             else:
                 if job.exists():
                     raise Failure("unexpected_existing_harbor_job")
+                self.assert_fresh_inputs()
                 config_path = self.work.path / "harbor-config.json"
                 atomic_json(config_path, harbor_config(self.a, self.work.path))
-                env = {k: v for k, v in os.environ.items() if not k.startswith("IOREC_HARBOR_")}
-                env.update(PYTHONPATH=str(ROOT / "examples") + os.pathsep + env.get("PYTHONPATH", ""),
-                           IOREC_HARBOR_BIN=str(self.a.iorec), IOREC_HARBOR_KEY_FILE=str(self.a.key_file),
+                env = harbor_environment()
+                env.update(IOREC_HARBOR_BIN=str(self.a.iorec), IOREC_HARBOR_KEY_FILE=str(self.a.key_file),
                            IOREC_HARBOR_CODEX_BIN=str(self.a.codex))
                 self.state["launch_intent"] = {"at": now(), "agent_timeout_seconds": self.a.agent_timeout,
                                                "automatic_retries": 0}
                 self.save()
-                process = subprocess.Popen(["harbor", "run", "--config", str(config_path), "--yes"],
+                launcher = self.state["config"]["fresh_inputs"]["harbor"]["launcher"]["path"]
+                process = subprocess.Popen([launcher, "run", "--config", str(config_path), "--yes"],
                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env,
                                            start_new_session=True, pass_fds=(self.work.lock.fileno(),))
                 self.state["launch_intent"]["pid"] = process.pid
@@ -339,6 +344,10 @@ class Workflow:
             if len(completed) != 1:
                 raise Failure("expected_exactly_one_harbor_trial")
             trial = completed[0].parent
+            # A run may have spent minutes using live installation files. Drift
+            # invalidates this qualification even when Harbor returned success;
+            # keep its evidence and launch intent, and never auto-resubmit it.
+            self.assert_fresh_inputs()
         benchmark, provenance = benchmark_from_trial(trial)
         runs = list((trial / "agent/iorec-runs").glob("run-*/manifest.json"))
         if len(runs) != 1:
@@ -356,7 +365,8 @@ class Workflow:
         self.state["source_identity"] = identity
         self.state["run_path"] = str(run)
         self.save()
-        return {**identity, **provenance, "fresh_trial": not bool(self.a.from_trial)}
+        return {**identity, **provenance, "fresh_trial": not bool(self.a.from_trial),
+                "fresh_inputs_unchanged": True if self.a.task else None}
 
     def integrity(self):
         report = read_json(self.command([self.a.iorec, "verify", "--profile", "integrity", "--json",
@@ -424,6 +434,9 @@ class Workflow:
         self.publish_report()
         try:
             self.stage("preflight", self.preflight)
+            if self.a.preflight_only:
+                self.state["status"] = "preflight_only"
+                return
             self.stage("record", self.record)
             self.stage("integrity", self.integrity)
             self.stage("transport_audit", self.audit)
@@ -431,7 +444,7 @@ class Workflow:
             self.stage("platform", self.qualify_platform)
             self.state["status"] = "completed"
         except BaseException as error:
-            code = str(error) if isinstance(error, Failure) else type(error).__name__
+            code = str(error) if isinstance(error, (Failure, InputFailure)) else type(error).__name__
             self.state["stages"].setdefault(self.phase, {}).update(status="failed", error=code, finished_at=now())
             self.state["status"] = "incomplete"
             raise
@@ -449,6 +462,8 @@ def parser():
     source.add_argument("--task", type=Path)
     source.add_argument("--from-trial", type=Path)
     p.add_argument("--model", default="")
+    p.add_argument("--preflight-only", action="store_true",
+                   help="check and pin fresh-trial inputs and platform health; never launch an agent")
     p.add_argument("--key-file", type=Path, required=True)
     p.add_argument("--iorec", type=Path, default=ROOT / "target/release/iorec")
     p.add_argument("--codex", type=Path, default=Path(shutil.which("codex") or "/missing/codex"))
@@ -475,14 +490,17 @@ def main():
             raise Failure("invalid_timeout")
         if args.task and (not IDENTIFIER.fullmatch(args.model) or not args.model.startswith("openai/") or not (args.task / "task.toml").is_file()):
             raise Failure("fresh_trial_requires_model_and_harbor_task")
+        if args.preflight_only and not args.task:
+            raise Failure("preflight_only_requires_fresh_task")
         with Workspace(args.work_dir) as work:
             Workflow(args, work).run()
-        print(json.dumps({"status": "completed", "report": str(args.work_dir.absolute() / "report.json")}))
+        print(json.dumps({"status": "preflight_only" if args.preflight_only else "completed",
+                          "report": str(args.work_dir.absolute() / "report.json")}))
         return 0
     except BaseException as error:
         if isinstance(error, SystemExit):
             raise
-        print(json.dumps({"status": "incomplete", "error": str(error) if isinstance(error, Failure) else type(error).__name__}), file=sys.stderr)
+        print(json.dumps({"status": "incomplete", "error": str(error) if isinstance(error, (Failure, InputFailure)) else type(error).__name__}), file=sys.stderr)
         return 1
 
 

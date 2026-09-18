@@ -203,6 +203,32 @@ timeouts. The timeout is **not a hard monetary limit**; provision appropriate
 provider-side spending limits before a fresh paid experiment. The M3 matrix
 must separately record and enforce its chosen budget/stop policy.
 
+Before authorizing a paid run, append `--preflight-only` to that fresh-trial
+command. It checks platform health, pins the task and upload inputs, and asks
+the installed Harbor CLI to validate its resolved configuration with
+`--print-config`. It does not install or run an agent. Its report is explicitly
+`preflight_only` with `qualification_passed=false`, not a successful recording.
+Keep the same chosen model and paths for the eventual run; a placeholder model
+is suitable only for a disposable preflight directory, not the experiment plan.
+
+Fresh inputs now include the profile's actual upload set: Codex and its helper,
+recorder, util-linux helpers/wrappers, and all six uploaded runtime libraries.
+The key is checked separately and is excluded from the public input identity.
+The Harbor launcher, its explicit Python interpreter, Harbor package content
+(excluding bytecode caches), task tree and workflow/profile code are also
+fingerprinted. Inherited `PYTHONPATH`, Python overrides and `IOREC_HARBOR_*`
+overrides cannot silently select another installation; the controlled workflow
+sets only its documented inputs and invokes the pinned absolute launcher.
+Harbor launchers with an ambiguous `env`/shell shebang are rejected.
+
+These identities are checked again immediately before launch and after the
+trial. Drift prevents launch or qualification; a completed but invalidated
+trial is retained and never automatically rerun. This is drift detection on a
+trusted worker, not adversarial host attestation. In particular it does **not**
+freeze all transitive Python packages, apt-installed container tools or the
+Docker daemon. Exact container installation and agent/runtime dependency
+qualification remain separate M3 gates.
+
 To validate the downstream stages using an already finished trial without
 starting or paying for another agent run:
 

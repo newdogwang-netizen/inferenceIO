@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-18T19:05:30.927801+00:00",
+  "subject": "Fresh Harbor experiment input drift detection and zero-agent preflight",
+  "preflight_passed": true,
+  "real_trial_qualified": false,
+  "m3_complete": false,
+  "scope": "Local Codex audit input checks only; no agent installation, model call, benchmark trial or new capture",
+  "report": {
+    "path_on_qualification_host": "/var/tmp/iorec-m3-preflight-inputs-20260918b/report.json",
+    "sha256": "246ff6dbc1a3a7b10432d55a147feeb8964456bf03d00239f05e0df88e2b8d00",
+    "same_workspace_successful_preflight_executions": 2,
+    "fresh_inputs_sha256": "b6dc5b4f72536681a17c2782322d8b261c4fe257439ece5e6ef479533f4f0426",
+    "launch_intent_present": false,
+    "harbor_job_created": false,
+    "plaintext_scratch_remaining": false,
+    "model_label": "openai/preflight-only-no-inference",
+    "model_label_is_experiment_choice": false
+  },
+  "inputs": {
+    "recorder_sha256": "03e805ee36a1bf20cf7f60d17f94ae02447c35bf98acb2132d804c94d2766da7",
+    "codex_sha256": "3188814c35471432d4123203e0eb38e5bddc60226e3d7ddf0e59e649ea140022",
+    "non_secret_uploaded_files": 13,
+    "uploaded_runtime_libraries": 6,
+    "harbor_version": "0.22.0",
+    "harbor_package_sha256": "23db9a0f6bde46ee416b8fea8ad7e232d986ce5f7fac91f95e311c9e0a88f945",
+    "harbor_package_entries": 516,
+    "harbor_package_bytes": 7256655,
+    "harbor_launcher_sha256": "bd2fd14e3394709aeeca3b52b38f40a803c7d27bd2534e8b1d573c2bdb56d20c",
+    "harbor_python_sha256": "889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+    "task": "html-js-filter",
+    "task_sha256": "9ddc0fb4785363780f7176fbc511667212998834a88cfae1c15c38cc55f90454"
+  },
+  "validation": {
+    "python_tests": 72,
+    "failures": 0,
+    "skipped": 0,
+    "includes_real_encrypted_export_failure_fixture": true,
+    "same_length_mutation_detected": true,
+    "mode_and_symlink_target_changes_detected": true,
+    "concurrent_file_change_rejected": true,
+    "fifo_rejected_without_blocking": true,
+    "tree_symlink_and_size_limits_enforced": true,
+    "inherited_python_and_profile_overrides_removed": true,
+    "ambiguous_launcher_rejected_without_execution": true,
+    "drift_prevents_new_launch_and_completed_trial_qualification": true,
+    "invalidated_trial_preserved_without_automatic_retry": true,
+    "key_excluded_from_public_input_identity": true,
+    "installed_harbor_print_config_passed": true,
+    "local_api_web_workers_healthy": true
+  },
+  "source_files": {
+    "examples/harbor-audit-compose.yaml": "9ed36f9b04539aa0ad503fec4d0023e0f4bcb692b095aad9ffef43851fad3522",
+    "examples/harbor_audit_inputs.py": "26d31de4d441a7ac71a344273c39e3e1343181b630f5144284bb20e3b0a0772a",
+    "examples/harbor_iorec_codex_audit.py": "e09c4bd4da73a72d178aba7ecad8a79fc0e97e216d3658bbd23f2c7cc49132d0",
+    "tools/harbor_audit_workflow.py": "157864523a29d4cac5fcff83440a8946aa0e0abc52b97d4fc20800124578b2d1",
+    "tools/harbor_input_provenance.py": "3823faaee1fe6ea2db6bee7fc9a8994ebf0e65d1c5f7e701a3a75eaf52d651d3"
+  },
+  "limitations": [
+    "Trusted-worker drift detection, not hostile-host attestation",
+    "Transitive Python dependencies and apt-resolved task-container tools are not fully pinned by this identity",
+    "Claude and Hermes Harbor audit profiles remain pending",
+    "A placeholder preflight model must not be used as the paid experiment plan",
+    "The new real trial, 12 real-agent matrix, recorder-on/off comparison and final five-hour result remain required"
+  ]
+}

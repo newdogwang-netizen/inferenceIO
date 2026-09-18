@@ -14,6 +14,7 @@ from typing import Any, override
 
 from harbor.agents.installed.codex import Codex
 from harbor.environments.base import BaseEnvironment
+from harbor_audit_inputs import codex_uploads
 
 
 _EXAMPLES_DIR = Path(__file__).resolve().parent
@@ -46,30 +47,9 @@ class IorecCodexAudit(Codex):
     _HOST_UNSHARE = _host_path("IOREC_HARBOR_UNSHARE_BIN", "/usr/bin/unshare")
     _HOST_NSENTER = _host_path("IOREC_HARBOR_NSENTER_BIN", "/usr/bin/nsenter")
 
-    _UPLOADS = {
-        _HOST_CODEX: "/usr/local/bin/codex",
-        _HOST_CODE_MODE: "/usr/local/bin/codex-code-mode-host",
-        _HOST_IOREC: "/tmp/iorec-bin",
-        _HOST_KEY: "/tmp/iorec.key",
-        _HOST_UNSHARE: "/tmp/iorec-runtime/unshare",
-        _HOST_NSENTER: "/tmp/iorec-runtime/nsenter",
-        Path("/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2"): (
-            "/tmp/iorec-runtime/ld-linux-x86-64.so.2"
-        ),
-        Path("/lib/x86_64-linux-gnu/libc.so.6"): "/tmp/iorec-runtime/libc.so.6",
-        Path("/lib/x86_64-linux-gnu/libm.so.6"): "/tmp/iorec-runtime/libm.so.6",
-        Path("/lib/x86_64-linux-gnu/libgcc_s.so.1"): (
-            "/tmp/iorec-runtime/libgcc_s.so.1"
-        ),
-        Path("/lib/x86_64-linux-gnu/libselinux.so.1"): (
-            "/tmp/iorec-runtime/libselinux.so.1"
-        ),
-        Path("/lib/x86_64-linux-gnu/libpcre2-8.so.0"): (
-            "/tmp/iorec-runtime/libpcre2-8.so.0"
-        ),
-        _EXAMPLES_DIR / "harbor-audit-unshare": "/usr/bin/unshare",
-        _EXAMPLES_DIR / "harbor-audit-nsenter": "/usr/bin/nsenter",
-    }
+    _UPLOADS = codex_uploads(codex=_HOST_CODEX, code_mode=_HOST_CODE_MODE,
+                            iorec=_HOST_IOREC, key=_HOST_KEY,
+                            unshare=_HOST_UNSHARE, nsenter=_HOST_NSENTER)
 
     @override
     async def install(self, environment: BaseEnvironment) -> None:

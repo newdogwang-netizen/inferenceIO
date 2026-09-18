@@ -131,3 +131,12 @@ M3 尚未完成。已完成独立 token 认证实例上的 20-collector、120 �
 - 浏览平台仍是原 `iorec-local`，未用于故障注入。新准备的五小时实例使用独立数据库 / 对象卷、固定镜像 ID、token 认证和正常 PostgreSQL 持久性配置，匿名访问返回 401。
 
 操作方法：[混合协议资格验收](mixed-protocol-qualification.md)。机器记录：[M3 短时校准](../benchmarks/2026-09-18-m3-mixed-calibration-linux-x86_64.json)。接下来运行冻结候选版本的五小时验收，并在费用上限确认后补全新 Harbor trial、真实三 agent 矩阵和录制开关对照；这些未完成项不能由合成负载替代。
+
+## 实施记录：2026-09-18 真实实验输入预检
+
+- 为新 Harbor trial 补齐实际上传文件的指纹：Codex/helper、recorder、util-linux/helper wrapper 和六个运行库共享同一输入定义，密钥不进入公共输入清单。另记录 Harbor 启动器、解释器、包内容、任务及工作流代码；启动前和录制后复核，变化时拒绝启动或验收，不自动重跑付费任务。
+- 增加 `--preflight-only`：检查本机平台和安装的 Harbor 配置，不安装或运行 agent，报告明确为 `qualification_passed=false`。当前候选 recorder 在同一目录连续两次通过真实预检，没有产生 Harbor job 或 launch intent；用于预检的占位模型不是 M3 模型选择。
+- 72 项 Python 测试通过且无跳过，包含真实加密录制导出失败夹具。冻结候选提交 `9261b30` 的四个 CI job 已全部成功。五小时负载仍在独立实例运行，本轮仅修改 Harbor 工作流，不改变它锁定的二进制、镜像和负载脚本。
+- 这不是完整供应链锁定：传递 Python 依赖、容器内 apt 工具和 Claude/Hermes 的安装适配仍需处理，12 次真实实验及配对运行尚未完成。
+
+机器记录：[Harbor 输入预检](../benchmarks/2026-09-18-harbor-input-preflight-linux-x86_64.json)。
