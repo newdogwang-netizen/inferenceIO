@@ -87,7 +87,7 @@ func (d *Deps) Rules(ctx context.Context, j *jobs.Job) error {
 		status_code, coalesce(api_mode,'unknown'), case when jsonb_typeof(normalized->'response_tool_calls')='array' then jsonb_array_length(normalized->'response_tool_calls') else 0 end,
 		coalesce((normalized->>'body_unavailable')::boolean,false),
 		exists(select 1 from model_attempts companion where companion.inference_id=model_attempts.inference_id and companion.id<>model_attempts.id and not coalesce((companion.normalized->>'body_unavailable')::boolean,false))
-		from model_attempts where capture_run_id=$1`, run)
+		from model_attempts where capture_run_id=$1 and entity_kind<>'websocket_connection'`, run)
 		if err != nil {
 			return err
 		}

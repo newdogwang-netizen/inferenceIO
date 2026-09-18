@@ -538,6 +538,7 @@ async fn bridge_websocket(
     let mut upstream_sequence = 0_u64;
     let mut terminal = TerminalState::Incomplete;
     let mut reason = "connection_ended";
+    let mut error_detail = None;
     let capture_failed = Arc::new(AtomicBool::new(false));
     let (capture_sender, capture_receiver) = tokio::sync::mpsc::channel(BODY_CHANNEL_CAPACITY);
     let capture_task = tokio::spawn(capture_websocket_stream(
@@ -562,9 +563,10 @@ async fn bridge_websocket(
                             store.note_capture_drop();
                             capture_failed.store(true, Ordering::Release);
                         }
-                        if upstream_tx.send(message).await.is_err() {
+                        if let Err(error) = upstream_tx.send(message).await {
                             terminal = TerminalState::Error;
                             reason = "upstream_write";
+                            error_detail = Some(websocket_error_detail(&error));
                             break;
                         }
                         if is_close {
@@ -573,9 +575,10 @@ async fn bridge_websocket(
                             break;
                         }
                     }
-                    Some(Err(_)) => {
+                    Some(Err(error)) => {
                         terminal = TerminalState::Error;
                         reason = "client_read";
+                        error_detail = Some(websocket_error_detail(&error));
                         break;
                     }
                     None => break,
@@ -597,9 +600,10 @@ async fn bridge_websocket(
                             store.note_capture_drop();
                             capture_failed.store(true, Ordering::Release);
                         }
-                        if downstream_tx.send(message).await.is_err() {
+                        if let Err(error) = downstream_tx.send(message).await {
                             terminal = TerminalState::Cancelled;
                             reason = "client_write";
+                            error_detail = Some(websocket_error_detail(&error));
                             break;
                         }
                         if is_close {
@@ -608,9 +612,10 @@ async fn bridge_websocket(
                             break;
                         }
                     }
-                    Some(Err(_)) => {
+                    Some(Err(error)) => {
                         terminal = TerminalState::Error;
                         reason = "upstream_read";
+                        error_detail = Some(websocket_error_detail(&error));
                         break;
                     }
                     None => break,
@@ -640,6 +645,7 @@ async fn bridge_websocket(
     finished.terminal_state = Some(evidence_terminal.clone());
     finished.normalized = Some(json!({
         "reason": reason,
+        "error_detail": error_detail,
         "capture_failed": capture_failed,
         "client_messages": downstream_sequence,
         "upstream_messages": upstream_sequence,
@@ -655,12 +661,47 @@ async fn bridge_websocket(
         json!({
             "protocol": "websocket",
             "reason": reason,
+            "error_detail": error_detail,
             "capture_failed": capture_failed,
             "client_messages": downstream_sequence,
             "upstream_messages": upstream_sequence,
         }),
     )
     .await;
+}
+
+// Never store Display/Debug of a provider error: it may contain URLs, headers,
+// or payload bytes. Walk a bounded source chain and retain only typed labels.
+fn websocket_error_detail(error: &(dyn std::error::Error + 'static)) -> Value {
+    use tokio_tungstenite::tungstenite::{Error, error::ProtocolError};
+    let mut current = Some(error);
+    for _ in 0..16 {
+        let Some(error) = current else { break };
+        if let Some(error) = error.downcast_ref::<io::Error>() {
+            return json!({"schema_version": 1, "category": "io", "io_kind": format!("{:?}", error.kind())});
+        }
+        if let Some(error) = error.downcast_ref::<Error>() {
+            let category = match error {
+                Error::Io(error) => {
+                    return json!({"schema_version": 1, "category": "io", "io_kind": format!("{:?}", error.kind())});
+                }
+                Error::Protocol(ProtocolError::ResetWithoutClosingHandshake) => {
+                    return json!({"schema_version": 1, "category": "protocol", "protocol_kind": "reset_without_closing_handshake"});
+                }
+                Error::Protocol(_) => "protocol",
+                Error::Tls(_) => "tls",
+                Error::Capacity(_) => "capacity",
+                Error::Utf8(_) => "utf8",
+                Error::ConnectionClosed => "connection_closed",
+                Error::AlreadyClosed => "already_closed",
+                Error::WriteBufferFull(_) => "write_buffer_full",
+                _ => "websocket_other",
+            };
+            return json!({"schema_version": 1, "category": category});
+        }
+        current = error.source();
+    }
+    json!({"schema_version": 1, "category": "unknown"})
 }
 
 async fn capture_websocket_stream(
@@ -2015,6 +2056,29 @@ mod tests {
     use crate::{policy::CapturePolicy, storage::for_each_event};
 
     use super::*;
+
+    #[test]
+    fn websocket_error_evidence_is_typed_bounded_and_secret_free() {
+        use tokio_tungstenite::tungstenite::{Error, error::ProtocolError};
+        let io_error = Error::Io(io::Error::new(
+            io::ErrorKind::ConnectionReset,
+            "secret-token=https://private.invalid/?key=do-not-record",
+        ));
+        let wrapped = axum::Error::new(io_error);
+        assert_eq!(
+            websocket_error_detail(&wrapped),
+            json!({"schema_version": 1, "category": "io", "io_kind": "ConnectionReset"})
+        );
+        let protocol = Error::Protocol(ProtocolError::ResetWithoutClosingHandshake);
+        assert_eq!(
+            websocket_error_detail(&protocol)["protocol_kind"],
+            "reset_without_closing_handshake"
+        );
+        let other = anyhow::anyhow!("secret-token");
+        let detail = websocket_error_detail(other.as_ref());
+        assert_eq!(detail["category"], "unknown");
+        assert!(!detail.to_string().contains("secret"));
+    }
 
     #[test]
     fn protocol_versions_have_stable_evidence_labels() {

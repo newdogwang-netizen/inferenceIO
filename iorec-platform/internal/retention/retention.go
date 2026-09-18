@@ -942,7 +942,7 @@ func (s *Service) finalizeEvidence(ctx context.Context, tx pgx.Tx, work deletion
 		{`delete from recording_blob_refs where project_id=$1 and recording_id=$2`, []any{work.project, recording}},
 		{`delete from blobs b using deletion_objects o where o.deletion_request_id=$2 and o.kind='blob' and o.state='done' and b.project_id=$1 and b.state='deleting' and b.object_key=o.object_key`, []any{work.project, work.id}},
 		{`update blobs b set ref_count=(select count(*)::int from recording_blob_refs rr where rr.project_id=b.project_id and rr.sha256=b.sha256) where b.project_id=$1`, []any{work.project}},
-		{`update model_attempts set request_headers=null,response_headers=null,request_body=null,request_body_ref=null,response_body=null,response_body_ref=null,response_text=null,normalized=null,input_hash=null,updated_at=now() where project_id=$1 and recording_id=$2`, []any{work.project, recording}},
+		{`update model_attempts set request_headers=null,response_headers=null,request_body=null,request_body_ref=null,response_body=null,response_body_ref=null,response_text=null,normalized=null,projection=null,input_hash=null,updated_at=now() where project_id=$1 and recording_id=$2`, []any{work.project, recording}},
 		{`update model_inferences set request=null,response=null,normalized=null,resolved_input_ref=null,input_hash=null,updated_at=now() where project_id=$1 and recording_id=$2`, []any{work.project, recording}},
 	}
 	for _, statement := range statements {

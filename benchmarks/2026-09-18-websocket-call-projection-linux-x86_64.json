@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-18 17:36:41 UTC",
+  "subject": "M1 per-call WebSocket projection of an existing real Harbor capture",
+  "passed": true,
+  "scope": "existing Codex Responses WebSocket recording and bounded regression fixtures; not M3 release qualification",
+  "source_baseline": "83fffca",
+  "run_id": "run-01a0b3b8-621f-7335-a60b-1c0f2056fa48",
+  "recording_id": "run-01a0b3b8-621f-7335-a60b-1c0f2056fa48#0000",
+  "projection": {
+    "schema_version": 1,
+    "passed": true,
+    "connection_id": "run-01a0b3b8-621f-7335-a60b-1c0f2056fa48~01a0b3b8-6633-771f-8dcc-3f5122b05b62",
+    "processor_version": "normalizer-v4",
+    "calls": 19,
+    "outcomes": {
+      "completed": 19
+    },
+    "messages": 13780,
+    "assigned_messages": 13710,
+    "control_messages": 70,
+    "unresolved_messages": 0,
+    "terminal_checks": 19,
+    "tool_calls": 17,
+    "tool_results": 17,
+    "usage": {
+      "input_tokens": 501166,
+      "output_tokens": 34070
+    },
+    "projection_sha256": "97b6537630592a697ddd14115a2083e673c3e72b24c7453d078b49ab3d2f6b54",
+    "transport_terminal": "error",
+    "transport_error_class": "client_read",
+    "close_diagnosis": "unspecified_connection_end",
+    "scope": "application_call_projection_against_original_message_blobs_not_transport_qualification"
+  },
+  "replay": {
+    "generations": [
+      "decoder-v1-m1-call-replay-20260918-c",
+      "decoder-v1-m1-call-replay-20260918-d"
+    ],
+    "projection_sha256_both": "97b6537630592a697ddd14115a2083e673c3e72b24c7453d078b49ab3d2f6b54",
+    "raw_event_index_sha256_both": "dee08bfc3d53f47bde189040ffb4c4bf2415a84ae6991ce6e7043196a5f1fcfe",
+    "encrypted_events_file_sha256_both": "4e3e8234e3e1ca505c8555ca5ddb19e9f58c6b36e50d5b064a83351112274e9b",
+    "path_qualified_blob_checksum_listing_sha256_both": "d9aabc4ba9a2c4cca683e7d619534f02fefac6f214031fc64c39c7977a949315",
+    "raw_event_count": 14093,
+    "raw_blob_integrity_verified": true
+  },
+  "platform": {
+    "logical_inferences": 19,
+    "physical_connections": 1,
+    "websocket_calls": 19,
+    "resolved_previous_response_links": 18,
+    "unresolved_server_state": 0,
+    "coverage_claim": "unknown",
+    "unknown_tls_surface_markers": 2,
+    "transport_proof_status": "verified",
+    "transport_proof_processor": "transport-audit-v2",
+    "normalizer": "normalizer-v4",
+    "resolver": "resolver-v2",
+    "coverage": "coverage-v4"
+  },
+  "benchmark": {
+    "framework": "Harbor",
+    "task": "html-js-filter",
+    "reward": 0,
+    "rerun_during_this_qualification": false
+  },
+  "validation": {
+    "rust_all_targets_all_features_locked": true,
+    "rust_tests": 318,
+    "clippy_warnings_denied": true,
+    "go_all_packages_with_postgresql": true,
+    "frontend_typescript_and_vite_build": true,
+    "browser_cdp_child_parent_link": true,
+    "browser_cdp_connection_has_19_calls": true,
+    "legacy_dump_dom_probe": "timed out; replaced by successful live CDP DOM checks",
+    "fixtures": [
+      "multiple calls",
+      "interleaved response IDs",
+      "ambiguous created event",
+      "late item from previous call",
+      "cancel intent versus confirmation",
+      "provider error",
+      "conflicting terminal fields",
+      "missing terminal",
+      "sequence gaps",
+      "visible request after gap",
+      "custom tool call and output",
+      "duplicate-free final snapshots",
+      "cross-recording segments",
+      "reconnect",
+      "idempotent replay",
+      "missing blob downgrade and recovery",
+      "project-scoped child evidence",
+      "projection lock cancellation and run isolation"
+    ]
+  },
+  "runtime_images": {
+    "api": "sha256:f3dcf52c3af07c121690842ef2bf9e5ea9d60d407e52edf9266a1d2f52af5032",
+    "worker": "sha256:941f33814b986bfda8ac25a48591023cf61291b3519c7258866f9b4a932e44d7",
+    "web": "sha256:086d6af20f7bf2e9c881b864ac8818595ac4b55dae763583efd94ca1c18752d8"
+  },
+  "source_files": {
+    "src/proxy.rs": "8b957835d3b38cacd30235cbb38dec761af0ef3f44405db93bbdd60ab4fc2378",
+    "iorec-platform/internal/pipeline/normalize.go": "23922d9ad3cbaa3b464dac46c2cb4f094bf72d848c11b4014d9d4f8dd29419c5",
+    "iorec-platform/internal/pipeline/websocket_calls.go": "3c337940c613fd6ae5e4accbe9bec75584aa08a041ada2810b7493d42de92709",
+    "iorec-platform/internal/pipeline/websocket_store.go": "a6fae58cb2d4cddf4d4e5f5bce746fd6f02dbd487a92982f376f1c55662ea36a",
+    "iorec-platform/internal/pipeline/resolve.go": "8f91c2f3cc09a2039c0483c639b7fac84e0fad190a3de16e2554ffc9e156afb0",
+    "iorec-platform/internal/pipeline/projection_lock.go": "f71035eb24c73108ce9dcd18ebe724b745bf4b0a2e41cc1d47eb653ae2a954c4",
+    "iorec-platform/internal/pipeline/coverage.go": "72d33141ea0e4c17507dc795dbe1ded4fc67d1fcc322d50d9ea42bf18b3375b7",
+    "iorec-platform/internal/query/query.go": "1ccfc11ad4938790920f6a2be8dcedfc7e3547821c865b52e378c0262775a025",
+    "iorec-platform/internal/exporter/exporter.go": "c4dff9cdeb4b6d494b08a2796d4e74c922bbd349c04aebdf8e831625e530150b",
+    "iorec-platform/internal/retention/retention.go": "5dc49debc4ffaee9fea50ea87c9436edf397a90996d739de63635d4f38d7ce4c",
+    "iorec-platform/web/src/pages/AttemptDetail.tsx": "edccaf8326fd90ada6131c9035789f2b4d21db25803d1c14dbf65ee3f382f373",
+    "iorec-platform/web/src/pages/InferenceDetail.tsx": "f2ba4a12cafaac341f13ccf27d46a9db14a0c63f7cabb883bc6073e87e22a021",
+    "iorec-platform/migrations/0012_websocket_calls.sql": "21aef9c2b33eb47ebf292145c3933c8ea08f79a687a50cb334a605219a52c0f9",
+    "tools/verify_websocket_projection.mjs": "418f19d6dbf347b72d2292b08730bb4e269160274df84bb28417cfb566605be7"
+  },
+  "limitations": [
+    "The historical capture contains no typed client_read error. Its exact close diagnosis stays unspecified.",
+    "Matching previous_response_id establishes observed protocol lineage, not visibility into provider-hidden effective context.",
+    "Observed proxy-message integrity is distinct from independent wire verification.",
+    "The 12-experiment agent matrix and final-candidate five-hour soak have not been performed for these changes.",
+    "The current full connection detail still renders a large event list; bounded evidence navigation belongs to M2."
+  ]
+}

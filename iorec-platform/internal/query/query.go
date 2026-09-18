@@ -290,7 +290,7 @@ func (s *Service) Timeline(w http.ResponseWriter, r *http.Request) {
 		httpapi.WriteError(w, r, err)
 		return
 	}
-	unattributed, err := s.list(r.Context(), `select id, task_id, session_id, provider_host, started_at, terminal_state, status_code, api_mode from model_attempts where capture_run_id=$1 and project_id=$2 and inference_id is null order by started_at`, run, p.ProjectID)
+	unattributed, err := s.list(r.Context(), `select id, task_id, session_id, provider_host, started_at, terminal_state, status_code, api_mode from model_attempts where capture_run_id=$1 and project_id=$2 and inference_id is null and entity_kind<>'websocket_connection' order by started_at`, run, p.ProjectID)
 	if err != nil {
 		httpapi.WriteError(w, r, err)
 		return
@@ -314,7 +314,7 @@ func (s *Service) ListAttempts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	items, err := s.list(r.Context(), `select a.id, a.recording_id, a.capture_run_id, a.inference_id, a.source, a.api_mode, a.model, a.provider_host, a.method, a.url, a.started_at, a.ended_at, a.first_byte_at, a.terminal_state, a.status_code, a.error_class, a.sse_event_count, a.usage, a.pid, a.first_seq, a.last_seq
+	items, err := s.list(r.Context(), `select a.id, a.recording_id, a.capture_run_id, a.inference_id, a.source, a.api_mode, a.model, a.provider_host, a.method, a.url, a.started_at, a.ended_at, a.first_byte_at, a.terminal_state, a.status_code, a.error_class, a.sse_event_count, a.usage, a.pid, a.first_seq, a.last_seq, a.entity_kind, a.parent_attempt_id, a.projection
 		from model_attempts a join capture_runs c on c.id=a.capture_run_id and c.project_id=a.project_id join recordings rec on rec.id=a.recording_id and rec.project_id=a.project_id
 		where a.project_id=$1 and c.state='active' and rec.state not in ('deleting','deleted') and ($2='' or a.recording_id=$2) and ($3='' or a.capture_run_id=$3) and ($4='' or a.inference_id=$4) order by a.started_at desc limit $5`,
 		p.ProjectID, q.Get("recording_id"), q.Get("capture_run_id"), q.Get("inference_id"), limitParam(r, 200, 2000))
@@ -338,22 +338,43 @@ func (s *Service) GetAttempt(w http.ResponseWriter, r *http.Request) {
 	}
 	run, _ := it["capture_run_id"].(string)
 	native, _ := it["native_id"].(string)
+	child := it["entity_kind"] == "websocket_call"
+	parentID := id
+	if child {
+		parentID, _ = it["parent_attempt_id"].(string)
+		parent, err := s.one(r.Context(), `select id,native_id,recording_id,terminal_state,error_class,projection,processor_version from model_attempts where id=$1 and project_id=$2`, parentID, p.ProjectID)
+		if err != nil {
+			httpapi.WriteError(w, r, err)
+			return
+		}
+		it["parent_connection"] = parent
+		native, _ = parent["native_id"].(string)
+	} else if it["entity_kind"] == "websocket_connection" {
+		calls, err := s.list(r.Context(), `select id,inference_id,started_at,ended_at,terminal_state,model,usage,projection,evidence_refs from model_attempts where parent_attempt_id=$1 and project_id=$2 order by first_seq,id`, id, p.ProjectID)
+		if err != nil {
+			httpapi.WriteError(w, r, err)
+			return
+		}
+		it["calls"] = calls
+	}
 	if r.URL.Query().Get("view") != "normalized" {
-		events, err := s.list(r.Context(), `select e.recording_id, e.seq, e.wall_time, e.monotonic_ns, e.event, e.task_id, e.agent_session_id, e.payload, e.payload_sha256, e.payload_size
+		events, err := s.list(r.Context(), `select e.recording_id, e.seq, e.wall_time, e.monotonic_ns, e.event, e.task_id, e.agent_session_id, e.payload, e.payload_sha256, e.payload_size,l.call_attempt_id,l.reason as assignment_reason
 			from recording_events e join recordings r on r.id=e.recording_id
-			where r.capture_run_id=$1 and r.project_id=$2 and e.attempt_id=$3
-			order by e.seq, e.recording_id`, run, p.ProjectID, native)
+			left join attempt_event_links l on l.recording_id=e.recording_id and l.seq=e.seq and l.parent_attempt_id=$4 and l.project_id=$2
+			where r.capture_run_id=$1 and r.project_id=$2 and e.attempt_id=$3 and (not $5::boolean or l.call_attempt_id=$6)
+			order by e.seq, e.recording_id`, run, p.ProjectID, native, parentID, child, id)
 		if err != nil {
 			httpapi.WriteError(w, r, err)
 			return
 		}
 		it["events"] = events
 	}
-	bodyParts, err := s.list(r.Context(), `select e.seq, e.event, e.payload_sha256 as sha256, e.payload_size as size, e.raw_media_type as media_type, e.raw_truncated,
+	bodyParts, err := s.list(r.Context(), `select e.recording_id, e.seq, e.event, e.payload->>'direction' as direction, e.payload_sha256 as sha256, e.payload_size as size, e.raw_media_type as media_type, e.raw_truncated,
 			case when coalesce(e.payload->>'chunk_sequence','') ~ '^[0-9]+$' then (e.payload->>'chunk_sequence')::bigint else 0 end as chunk_sequence
 		from recording_events e join recordings r on r.id=e.recording_id
-		where r.capture_run_id=$1 and r.project_id=$2 and e.attempt_id=$3 and e.event in ('request_body_chunk','response_body_chunk')
-		order by e.seq, e.recording_id`, run, p.ProjectID, native)
+		left join attempt_event_links l on l.recording_id=e.recording_id and l.seq=e.seq and l.parent_attempt_id=$4 and l.project_id=$2
+		where r.capture_run_id=$1 and r.project_id=$2 and e.attempt_id=$3 and (not $5::boolean or l.call_attempt_id=$6) and (e.event in ('request_body_chunk','response_body_chunk') or (e.event='websocket_frame' and e.payload->>'opcode'='text'))
+		order by e.seq, e.recording_id`, run, p.ProjectID, native, parentID, child, id)
 	if err != nil {
 		httpapi.WriteError(w, r, err)
 		return
@@ -361,7 +382,7 @@ func (s *Service) GetAttempt(w http.ResponseWriter, r *http.Request) {
 	requestParts := make([]map[string]any, 0)
 	responseParts := make([]map[string]any, 0)
 	for _, part := range bodyParts {
-		if part["event"] == protocol.EvRequestBodyChunk {
+		if part["event"] == protocol.EvRequestBodyChunk || part["direction"] == "client_to_upstream" {
 			requestParts = append(requestParts, part)
 		} else {
 			responseParts = append(responseParts, part)
@@ -395,7 +416,7 @@ func (s *Service) GetInference(w http.ResponseWriter, r *http.Request) {
 		httpapi.WriteError(w, r, err)
 		return
 	}
-	attempts, _ := s.list(r.Context(), `select id, terminal_state, status_code, provider_host, started_at, ended_at, sse_event_count, error_class, api_mode, model from model_attempts where inference_id=$1 and project_id=$2 order by started_at`, id, p.ProjectID)
+	attempts, _ := s.list(r.Context(), `select id, terminal_state, status_code, provider_host, started_at, ended_at, sse_event_count, error_class, api_mode, model,entity_kind,parent_attempt_id,projection,evidence_refs from model_attempts where inference_id=$1 and project_id=$2 order by started_at`, id, p.ProjectID)
 	it["attempts"] = attempts
 	rels, _ := s.list(r.Context(), `select type, from_id, to_id, status, confidence, evidence, revision from relations where (from_id=$1 or to_id=$1) and project_id=$2 and superseded_by is null order by revision desc`, id, p.ProjectID)
 	it["relations"] = rels

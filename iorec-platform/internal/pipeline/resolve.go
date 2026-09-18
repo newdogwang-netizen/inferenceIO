@@ -37,18 +37,20 @@ type evidence struct {
 }
 
 type attemptRow struct {
-	ID, Recording  string
-	InferenceID    string // explicit raw ID, or canonicalized cross-source ID
-	Source         string
-	PID            int
-	StartedAt      time.Time
-	InputHash      string
-	Fingerprint    string
-	Host           string
-	Terminal       string
-	FirstSeq, Last int64
-	Norm           *Normalized
-	Correlation    *evidence
+	ID, Recording     string
+	InferenceID       string // explicit raw ID, or canonicalized cross-source ID
+	Source            string
+	PID               int
+	StartedAt         time.Time
+	InputHash         string
+	Fingerprint       string
+	Host              string
+	Terminal          string
+	FirstSeq, Last    int64
+	Norm              *Normalized
+	Correlation       *evidence
+	Evidence          []EvidenceRef
+	Request, Response json.RawMessage
 }
 
 type inferenceNode struct {
@@ -84,6 +86,11 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 	if run == "" {
 		return fmt.Errorf("resolve: no capture_run_id")
 	}
+	unlock, lockErr := d.lockProjection(ctx, run)
+	if lockErr != nil {
+		return lockErr
+	}
+	defer unlock()
 	// 1. facts
 	attempts, err := d.loadAttempts(ctx, run)
 	if err != nil {
@@ -206,17 +213,30 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 				n.At = a0.StartedAt
 			}
 			best, bestScore := n.Norm, normalizedProjectionScore(n.Norm, "")
+			var bestAttempt *attemptRow
 			for _, attempt := range n.Attempts {
 				if score := normalizedProjectionScore(attempt.Norm, attempt.Terminal); score >= bestScore {
 					best, bestScore = attempt.Norm, score
+					bestAttempt = attempt
 				}
 			}
 			n.Norm = best
+			if bestAttempt != nil {
+				if len(n.Request) == 0 {
+					n.Request = bestAttempt.Request
+				}
+				if len(n.Response) == 0 {
+					n.Response = bestAttempt.Response
+				}
+			}
+			if best != nil && best.Usage != nil {
+				n.Usage, _ = json.Marshal(best.Usage)
+			}
 			if n.PID == 0 {
 				n.PID = a0.PID
 			}
 			for _, a := range n.Attempts {
-				n.Evidence = append(n.Evidence, EvidenceRef{RecordingID: a.Recording, FirstSeq: a.FirstSeq, LastSeq: a.Last})
+				n.Evidence = append(n.Evidence, a.Evidence...)
 			}
 		}
 		if n.Norm != nil {
@@ -443,6 +463,15 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 			}
 		}
 		unattributed := 0
+		// Reprocessing may replace one historical connection-level inference
+		// with many call-level inferences. Remove only stale derived projections.
+		currentIDs := make([]string, 0, len(list))
+		for _, n := range list {
+			currentIDs = append(currentIDs, n.ID)
+		}
+		if _, err := tx.Exec(ctx, `delete from model_inferences where capture_run_id=$1 and status='inferred' and not(id=any($2::text[]))`, run, currentIDs); err != nil {
+			return err
+		}
 		for key, ns := range bySession {
 			kind, native := "inferred", (*string)(nil)
 			if nativeID, ok := nativeSessions[key]; ok {
@@ -497,7 +526,7 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 			serverState := "none"
 			if n.Norm != nil && len(n.Norm.ServerStateRefs) > 0 {
 				serverState = "unresolved"
-				if n.prev != nil && n.prevEv.Kind == "response_id_chain" {
+				if n.prev != nil && !n.conflict && n.prevEv.Kind == "response_id_chain" && len(n.Norm.ServerStateRefs) == 1 && n.Norm.ServerStateRefs[0] == n.Norm.PreviousResponseID {
 					serverState = "resolved"
 				}
 			}
@@ -505,27 +534,27 @@ func (d *Deps) Resolve(ctx context.Context, j *jobs.Job) error {
 			if _, err := tx.Exec(ctx, `insert into model_inferences(id, recording_id, capture_run_id, project_id, status, attempt_count, first_attempt_at, model, api_mode, request_fingerprint, input_hash, request, response, usage, normalized, server_state, task_id, session_id, turn_id, pid, evidence_refs, processor_version, relation_revision)
 				values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
 				on conflict (id) do update set status=excluded.status, attempt_count=excluded.attempt_count, first_attempt_at=excluded.first_attempt_at, model=coalesce(excluded.model,model_inferences.model), api_mode=coalesce(nullif(excluded.api_mode,'unknown'),model_inferences.api_mode),
-					request_fingerprint=coalesce(excluded.request_fingerprint,model_inferences.request_fingerprint), input_hash=coalesce(excluded.input_hash,model_inferences.input_hash), request=coalesce(excluded.request,model_inferences.request), response=coalesce(excluded.response,model_inferences.response), usage=coalesce(excluded.usage,model_inferences.usage), normalized=coalesce(excluded.normalized,model_inferences.normalized),
+					request_fingerprint=coalesce(excluded.request_fingerprint,model_inferences.request_fingerprint), input_hash=coalesce(excluded.input_hash,model_inferences.input_hash), request=case when excluded.status='observed' then coalesce(excluded.request,model_inferences.request) else excluded.request end, response=case when excluded.status='observed' then coalesce(excluded.response,model_inferences.response) else excluded.response end, usage=case when excluded.status='observed' then coalesce(excluded.usage,model_inferences.usage) else excluded.usage end, normalized=case when excluded.status='observed' then coalesce(excluded.normalized,model_inferences.normalized) else excluded.normalized end,
 					server_state=excluded.server_state, task_id=excluded.task_id, session_id=excluded.session_id, turn_id=excluded.turn_id, pid=coalesce(excluded.pid,model_inferences.pid), evidence_refs=excluded.evidence_refs, relation_revision=excluded.relation_revision, updated_at=now()`,
 				n.ID, n.Recording, run, j.ProjectID, status, len(n.Attempts), n.At, nilIfEmpty(n.Model), orUnknown(n.APIMode), fp, ih, nullJSON(n.Request), nullJSON(n.Response), nullJSON(n.Usage), normB, serverState, taskKey, n.sessionKey, nilIfEmpty(turnID), nilIfZero(n.PID), evB, ResolverVersion, rev); err != nil {
 				return err
 			}
 			for _, a := range n.Attempts {
 				st, conf, kind := "observed", confExplicit, "explicit_id"
-				relationEvidence := evidence{Kind: kind, Weight: conf, Refs: []EvidenceRef{{RecordingID: a.Recording, FirstSeq: a.FirstSeq, LastSeq: a.Last}}}
+				relationEvidence := evidence{Kind: kind, Weight: conf, Refs: a.Evidence}
 				if a.InferenceID == "" {
 					st, conf, kind = "inferred", confInputHash, "input_hash_retry_group"
 					if len(n.Attempts) == 1 && !n.Observed {
 						conf, kind = confExplicit, "single_attempt"
 					}
-					relationEvidence = evidence{Kind: kind, Weight: conf, Refs: []EvidenceRef{{RecordingID: a.Recording, FirstSeq: a.FirstSeq, LastSeq: a.Last}}}
+					relationEvidence = evidence{Kind: kind, Weight: conf, Refs: a.Evidence}
 				} else if a.Correlation != nil {
 					st, conf, kind = "inferred", a.Correlation.Weight, a.Correlation.Kind
 					if conf >= confExplicit {
 						st = "observed"
 					}
 					relationEvidence = *a.Correlation
-					relationEvidence.Refs = append(append([]EvidenceRef(nil), relationEvidence.Refs...), EvidenceRef{RecordingID: a.Recording, FirstSeq: a.FirstSeq, LastSeq: a.Last})
+					relationEvidence.Refs = append(append([]EvidenceRef(nil), relationEvidence.Refs...), a.Evidence...)
 				}
 				eb, _ := json.Marshal([]evidence{relationEvidence})
 				if _, err := tx.Exec(ctx, `insert into relations(project_id, capture_run_id, type, from_id, to_id, status, confidence, evidence, revision) values($1,$2,'attempt_of',$3,$4,$5,$6,$7,$8)`, j.ProjectID, run, a.ID, n.ID, st, conf, eb, rev); err != nil {
@@ -693,8 +722,8 @@ func (d *Deps) loadAttempts(ctx context.Context, run string) ([]*attemptRow, err
 	rows, err := d.DB.Pool.Query(ctx, `select a.id, a.recording_id,
 		coalesce((select e.inference_id from recording_events e join recordings er on er.id=e.recording_id
 			where er.capture_run_id=a.capture_run_id and e.attempt_id=a.native_id and e.inference_id is not null order by e.seq limit 1),''),
-		a.source, coalesce(a.pid,0), coalesce(a.started_at, now()), coalesce(encode(a.input_hash,'hex'),''), coalesce(encode(a.request_fingerprint,'hex'),''), coalesce(a.provider_host,''), a.terminal_state, coalesce(a.first_seq,0), coalesce(a.last_seq,0), a.normalized
-		from model_attempts a where a.capture_run_id=$1 order by a.started_at`, run)
+		a.source, coalesce(a.pid,0), coalesce(a.started_at, now()), coalesce(encode(a.input_hash,'hex'),''), coalesce(encode(a.request_fingerprint,'hex'),''), coalesce(a.provider_host,''), a.terminal_state, coalesce(a.first_seq,0), coalesce(a.last_seq,0), a.normalized, a.entity_kind, a.evidence_refs, a.request_body, a.response_body
+		from model_attempts a where a.capture_run_id=$1 and a.entity_kind <> 'websocket_connection' order by a.started_at,a.id`, run)
 	if err != nil {
 		return nil, err
 	}
@@ -704,11 +733,22 @@ func (d *Deps) loadAttempts(ctx context.Context, run string) ([]*attemptRow, err
 		a := &attemptRow{}
 		var norm json.RawMessage
 		var nativeInferenceID string
-		if err := rows.Scan(&a.ID, &a.Recording, &nativeInferenceID, &a.Source, &a.PID, &a.StartedAt, &a.InputHash, &a.Fingerprint, &a.Host, &a.Terminal, &a.FirstSeq, &a.Last, &norm); err != nil {
+		var entityKind string
+		var refs json.RawMessage
+		if err := rows.Scan(&a.ID, &a.Recording, &nativeInferenceID, &a.Source, &a.PID, &a.StartedAt, &a.InputHash, &a.Fingerprint, &a.Host, &a.Terminal, &a.FirstSeq, &a.Last, &norm, &entityKind, &refs, &a.Request, &a.Response); err != nil {
 			return nil, err
 		}
 		if nativeInferenceID != "" {
 			a.InferenceID = InferenceKey(run, nativeInferenceID)
+		}
+		if entityKind == "websocket_call" {
+			// Repeated identical requests are not proof of a retry. Preserve one
+			// inference per observed create; explicit state chains link calls later.
+			a.InferenceID = "inf:" + a.ID
+		}
+		_ = json.Unmarshal(refs, &a.Evidence)
+		if len(a.Evidence) == 0 {
+			a.Evidence = []EvidenceRef{{a.Recording, a.FirstSeq, a.Last}}
 		}
 		if len(norm) > 0 {
 			var n Normalized

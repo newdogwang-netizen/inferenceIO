@@ -35,9 +35,9 @@ export default function InferenceDetail() {
             </div>
           </div>
           <div className="panel">
-            <h3>物理尝试</h3>
+            <h3>调用尝试</h3>
             <table><tbody>{(i.attempts ?? []).map((a: any) => (
-              <tr key={a.id}><td><Link to={`/attempts/${enc(a.id)}`} className="mono">{a.id}</Link></td><td><Terminal s={a.terminal_state} /></td><td>{a.status_code ?? ""} {a.error_class ?? ""}</td><td>{a.provider_host}</td><td>{a.sse_event_count} SSE</td><td className="muted">{fmtDur(a.started_at, a.ended_at)}</td></tr>
+              <tr key={a.id}><td><Link to={`/attempts/${enc(a.id)}`} className="mono">{a.id}</Link>{a.parent_attempt_id ? <div><Link to={`/attempts/${enc(a.parent_attempt_id)}`}>所属 WebSocket 连接</Link></div> : null}</td><td><Terminal s={a.terminal_state} /></td><td>{a.status_code ?? ""} {a.error_class ?? ""}</td><td>{a.provider_host}</td><td>{a.entity_kind === "websocket_call" ? `${a.projection?.message_count ?? 0} WS 消息` : `${a.sse_event_count} SSE`}</td><td className="muted">{fmtDur(a.started_at, a.ended_at)}</td></tr>
             ))}</tbody></table>
           </div>
           <div className="grid cols-2">
@@ -77,6 +77,7 @@ export default function InferenceDetail() {
               <h3>tools / 参数</h3>
               <div className="small">{(n.tools ?? []).map((t: string) => <span key={t} className="tag">{t}</span>)}</div>
               <Json v={n.params} max={120} />
+              {n.protocol_inputs?.length ? <><h3>原生协议输入（非用户消息）</h3><Json v={n.protocol_inputs} max={160} /></> : null}
               <h3>关系</h3><Json v={i.relations} max={220} />
             </div>
           </div>

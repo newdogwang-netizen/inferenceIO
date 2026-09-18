@@ -24,10 +24,10 @@ import (
 const (
 	DecoderVersion        = "decoder-v1"
 	AssemblerVersion      = "assembler-v2"
-	NormalizerVersion     = "normalizer-v3"
-	ResolverVersion       = "resolver-v1"
+	NormalizerVersion     = "normalizer-v4"
+	ResolverVersion       = "resolver-v2"
 	TransportAuditVersion = "transport-audit-v2"
-	CoverageVersion       = "coverage-v3"
+	CoverageVersion       = "coverage-v4"
 	RulesVersion          = "rules-v1"
 )
 

@@ -29,6 +29,9 @@ type Coverage struct {
 	UnresolvedServerState        int            `json:"unresolved_server_state"`
 	MissingBlobs                 int            `json:"missing_blobs"`
 	BodyUnavailable              int            `json:"body_unavailable"`
+	WebSocketCalls               int            `json:"websocket_calls"`
+	UnresolvedWebSocketMessages  int            `json:"unresolved_websocket_messages"`
+	CallsWithoutModelTerminal    int            `json:"calls_without_model_terminal"`
 	CapabilitiesKnown            bool           `json:"capabilities_known"`
 	// PlatformTransportProofVerified is set only by a platform-owned decoder
 	// after it has independently validated a bounded task-egress capture and
@@ -192,8 +195,11 @@ func (d *Deps) Coverage(ctx context.Context, j *jobs.Job) error {
 		}
 		// attempts
 		var noTerminal, bodyUnavail int
-		if err := pool.QueryRow(ctx, `select count(*), count(*) filter (where terminal_state='unknown'), count(*) filter (where inference_id is null), count(*) filter (where normalized->>'body_unavailable' = 'true')
-		from model_attempts where recording_id=$1 and source not like 'hook:%'`, rec).Scan(&c.TransportAttempts, &noTerminal, &c.UnattributedAttempts, &bodyUnavail); err != nil {
+		if err := pool.QueryRow(ctx, `select count(*) filter(where entity_kind<>'websocket_call'), count(*) filter (where terminal_state='unknown' and entity_kind<>'websocket_call'), count(*) filter (where inference_id is null and entity_kind<>'websocket_connection'), count(*) filter (where normalized->>'body_unavailable' = 'true'), count(*) filter(where entity_kind='websocket_call'), count(*) filter(where entity_kind='websocket_call' and terminal_state='unknown')
+		from model_attempts where recording_id=$1 and source not like 'hook:%'`, rec).Scan(&c.TransportAttempts, &noTerminal, &c.UnattributedAttempts, &bodyUnavail, &c.WebSocketCalls, &c.CallsWithoutModelTerminal); err != nil {
+			return err
+		}
+		if err := pool.QueryRow(ctx, `select count(*) from attempt_event_links where recording_id=$1 and call_attempt_id is null and reason<>'connection_control'`, rec).Scan(&c.UnresolvedWebSocketMessages); err != nil {
 			return err
 		}
 		c.BodyUnavailable = bodyUnavail
@@ -285,7 +291,7 @@ func assignCoverageClaim(c *Coverage, state string) {
 		return
 	}
 	c.Claim = "transport-complete"
-	if c.BodyUnavailable == 0 && c.UnattributedAttempts == 0 && c.TransportAttempts > 0 {
+	if c.BodyUnavailable == 0 && c.UnattributedAttempts == 0 && c.TransportAttempts > 0 && c.UnresolvedWebSocketMessages == 0 && c.CallsWithoutModelTerminal == 0 && c.UnresolvedServerState == 0 {
 		c.Claim = "client-complete"
 	}
 }
