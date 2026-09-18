@@ -29,6 +29,7 @@ import time
 from urllib.parse import quote, urlsplit
 
 from harbor_input_provenance import InputFailure, audit_definitions, fresh_identity, harbor_environment, image_compose, file_identity, measurement_definitions
+from m3_experiment_plan import PlanFailure, bind_case
 
 ROOT = Path(__file__).resolve().parents[1]
 IDENTIFIER = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:/@+~-]{0,255}\Z")
@@ -268,6 +269,8 @@ class Workflow:
         return output
 
     def preflight(self):
+        if bool(getattr(self.a, "experiment_plan", None)) != bool(getattr(self.a, "experiment_case", None)) or (getattr(self.a, "experiment_plan", None) and not self.a.task):
+            raise Failure("experiment_plan_and_case_require_fresh_task")
         if getattr(self.a, "recording_mode", "on") == "off" and not self.a.task:
             raise Failure("baseline_requires_fresh_task_or_same_workspace_resume")
         private_path(self.a.key_file)
@@ -286,6 +289,8 @@ class Workflow:
             # Match the profile's actual upload set, not a parallel hand-written
             # subset. A dependency change cannot silently reuse a paid trial.
             config["fresh_inputs"] = fresh_identity(self.a)
+            if getattr(self.a, "experiment_plan", None):
+                config["experiment"] = bind_case(self.a, config["fresh_inputs"])
             if getattr(self.a, "task_image", None):
                 overlay = self.work.path / "task-image.compose.json"
                 atomic_json(overlay, image_compose(self.a.task_image))
@@ -323,6 +328,8 @@ class Workflow:
         current = fresh_identity(self.a, Path(expected["harbor"]["launcher"]["path"]))
         if current != expected or digest(self.a.key_file) != self.state["config"]["key_fingerprint"]:
             raise Failure("fresh_trial_inputs_changed_no_launch_or_qualification")
+        if bind_case(self.a, current) != self.state["config"].get("experiment"):
+            raise Failure("experiment_plan_changed_no_launch_or_qualification")
         if "task_image_compose" in self.state["config"]:
             overlay = self.work.path / "task-image.compose.json"
             private_path(overlay)
@@ -356,6 +363,9 @@ class Workflow:
                     env["IOREC_HARBOR_" + self.a.agent.upper() + "_BIN"] = str(getattr(self.a, self.a.agent))
                 self.state["launch_intent"] = {"at": now(), "agent_timeout_seconds": self.a.agent_timeout,
                                                "automatic_retries": 0}
+                if self.state["config"].get("experiment"):
+                    bound = self.state["config"]["experiment"]
+                    self.state["launch_intent"]["experiment"] = {k: bound[k] for k in ("case_id", "plan_sha256")}
                 self.save()
                 launcher = self.state["config"]["fresh_inputs"]["harbor"]["launcher"]["path"]
                 process = subprocess.Popen([launcher, "run", "--config", str(config_path), "--yes"],
@@ -382,6 +392,11 @@ class Workflow:
         benchmark, provenance = benchmark_from_trial(trial)
         self.state["trial_summary"] = {"benchmark": benchmark, **provenance}
         self.save()
+        if self.state.get("config", {}).get("experiment"):
+            expected = self.state["config"]["experiment"]["expected_result"]
+            actual = {**benchmark, **provenance}
+            if any(actual.get(key) != value for key, value in expected.items()):
+                raise Failure("experiment_reported_trial_identity_mismatch")
         measurement = None
         mode = getattr(self.a, "recording_mode", "on")
         if self.a.task:
@@ -499,7 +514,7 @@ class Workflow:
             self.stage("platform", self.qualify_platform)
             self.state["status"] = "completed"
         except BaseException as error:
-            code = str(error) if isinstance(error, (Failure, InputFailure)) else type(error).__name__
+            code = str(error) if isinstance(error, (Failure, InputFailure, PlanFailure)) else type(error).__name__
             self.state["stages"].setdefault(self.phase, {}).update(status="failed", error=code, finished_at=now())
             self.state["status"] = "incomplete"
             raise
@@ -517,6 +532,8 @@ def parser():
     source.add_argument("--task", type=Path)
     source.add_argument("--from-trial", type=Path)
     p.add_argument("--model", default="")
+    p.add_argument("--experiment-plan", type=Path, help="bind a fully declared M3 plan before launch; not user approval or a global spending guard")
+    p.add_argument("--experiment-case", help="exact case ID from --experiment-plan; required together")
     p.add_argument("--recording-mode", choices=("on", "off"), default="on",
                    help="off is a measured native-network baseline, never capture-qualified or imported")
     p.add_argument("--agent", choices=("codex", "claude", "hermes"), default="codex")
@@ -544,7 +561,7 @@ def main():
     args = parser().parse_args()
     try:
         args.api, args.web = local_url(args.api), local_url(args.web)
-        for key in ("task", "from_trial", "iorec", "codex", "claude", "hermes_bundle", "key_file", "token_file"):
+        for key in ("task", "from_trial", "iorec", "codex", "claude", "hermes_bundle", "key_file", "token_file", "experiment_plan"):
             if getattr(args, key):
                 setattr(args, key, getattr(args, key).absolute())
         # Preserve strict ownership checks on the key, but resolve CLI symlinks
@@ -579,7 +596,7 @@ def main():
     except BaseException as error:
         if isinstance(error, SystemExit):
             raise
-        print(json.dumps({"status": "incomplete", "error": str(error) if isinstance(error, (Failure, InputFailure)) else type(error).__name__}), file=sys.stderr)
+        print(json.dumps({"status": "incomplete", "error": str(error) if isinstance(error, (Failure, InputFailure, PlanFailure)) else type(error).__name__}), file=sys.stderr)
         return 1
 
 

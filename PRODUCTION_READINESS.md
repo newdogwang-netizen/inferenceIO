@@ -21,6 +21,10 @@ The [on/off measurement checks](benchmarks/2026-09-18-harbor-measured-modes-linu
 add a shared observer and a non-importing baseline workflow. CPU/RSS have explicit
 Linux wait4 limits; network/confinement differences remain part of the comparison.
 Synthetic observer and install-only results do not qualify real paired overhead.
+The [plan-binding/comparison checks](benchmarks/2026-09-18-m3-plan-binding-and-comparison-linux-x86_64.json)
+add pre-launch case identity and fail-closed, read-only observation comparison.
+They do not supply actual budget approval, a global cost ledger, real runs or a
+fresh cryptographic audit of every retained blob.
 
 `iorec 0.1.0` is release-hardened for local, best-effort recording on Linux x86-64. It is not a host-wide or transport-complete inference monitor. Every manifest claim remains `best-effort`, regardless of process exit status or verifier profile.
 

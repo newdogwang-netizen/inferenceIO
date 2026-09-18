@@ -86,3 +86,45 @@ python3 tools/harbor_audit_workflow.py --preflight-only \
 
 使用真实模型前必须替换占位值、冻结经批准的清单及摘要，并绑定每次结果。
 “12 个 case 已生成”只代表计划，不能代表 12 次运行，更不能代表 M3 完成。
+
+## 启动前绑定计划与 case
+
+M3 的每个真实工作流都必须同时传入 `--experiment-plan /private/approved-m3-plan.json`
+和 `--experiment-case CASE_ID`。矩阵 case ID 由上面的清单检查器列出；额外对照是
+`paired-off` 和 `paired-on`，分别使用 `--recording-mode off` / `on`。
+
+控制器先检查完整声明、case 成员关系、模型、任务、录制模式、镜像、时间限制和
+实际输入摘要，再将计划 SHA-256 / case ID 锁进配置及 launch intent；启动前和
+录制后重查，改变会拒绝启动或验收，不能自动重试。实际返回的 agent、版本、
+模型和任务也必须匹配。计划验证代码本身进入输入摘要。未填写的仓库清单应以
+`experiment_declaration_incomplete_no_launch` 拒绝，不能拿预检占位模型来过关。
+
+这是单工作流输入绑定，**不是实际用户批准、provider 账单证明、跨工作目录的
+串行锁或总预算账本**。不带这些选项的普通 Harbor 工作流仍然存在，不能计作
+已绑定的 M3 case。操作员必须先获得实际预算批准并执行既定停止策略。
+
+## 完成后汇总额外对照
+
+仅在两个绑定 case 均结束后运行只读汇总；保留完整私有工作目录，不只保留 report：
+
+```bash
+python3 tools/m3_pair_comparison.py \
+  --plan /private/approved-m3-plan.json \
+  --off-work-dir /private/paired-off \
+  --on-work-dir /private/paired-on \
+  --output /private/reports/pair-comparison.json
+```
+
+输出文件必须是私有目录中的新文件，不能位于两个证据工作目录内。工具持共享锁，
+拒绝仍在运行的工作流；核对启动绑定、单一终结 trial、Harbor 启动配置、报告与
+原件、录制索引摘要、已完成的 proof 阶段和安装依赖清单。它不会重新解密/审计
+全部 blob，也不会发起模型调用。输入、版本或系统依赖不同则不给出可比结论。
+
+报告分别列出 CLI wall / user CPU / system CPU / RSS 的 off、on、差值及比值；
+分母为零时比值为 `null`。Harbor 的安装、执行和 verifier 耗时单列。未知费用
+保留 `null`；未知或超过单次声明上限时 `stop_further_paid_trials=true`，退出码 2。
+这不是总预算执行器，也不能替代 provider 费用证据。
+
+`paired_metrics_compared=true` 只表示这些观察已可比对，`qualification_passed`
+和 `m3_complete` 仍为 false。网络依赖影响默认 `not_determined_from_summary`，
+须结合真实任务日志和录制另行分析；单次对照不能证明因果性能回退。

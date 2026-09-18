@@ -140,6 +140,16 @@ class InputTests(unittest.TestCase):
         self.assertEqual(off["recording_mode"], "off")
 
     @mock.patch.object(inputs, "harbor_runtime")
+    def test_experiment_binding_code_is_an_additional_pinned_controller_input(self, runtime):
+        runtime.return_value = self.runtime
+        normal = inputs.fresh_identity(self.args)
+        self.args.experiment_plan = self.base / "plan-reference"
+        bound = inputs.fresh_identity(self.args)
+        name = "tools/m3_experiment_plan.py"
+        self.assertNotIn(name, normal["controller"])
+        self.assertEqual(bound["controller"][name], inputs.file_identity(inputs.ROOT / name))
+
+    @mock.patch.object(inputs, "harbor_runtime")
     def test_hermes_bundle_launcher_and_verifier_are_actual_bound_inputs(self, runtime):
         import importlib.util
         spec = importlib.util.spec_from_file_location("bundle_identity_fixture", inputs.ROOT / "examples/hermes_runtime_bundle.py")

@@ -284,6 +284,16 @@ pair measures the whole audit configuration, not isolated recorder CPU overhead.
 A single off→on pair does not control order effects or model nondeterminism and
 does not establish a causal reward/performance regression.
 
+M3 cases additionally require `--experiment-plan` and `--experiment-case` before
+launch, including the extra `paired-off` / `paired-on` cases. These bind the full
+declaration hash and case identity into the launch intent and reject drift or
+mismatching reported versions. They do not grant spending approval or implement
+a global budget/concurrency ledger. After both cases complete,
+`tools/m3_pair_comparison.py` reads the locked private workspaces, validates their
+plan/config/artifact consistency and installed dependency equality, and publishes
+bounded observational differences without overwriting evidence. See the
+[M3 comparison procedure](m3-experiment-plan.md#完成后汇总额外对照).
+
 ### Pinned Hermes runtime (no personal state)
 
 Do not copy the venv launcher alone: its absolute Python shebang is not portable.

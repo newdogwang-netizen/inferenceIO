@@ -227,4 +227,7 @@ def fresh_identity(args, launcher: Path | None = None):
         result["controller"][str(verifier_path.relative_to(ROOT))] = file_identity(verifier_path)
     if getattr(args, "task_image", None):
         result["task_image_override"] = task_image_input(args.task, args.task_image)
+    if getattr(args, "experiment_plan", None):
+        validator = ROOT / "tools/m3_experiment_plan.py"
+        result["controller"][str(validator.relative_to(ROOT))] = file_identity(validator)
     return result

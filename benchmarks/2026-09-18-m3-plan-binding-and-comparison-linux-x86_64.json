@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-18T20:42:46Z",
+  "subject": "Pre-launch M3 case binding and read-only off/on comparison",
+  "source_baseline": "8de9a6c",
+  "tooling_checks_passed": true,
+  "real_provider_trials_run": 0,
+  "real_pair_compared": false,
+  "m3_complete": false,
+  "scope": "Synthetic comparison/binding regressions, existing real encrypted-export regression fixture, and an actual refusal of the incomplete repository plan. Not real-provider matrix or paired-performance qualification.",
+  "validation": {
+    "python_tests_with_real_encrypted_export_fixture": 143,
+    "test_failures": 0,
+    "tests_skipped": 0,
+    "case_plan_hash_and_expected_identity_bound_before_launch": true,
+    "plan_and_binding_code_drift_blocks_launch_or_qualification": true,
+    "wrong_case_mode_model_task_artifact_or_timeout_rejected": true,
+    "reported_agent_version_mismatch_rejected_without_losing_cost": true,
+    "shared_workflow_locks_prevent_reading_live_trials": true,
+    "comparison_requires_matching_launch_plan_bindings": true,
+    "comparison_requires_one_terminal_trial_per_job": true,
+    "report_source_measurement_and_capture_index_changes_rejected": true,
+    "launch_configuration_controller_and_runtime_inventory_differences_rejected": true,
+    "recorded_proof_stages_required_without_promoting_baseline": true,
+    "declared_order_and_nonoverlap_required": true,
+    "stage_timings_separate_from_cli_metrics": true,
+    "zero_denominator_ratio_is_null": true,
+    "unknown_or_excessive_reported_cost_sets_stop_signal": true,
+    "output_is_private_exclusive_and_outside_evidence_workspaces": true,
+    "secret_config_fields_not_copied_to_comparison": true,
+    "five_hour_bound_recorder_and_harness_unchanged": true
+  },
+  "actual_incomplete_plan_preflight": {
+    "work_dir": "/var/tmp/iorec-m3-bound-plan-rejection-20260918",
+    "case_id": "paired-off",
+    "preflight_only": true,
+    "expected_exit_code": 1,
+    "observed_exit_code": 1,
+    "error": "experiment_declaration_incomplete_no_launch",
+    "qualification_passed": false,
+    "launch_intent_present": false,
+    "jobs_present": false,
+    "report_sha256": "33481a3971ad5c08be8a60c0cfd9aa3440d131860be7274daa54ad87d85838f9"
+  },
+  "actual_comparison_refusal": {
+    "plan": "examples/m3-experiment-plan.json",
+    "error": "comparison_requires_complete_predeclared_plan",
+    "exit_code": 1,
+    "paired_metrics_compared": false,
+    "qualification_passed": false
+  },
+  "source_files": {
+    "tools/harbor_audit_workflow.py": "54e5ff6749fbda80d4b1b382f2e5c8c6ee595b41be3069084b56b1ec5ba8970a",
+    "tools/harbor_input_provenance.py": "66917a429b12e77f72f59604311a8a9aeeab95fcd572c75ed889d33eb135ff70",
+    "tools/m3_experiment_plan.py": "a5882f3037ce46ea5344e947d9e5d33f136bbf7901ee7d1c512c2dec5fdd72c2",
+    "tools/m3_pair_comparison.py": "44c27cc41acac926111bc41d3365317daccb5bb5dba4b9b86b633ac674b2bd22",
+    "tools/test_m3_experiment_plan.py": "b96d8776b4235bff11526c9755f76671d2b3fe90a2aae6a79ce49d4ba67d6b73",
+    "tools/test_harbor_input_provenance.py": "a5d65da274091c94d99e8fafd55edbfc54ce458b2d8e05b026aec75094e856a2",
+    "tools/test_m3_pair_comparison.py": "460c7566befa8d7025cdc22aa55ee42a26ab1663954320f6b0ab19d29e93c030"
+  },
+  "limits": [
+    "A complete declaration is not actual user spending approval or provider-side cap evidence.",
+    "Single-workflow binding does not implement a cross-workspace concurrency lock or total-cost ledger.",
+    "Comparison validates existing proof stages and current index hashes; it does not decrypt/re-audit all encrypted blobs or independently verify billing.",
+    "Target-owned resource observations retain wait4 scope and pre-exec-memory limitations.",
+    "Network dependency impact cannot be determined from summaries alone; on/off confinement differences and order/model variance need separate interpretation.",
+    "All successful paired comparisons in these tests use explicitly synthetic fixtures, not real model or benchmark results."
+  ],
+  "pending": [
+    "Actual user-approved models and monetary limits with effective provider spending caps.",
+    "Fresh real full-chain trial, twelve recorded matrix trials and two additional real paired runs.",
+    "Final compatible-recorder five-hour completion, recovery/drain reconciliation and release acceptance."
+  ]
+}

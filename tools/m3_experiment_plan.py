@@ -156,5 +156,40 @@ def main():
         return 1
 
 
+def bind_case(args, fresh):
+    """Bind a declared case before launch; not spending authority or a ledger."""
+    path, case_id = getattr(args, "experiment_plan", None), getattr(args, "experiment_case", None)
+    if path is None and case_id is None:
+        return None
+    require(path is not None and bool(case_id) and bool(getattr(args, "task", None)), "experiment_plan_and_case_require_fresh_task")
+    identity = file_identity(path)
+    require(identity["bytes"] <= 1 << 20, "plan_file_limit_exceeded")
+    with path.open("rb") as src:
+        raw = src.read((1 << 20) + 1)
+    require(hashlib.sha256(raw).hexdigest() == identity["sha256"], "experiment_plan_changed_while_reading")
+    plan = json.loads(raw)
+    declaration = validate(plan)
+    require(declaration["declaration_complete"], "experiment_declaration_incomplete_no_launch")
+    cases = [case for case in declaration["cases"] if case["id"] == case_id]
+    require(len(cases) == 1, "experiment_case_not_in_plan")
+    case = cases[0]
+    agent = plan["agents"][case["agent"]]
+    task = next(task for task in plan["tasks"] if task["id"] == case["task"])
+    require(args.agent == case["agent"] and args.model == agent["model"]
+            and args.upstream == agent["upstream"] and args.recording_mode == case["recording"]
+            and str(args.task.absolute()) == task["path"] and args.task_image == task["image"]
+            and args.agent_timeout == plan["limits"]["agent_timeout_seconds"]
+            and args.verifier_timeout == plan["limits"]["verifier_timeout_seconds"]
+            and plan["limits"]["setup_timeout_seconds"] == 600, "workflow_arguments_differ_from_experiment_case")
+    remote = "/tmp/iorec-hermes-runtime.tar.gz" if args.agent == "hermes" else "/opt/iorec-agent/" + args.agent
+    require(fresh["uploads"][remote]["sha256"] == agent["artifact"]["sha256"]
+            and fresh["uploads"]["/tmp/iorec-bin"]["sha256"] == plan["recorder"]["sha256"]
+            and fresh["task"]["sha256"] == task["source_tree_sha256"]
+            and fresh["task_image_override"]["pinned_reference"] == task["image"], "experiment_input_artifacts_differ")
+    return {"case_id": case_id, "plan_path": str(path.absolute()), "plan_sha256": identity["sha256"],
+            "expected_result": {"agent": {"codex": "codex", "claude": "claude-code", "hermes": "hermes"}[args.agent],
+                                "agent_version": agent["version"], "model": agent["model"], "task": task["id"]}}
+
+
 if __name__ == "__main__":
     sys.exit(main())

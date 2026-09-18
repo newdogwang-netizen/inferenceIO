@@ -1,10 +1,12 @@
 import copy
 import json
 from pathlib import Path
+import tempfile
 import unittest
 from unittest import mock
 
 import m3_experiment_plan as plans
+import harbor_audit_workflow as workflow
 
 
 class PlanTests(unittest.TestCase):
@@ -85,6 +87,105 @@ class PlanTests(unittest.TestCase):
             hashes[self.plan["recorder"]["path"]] = "0" * 64
             with self.assertRaisesRegex(plans.PlanFailure, "runtime_digest_changed"):
                 plans.validate(self.plan, verify_local=True)
+
+
+class CaseBindingTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        fixture = PlanTests()
+        fixture.setUp()
+        self.plan = fixture.approved_fixture()
+        self.plan_path = self.root / "plan.json"
+        workflow.atomic_json(self.plan_path, self.plan)
+        agent, task = self.plan["agents"]["codex"], self.plan["tasks"][0]
+        key = self.root / "key"
+        key.write_bytes(bytes(range(32)))
+        key.chmod(0o600)
+        binary = self.root / "iorec"
+        binary.write_bytes(b"test-fixture")
+        self.args = workflow.parser().parse_args(["--work-dir", str(self.root / "work"),
+            "--task", task["path"], "--task-image", task["image"], "--model", agent["model"],
+            "--upstream", agent["upstream"], "--key-file", str(key), "--iorec", str(binary),
+            "--verifier-timeout", "900", "--recording-mode", "off",
+            "--experiment-plan", str(self.plan_path), "--experiment-case", "paired-off"])
+        self.fresh = {"uploads": {"/opt/iorec-agent/codex": {"sha256": agent["artifact"]["sha256"]},
+                                  "/tmp/iorec-bin": {"sha256": self.plan["recorder"]["sha256"]}},
+                      "task": {"sha256": task["source_tree_sha256"]}, "task_image_override": {"pinned_reference": task["image"]},
+                      "harbor": {"launcher": {"path": "/fixture/harbor"}}}
+
+    def test_binds_full_plan_hash_case_and_expected_reported_identity(self):
+        bound = plans.bind_case(self.args, self.fresh)
+        self.assertEqual(bound["plan_sha256"], workflow.digest(self.plan_path))
+        self.assertEqual(bound["case_id"], "paired-off")
+        self.assertEqual(bound["expected_result"]["agent_version"], "0.154.0")
+        self.assertEqual(bound["expected_result"]["model"], "openai/test-model")
+
+    def test_wrong_case_mode_model_task_artifact_timeout_and_partial_flags_reject(self):
+        for field, value in (("experiment_case", "missing"), ("experiment_case", "paired-on"),
+                             ("model", "openai/other"), ("agent_timeout", 899), ("task_image", None),
+                             ("task", None), ("experiment_case", None), ("experiment_plan", None)):
+            args = copy.copy(self.args)
+            setattr(args, field, value)
+            with self.subTest(field=field), self.assertRaises(plans.PlanFailure):
+                plans.bind_case(args, self.fresh)
+        self.fresh["uploads"]["/tmp/iorec-bin"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(plans.PlanFailure, "artifacts_differ"):
+            plans.bind_case(self.args, self.fresh)
+
+    def test_incomplete_plan_preflight_stops_before_job_commands_or_launch(self):
+        self.plan["agents"]["codex"]["model"] = None
+        workflow.atomic_json(self.plan_path, self.plan)
+        with workflow.Workspace(self.args.work_dir) as work:
+            w = workflow.Workflow(self.args, work)
+            with mock.patch.object(workflow, "fresh_identity", return_value=self.fresh), mock.patch.object(w, "command") as command, \
+                    mock.patch.object(workflow.subprocess, "Popen") as launch:
+                with self.assertRaisesRegex(plans.PlanFailure, "declaration_incomplete_no_launch"):
+                    w.run()
+                command.assert_not_called()
+                launch.assert_not_called()
+            self.assertNotIn("launch_intent", w.state)
+            self.assertFalse(workflow.read_json(work.path / "report.json")["qualification_passed"])
+
+    def test_plan_drift_blocks_before_launch_and_after_terminal_job_without_resubmit(self):
+        bound = plans.bind_case(self.args, self.fresh)
+        self.plan["budget"]["total_usd"] = "15.00"
+        workflow.atomic_json(self.plan_path, self.plan)
+        with workflow.Workspace(self.args.work_dir) as work:
+            w = workflow.Workflow(self.args, work)
+            w.state["config"] = {"fresh_inputs": self.fresh, "experiment": bound,
+                                 "key_fingerprint": workflow.digest(self.args.key_file)}
+            with mock.patch.object(workflow, "fresh_identity", return_value=self.fresh), \
+                    mock.patch.object(workflow.subprocess, "Popen") as launch:
+                with self.assertRaisesRegex(workflow.Failure, "experiment_plan_changed"):
+                    w.record()
+                self.assertNotIn("launch_intent", w.state)
+                job = work.path / "jobs/audit"
+                (job / "fixture-trial").mkdir(parents=True)
+                workflow.atomic_json(job / "result.json", {})
+                workflow.atomic_json(job / "fixture-trial/result.json", {})
+                w.state["launch_intent"] = {"pid": 999999}
+                with self.assertRaisesRegex(workflow.Failure, "experiment_plan_changed"):
+                    w.record()
+                launch.assert_not_called()
+
+    def test_wrong_reported_agent_version_fails_but_retains_trial_cost(self):
+        with workflow.Workspace(self.args.work_dir) as work:
+            w = workflow.Workflow(self.args, work)
+            w.state["config"] = {"experiment": plans.bind_case(self.args, self.fresh)}
+            w.state["launch_intent"] = {"pid": 999999}
+            job = work.path / "jobs/audit"
+            trial = job / "fixture-trial"
+            trial.mkdir(parents=True)
+            workflow.atomic_json(job / "result.json", {})
+            workflow.atomic_json(trial / "result.json", {"finished_at": "fixture", "task_name": "cancel-async-tasks",
+                "agent_info": {"name": "codex", "version": "wrong-version", "model_info": {"provider": "openai", "name": "test-model"}},
+                "agent_result": {"cost_usd": 0.5}, "verifier_result": {"rewards": {"reward": 0}}})
+            with mock.patch.object(w, "assert_fresh_inputs"):
+                with self.assertRaisesRegex(workflow.Failure, "reported_trial_identity"):
+                    w.record()
+            self.assertEqual(w.state["trial_summary"]["reported_cost_usd"], 0.5)
 
 
 if __name__ == "__main__":
