@@ -23,8 +23,18 @@ Linux wait4 limits; network/confinement differences remain part of the compariso
 Synthetic observer and install-only results do not qualify real paired overhead.
 The [plan-binding/comparison checks](benchmarks/2026-09-18-m3-plan-binding-and-comparison-linux-x86_64.json)
 add pre-launch case identity and fail-closed, read-only observation comparison.
-They do not supply actual budget approval, a global cost ledger, real runs or a
+They do not supply actual budget approval, an account-wide spending cap, real runs or a
 fresh cryptographic audit of every retained blob.
+
+Bound M3 workflows now use a private shared admission ledger with durable
+reservation/nonces, inherited locks, conservative cost accounting and explicit
+stop/recovery behavior. This controls subsequent launches through the same ledger
+directory only, not provider billing or bypassing callers. Real paid qualification
+is still pending approval; synthetic ledger tests do not count as matrix trials.
+The [ledger regression report](benchmarks/2026-09-18-m3-admission-ledger-linux-x86_64.json)
+records 159 passing Python tests and an actual refusal of the incomplete plan.
+Prior report hashes and shared workspace locks prevent stale successful receipts
+from admitting the next case after a failed or concurrent revalidation.
 
 `iorec 0.1.0` is release-hardened for local, best-effort recording on Linux x86-64. It is not a host-wide or transport-complete inference monitor. Every manifest claim remains `best-effort`, regardless of process exit status or verifier profile.
 

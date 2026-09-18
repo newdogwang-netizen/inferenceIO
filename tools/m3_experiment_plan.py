@@ -186,7 +186,9 @@ def bind_case(args, fresh):
             and fresh["uploads"]["/tmp/iorec-bin"]["sha256"] == plan["recorder"]["sha256"]
             and fresh["task"]["sha256"] == task["source_tree_sha256"]
             and fresh["task_image_override"]["pinned_reference"] == task["image"], "experiment_input_artifacts_differ")
+    ledger = getattr(args, "experiment_ledger", None) or path.with_name(path.name + ".ledger")
     return {"case_id": case_id, "plan_path": str(path.absolute()), "plan_sha256": identity["sha256"],
+            "ledger_path": str(ledger.absolute()),
             "expected_result": {"agent": {"codex": "codex", "claude": "claude-code", "hermes": "hermes"}[args.agent],
                                 "agent_version": agent["version"], "model": agent["model"], "task": task["id"]}}
 

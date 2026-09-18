@@ -287,8 +287,13 @@ does not establish a causal reward/performance regression.
 M3 cases additionally require `--experiment-plan` and `--experiment-case` before
 launch, including the extra `paired-off` / `paired-on` cases. These bind the full
 declaration hash and case identity into the launch intent and reject drift or
-mismatching reported versions. They do not grant spending approval or implement
-a global budget/concurrency ledger. After both cases complete,
+mismatching reported versions. Bound executions also use the shared private
+`--experiment-ledger` (default `PLAN_FILE.ledger`): reserve before launch, inherit
+the lock in Harbor, refuse duplicate/uncertain starts, and halt subsequent cases
+on unknown/excess costs or incomplete results. This coordinates only users of
+that same directory; it is not spending approval, provider billing verification
+or an account-wide hard cap. Preflight does not reserve or initialize a ledger.
+After both cases complete,
 `tools/m3_pair_comparison.py` reads the locked private workspaces, validates their
 plan/config/artifact consistency and installed dependency equality, and publishes
 bounded observational differences without overwriting evidence. See the

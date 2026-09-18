@@ -27,6 +27,11 @@ M3 cases can now bind a complete plan/case identity before launch and use a
 [read-only paired comparison](docs/m3-experiment-plan.md#完成后汇总额外对照) afterwards.
 Its [tooling checks](benchmarks/2026-09-18-m3-plan-binding-and-comparison-linux-x86_64.json)
 do not count as real paired runs or provider billing verification.
+Bound runs also use a [shared admission ledger](docs/m3-experiment-plan.md#共享执行账本与停止策略)
+for serial reservations, once-only launch linkage and conservative stop/recovery.
+Its [159-test regression report](benchmarks/2026-09-18-m3-admission-ledger-linux-x86_64.json)
+includes stale-report and inherited-lock checks, not paid matrix qualification or
+an account-wide spending cap.
 
 For the **local development** platform (unauthenticated, loopback-only, with
 development database durability settings):

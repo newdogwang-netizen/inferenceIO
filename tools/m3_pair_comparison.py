@@ -105,7 +105,7 @@ def read_case(root, mode, plan, plan_sha256):
     for a, b in (("source_identity", "source"), ("stages", "stages"), ("trial_summary", "trial_summary")):
         require(state.get(a) == report.get(b) and isinstance(state.get(a), dict), "state_report_disagree")
     stages = state["stages"]
-    expected_stages = {"preflight", "record"} if mode == "off" else {"preflight", "record", "integrity", "transport_audit", "import", "platform"}
+    expected_stages = {"preflight", "admission", "record"} if mode == "off" else {"preflight", "admission", "record", "integrity", "transport_audit", "import", "platform"}
     require(set(stages) == expected_stages and all(v.get("status") == "completed" for v in stages.values()), "missing_completed_workflow_stages")
     recorded = stages["record"]["result"]
     require(recorded.get("fresh_trial") is True and recorded.get("fresh_inputs_unchanged") is True, "pair_requires_fresh_inputs")
@@ -126,10 +126,13 @@ def read_case(root, mode, plan, plan_sha256):
             and type(intent.get("automatic_retries")) is int and intent["automatic_retries"] == 0,
             "missing_single_launch_provenance")
     binding = cfg["experiment"]
-    require(set(binding) == {"case_id", "plan_path", "plan_sha256", "expected_result"}
+    require(set(binding) == {"case_id", "plan_path", "plan_sha256", "expected_result", "ledger_path"}
             and binding.get("case_id") == "paired-" + mode and binding.get("plan_sha256") == plan_sha256
             and intent.get("experiment") == {"case_id": binding["case_id"], "plan_sha256": plan_sha256},
             "plan_not_bound_to_launch")
+    require(isinstance(binding["ledger_path"], str) and Path(binding["ledger_path"]).is_absolute()
+            and isinstance(intent.get("ledger_reservation_id"), str) and len(intent["ledger_reservation_id"]) == 32
+            and intent["ledger_reservation_id"] == stages["admission"]["result"].get("reservation_id"), "ledger_admission_not_bound_to_launch")
     pair = plan["paired"]
     agent = plan["agents"][pair["agent"]]
     task = next(t for t in plan["tasks"] if t["id"] == pair["task"])

@@ -97,7 +97,8 @@ class PairComparisonTests(unittest.TestCase):
         for name in ("audit-package-inventory.tsv", "audit-tool-sha256.txt"):
             (trial / "agent" / name).write_text("identical-synthetic-inventory\n")
         source = {"benchmark": benchmark, "measurement": metrics}
-        stages = {name: {"status": "completed", "result": {}} for name in ("preflight", "record")}
+        stages = {name: {"status": "completed", "result": {}} for name in ("preflight", "record", "admission")}
+        stages["admission"]["result"] = {"reservation_id": "a" * 32}
         if mode == "off":
             source["recording_mode"] = "off"
         else:
@@ -115,7 +116,7 @@ class PairComparisonTests(unittest.TestCase):
         self.states[mode] = {"config": cfg, "status": "baseline_completed" if mode == "off" else "completed",
                              "source_identity": source, "stages": stages, "trial_summary": {"benchmark": benchmark, **provenance},
                              "plaintext_staging_cleaned": True,
-                             "launch_intent": {"pid": 12345, "automatic_retries": 0,
+                             "launch_intent": {"pid": 12345, "automatic_retries": 0, "ledger_reservation_id": "a" * 32,
                                 "experiment": {k: cfg["experiment"][k] for k in ("case_id", "plan_sha256")}}}
         self.save(mode)
 

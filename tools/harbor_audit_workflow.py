@@ -30,6 +30,7 @@ from urllib.parse import quote, urlsplit
 
 from harbor_input_provenance import InputFailure, audit_definitions, fresh_identity, harbor_environment, image_compose, file_identity, measurement_definitions
 from m3_experiment_plan import PlanFailure, bind_case
+from m3_trial_ledger import Ledger, LedgerFailure
 
 ROOT = Path(__file__).resolve().parents[1]
 IDENTIFIER = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:/@+~-]{0,255}\Z")
@@ -211,6 +212,8 @@ class Workflow:
         self.state = read_json(self.state_path) if self.state_path.exists() else {"schema_version": 1, "stages": {}}
         self.phase = "preflight"
         self.token = ""
+        self.ledger = None
+        self.experiment_control = None
         if args.token_file:
             private_path(args.token_file)
             self.token = args.token_file.read_text().strip()
@@ -253,7 +256,7 @@ class Workflow:
         output = scratch / "command-output.json"
         with output.open("wb") as stream:
             process = subprocess.Popen([str(x) for x in command], stdout=stream, stderr=subprocess.DEVNULL,
-                                       env=env, start_new_session=True, pass_fds=(self.work.lock.fileno(),))
+                                       env=env, start_new_session=True, pass_fds=self.child_lock_fds())
             try:
                 code = process.wait(timeout=timeout)
             except BaseException:
@@ -268,7 +271,23 @@ class Workflow:
             raise Failure(f"command_exit_{code}")
         return output
 
+    def child_lock_fds(self):
+        return (self.work.lock.fileno(),) + ((self.ledger.lock.fileno(),) if self.ledger else ())
+
+    def admit_experiment(self):
+        bound = self.state["config"]["experiment"]
+        self.ledger = Ledger(Path(bound["ledger_path"]), self.a.experiment_plan, bound["plan_sha256"])
+        try:
+            self.ledger.__enter__()
+        except BaseException:
+            self.ledger = None
+            raise
+        config_sha256 = hashlib.sha256(json.dumps(self.state["config"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        return self.ledger.reserve(bound["case_id"], self.work.path, config_sha256, self.state.get("launch_intent"))
+
     def preflight(self):
+        if getattr(self.a, "experiment_ledger", None) and not getattr(self.a, "experiment_plan", None):
+            raise Failure("experiment_ledger_requires_bound_plan")
         if bool(getattr(self.a, "experiment_plan", None)) != bool(getattr(self.a, "experiment_case", None)) or (getattr(self.a, "experiment_plan", None) and not self.a.task):
             raise Failure("experiment_plan_and_case_require_fresh_task")
         if getattr(self.a, "recording_mode", "on") == "off" and not self.a.task:
@@ -361,16 +380,22 @@ class Workflow:
                     env["IOREC_HARBOR_HERMES_BUNDLE"] = str(self.a.hermes_bundle)
                 else:
                     env["IOREC_HARBOR_" + self.a.agent.upper() + "_BIN"] = str(getattr(self.a, self.a.agent))
+                ledger_id = None
+                if self.state["config"].get("experiment"):
+                    if self.ledger is None:
+                        raise Failure("bound_experiment_requires_ledger_admission")
+                    ledger_id = self.ledger.mark_launch()
                 self.state["launch_intent"] = {"at": now(), "agent_timeout_seconds": self.a.agent_timeout,
                                                "automatic_retries": 0}
                 if self.state["config"].get("experiment"):
                     bound = self.state["config"]["experiment"]
+                    self.state["launch_intent"]["ledger_reservation_id"] = ledger_id
                     self.state["launch_intent"]["experiment"] = {k: bound[k] for k in ("case_id", "plan_sha256")}
                 self.save()
                 launcher = self.state["config"]["fresh_inputs"]["harbor"]["launcher"]["path"]
                 process = subprocess.Popen([launcher, "run", "--config", str(config_path), "--yes"],
                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env,
-                                           start_new_session=True, pass_fds=(self.work.lock.fileno(),))
+                                           start_new_session=True, pass_fds=self.child_lock_fds())
                 self.state["launch_intent"]["pid"] = process.pid
                 self.save()
                 # This is an observation deadline, not a new timeout imposed on
@@ -494,6 +519,7 @@ class Workflow:
             time.sleep(2)
 
     def run(self):
+        self.experiment_control = None
         self.work.cleanup()
         # A revalidation in progress must not retain a prior green report.
         self.state.update(status="running", stages={}, plaintext_staging_cleaned=False)
@@ -504,6 +530,8 @@ class Workflow:
             if self.a.preflight_only:
                 self.state["status"] = "preflight_only"
                 return
+            if self.state.get("config", {}).get("experiment"):
+                self.stage("admission", self.admit_experiment)
             self.stage("record", self.record)
             if getattr(self.a, "recording_mode", "on") == "off":
                 self.state["status"] = "baseline_completed"
@@ -514,15 +542,22 @@ class Workflow:
             self.stage("platform", self.qualify_platform)
             self.state["status"] = "completed"
         except BaseException as error:
-            code = str(error) if isinstance(error, (Failure, InputFailure, PlanFailure)) else type(error).__name__
+            code = str(error) if isinstance(error, (Failure, InputFailure, PlanFailure, LedgerFailure)) else type(error).__name__
             self.state["stages"].setdefault(self.phase, {}).update(status="failed", error=code, finished_at=now())
             self.state["status"] = "incomplete"
             raise
         finally:
-            self.work.cleanup()
-            self.state["plaintext_staging_cleaned"] = True
-            self.save()
-            self.publish_report()
+            try:
+                self.work.cleanup()
+                self.state["plaintext_staging_cleaned"] = True
+                self.save()
+                self.publish_report()
+                if self.ledger and self.ledger.active:
+                    self.experiment_control = self.ledger.settle(self.state, digest(self.work.path / "report.json"))
+            finally:
+                if self.ledger:
+                    self.ledger.__exit__()
+                    self.ledger = None
 
 
 def parser():
@@ -534,6 +569,7 @@ def parser():
     p.add_argument("--model", default="")
     p.add_argument("--experiment-plan", type=Path, help="bind a fully declared M3 plan before launch; not user approval or a global spending guard")
     p.add_argument("--experiment-case", help="exact case ID from --experiment-plan; required together")
+    p.add_argument("--experiment-ledger", type=Path, help="shared private admission directory; defaults to PLAN_FILE.ledger, not a provider-side billing cap")
     p.add_argument("--recording-mode", choices=("on", "off"), default="on",
                    help="off is a measured native-network baseline, never capture-qualified or imported")
     p.add_argument("--agent", choices=("codex", "claude", "hermes"), default="codex")
@@ -561,7 +597,7 @@ def main():
     args = parser().parse_args()
     try:
         args.api, args.web = local_url(args.api), local_url(args.web)
-        for key in ("task", "from_trial", "iorec", "codex", "claude", "hermes_bundle", "key_file", "token_file", "experiment_plan"):
+        for key in ("task", "from_trial", "iorec", "codex", "claude", "hermes_bundle", "key_file", "token_file", "experiment_plan", "experiment_ledger"):
             if getattr(args, key):
                 setattr(args, key, getattr(args, key).absolute())
         # Preserve strict ownership checks on the key, but resolve CLI symlinks
@@ -591,12 +627,13 @@ def main():
             workflow = Workflow(args, work)
             workflow.run()
         print(json.dumps({"status": workflow.state["status"],
+                          "experiment_control": workflow.experiment_control,
                           "report": str(args.work_dir.absolute() / "report.json")}))
-        return 0
+        return 2 if workflow.experiment_control and workflow.experiment_control["stop_further_paid_trials"] else 0
     except BaseException as error:
         if isinstance(error, SystemExit):
             raise
-        print(json.dumps({"status": "incomplete", "error": str(error) if isinstance(error, (Failure, InputFailure, PlanFailure)) else type(error).__name__}), file=sys.stderr)
+        print(json.dumps({"status": "incomplete", "error": str(error) if isinstance(error, (Failure, InputFailure, PlanFailure, LedgerFailure)) else type(error).__name__}), file=sys.stderr)
         return 1
 
 

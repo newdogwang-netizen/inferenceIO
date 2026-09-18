@@ -148,6 +148,7 @@ class InputTests(unittest.TestCase):
         name = "tools/m3_experiment_plan.py"
         self.assertNotIn(name, normal["controller"])
         self.assertEqual(bound["controller"][name], inputs.file_identity(inputs.ROOT / name))
+        self.assertEqual(bound["controller"]["tools/m3_trial_ledger.py"], inputs.file_identity(inputs.ROOT / "tools/m3_trial_ledger.py"))
 
     @mock.patch.object(inputs, "harbor_runtime")
     def test_hermes_bundle_launcher_and_verifier_are_actual_bound_inputs(self, runtime):
