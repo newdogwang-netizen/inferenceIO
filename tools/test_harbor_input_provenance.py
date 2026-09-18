@@ -128,6 +128,34 @@ class InputTests(unittest.TestCase):
         (self.base / "codex-code-mode-host").write_text("changed helper")
         self.assertNotEqual(inputs.fresh_identity(self.args), identity)
 
+    @mock.patch.object(inputs, "harbor_runtime")
+    def test_hermes_bundle_launcher_and_verifier_are_actual_bound_inputs(self, runtime):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("bundle_identity_fixture", inputs.ROOT / "examples/hermes_runtime_bundle.py")
+        bundle = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bundle)
+        runtime.return_value = self.runtime
+        python, site = self.base / "python-source", self.base / "site"
+        (python / "bin").mkdir(parents=True)
+        (python / "bin/python3.11").write_bytes(b"python fixture")
+        (site / "hermes_cli").mkdir(parents=True)
+        (site / "hermes_cli/main.py").write_text("fixture = True\n")
+        (site / "hermes_agent-0.19.0.dist-info").mkdir()
+        (site / "hermes_agent-0.19.0.dist-info/METADATA").write_text("Name: hermes-agent\nVersion: 0.19.0\n")
+        self.args.agent, self.args.hermes_bundle = "hermes", self.base / "runtime.tar.gz"
+        built = bundle.build(python, site, self.args.hermes_bundle)
+        identity = inputs.fresh_identity(self.args)
+        self.assertEqual(identity["hermes_runtime"]["archive_sha256"], built["archive_sha256"])
+        self.assertIn("/tmp/iorec-hermes-runtime.tar.gz", identity["uploads"])
+        self.assertTrue(identity["uploads"]["/opt/iorec-agent/hermes"]["path"].endswith("/examples/harbor-audit-hermes"))
+        self.assertIn("examples/hermes_runtime_bundle.py", identity["controller"])
+        self.assertNotIn("/tmp/iorec.key", identity["uploads"])
+        self.args.hermes_bundle.chmod(0o400)
+        self.assertNotEqual(inputs.fresh_identity(self.args), identity)
+        self.args.hermes_bundle = None
+        with self.assertRaisesRegex(ValueError, "hermes_requires_pinned"):
+            inputs.fresh_identity(self.args)
+
     def test_workflow_rejects_drift_before_new_launch_and_after_finished_trial(self):
         args = workflow.parser().parse_args(["--work-dir", str(self.base / "work"),
             "--task", str(self.task), "--model", "openai/fixture", "--key-file", str(self.args.key_file)])

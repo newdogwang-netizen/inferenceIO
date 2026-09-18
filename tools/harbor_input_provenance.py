@@ -137,9 +137,11 @@ def fresh_identity(args, launcher: Path | None = None):
     path = ROOT / "examples/harbor_audit_inputs.py"
     agent = getattr(args, "agent", "codex")
     upstream = getattr(args, "upstream", "") or module.AGENTS[agent]["upstream"]
-    uploads = module.native_uploads(agent=agent, executable=getattr(args, agent),
-                                    iorec=args.iorec, key=args.key_file)
-    return {"task": tree_identity(args.task, ignored_names=(".git",)),
+    bundle = getattr(args, "hermes_bundle", None) if agent == "hermes" else None
+    executable = ROOT / "examples/harbor-audit-hermes" if agent == "hermes" else getattr(args, agent)
+    uploads = module.native_uploads(agent=agent, executable=executable,
+                                    iorec=args.iorec, key=args.key_file, hermes_bundle=bundle)
+    result = {"task": tree_identity(args.task, ignored_names=(".git",)),
             "agent": agent, "upstream": module.upstream_url(upstream),
             "cli_wrapper_sha256": hashlib.sha256(module.cli_wrapper(agent, upstream).encode()).hexdigest(),
             "uploads": {remote: file_identity(local) for local, remote in uploads.items()
@@ -150,3 +152,14 @@ def fresh_identity(args, launcher: Path | None = None):
                 ROOT / "examples/harbor_iorec_audit_base.py",
                 ROOT / ("examples/harbor_iorec_" + agent + "_audit.py"),
                 ROOT / "examples/harbor-audit-compose.yaml")}}
+    if agent == "hermes":
+        import importlib.util
+        verifier_path = ROOT / "examples/hermes_runtime_bundle.py"
+        spec = importlib.util.spec_from_file_location("iorec_runtime_bundle", verifier_path)
+        verifier = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(verifier)
+        result["hermes_runtime"] = verifier.verify(bundle)
+        if result["hermes_runtime"]["archive_sha256"] != result["uploads"]["/tmp/iorec-hermes-runtime.tar.gz"]["sha256"]:
+            raise InputFailure("hermes_bundle_changed_during_preflight")
+        result["controller"][str(verifier_path.relative_to(ROOT))] = file_identity(verifier_path)
+    return result

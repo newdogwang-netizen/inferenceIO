@@ -12,6 +12,11 @@ fresh-trial acceptance is still pending. M3's 12 real experiments and a new
 five-hour soak on the final candidate remain required. Do not deploy a newer
 worktree based solely on the historical “release-hardened” statement below.
 
+The [Hermes/runtime and compatible-recorder calibration](benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)
+adds a pinned installed Python/dependency bundle, a no-provider Harbor install
+check, and a passing 180-second/20-collector mixed-protocol calibration. It does
+not close the fresh-provider, 12-run, paired-overhead or five-hour gates above.
+
 `iorec 0.1.0` is release-hardened for local, best-effort recording on Linux x86-64. It is not a host-wide or transport-complete inference monitor. Every manifest claim remains `best-effort`, regardless of process exit status or verifier profile.
 
 ## Shipped boundary

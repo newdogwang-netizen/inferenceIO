@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euo pipefail
+# Ignore host Python paths and disable bytecode writes into the pinned runtime.
+exec /opt/iorec-hermes/python/bin/python3.11 -I -B -m hermes_cli.main "$@"

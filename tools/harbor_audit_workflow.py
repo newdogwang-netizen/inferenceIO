@@ -185,7 +185,7 @@ def benchmark_from_trial(trial: Path):
 
 def harbor_config(args, work):
     agent = getattr(args, "agent", "codex")
-    kwargs = {"reasoning_effort": "high", "web_search": "disabled"} if agent == "codex" else {"max_turns": 60}
+    kwargs = {"reasoning_effort": "high", "web_search": "disabled"} if agent == "codex" else ({"max_turns": 60} if agent == "claude" else {})
     if agent == "claude" and getattr(args, "agent_budget_usd", None) is not None:
         kwargs["max_budget_usd"] = str(args.agent_budget_usd)
     return {"job_name": "audit", "jobs_dir": str(work / "jobs"), "n_attempts": 1,
@@ -328,7 +328,10 @@ class Workflow:
                 env = harbor_environment()
                 env.update(IOREC_HARBOR_BIN=str(self.a.iorec), IOREC_HARBOR_KEY_FILE=str(self.a.key_file),
                            IOREC_HARBOR_UPSTREAM=self.a.upstream)
-                env["IOREC_HARBOR_" + self.a.agent.upper() + "_BIN"] = str(getattr(self.a, self.a.agent))
+                if self.a.agent == "hermes":
+                    env["IOREC_HARBOR_HERMES_BUNDLE"] = str(self.a.hermes_bundle)
+                else:
+                    env["IOREC_HARBOR_" + self.a.agent.upper() + "_BIN"] = str(getattr(self.a, self.a.agent))
                 self.state["launch_intent"] = {"at": now(), "agent_timeout_seconds": self.a.agent_timeout,
                                                "automatic_retries": 0}
                 self.save()
@@ -468,7 +471,7 @@ def parser():
     source.add_argument("--task", type=Path)
     source.add_argument("--from-trial", type=Path)
     p.add_argument("--model", default="")
-    p.add_argument("--agent", choices=("codex", "claude"), default="codex")
+    p.add_argument("--agent", choices=("codex", "claude", "hermes"), default="codex")
     p.add_argument("--upstream", default="", help="explicit non-loopback HTTPS provider endpoint; defaults to the agent's native provider")
     p.add_argument("--agent-budget-usd", type=float, help="Claude's native per-run budget flag; not a cross-agent or provider-side hard cap")
     p.add_argument("--preflight-only", action="store_true",
@@ -477,6 +480,7 @@ def parser():
     p.add_argument("--iorec", type=Path, default=ROOT / "target/release/iorec")
     p.add_argument("--codex", type=Path, default=Path(shutil.which("codex") or "/missing/codex"))
     p.add_argument("--claude", type=Path, default=Path(shutil.which("claude") or "/missing/claude"))
+    p.add_argument("--hermes-bundle", type=Path, help="verified installed Hermes/Python archive; required for fresh Hermes trials")
     p.add_argument("--api", default="http://127.0.0.1:18080")
     p.add_argument("--web", default="http://127.0.0.1:8088")
     p.add_argument("--token-file", type=Path)
@@ -490,7 +494,7 @@ def main():
     args = parser().parse_args()
     try:
         args.api, args.web = local_url(args.api), local_url(args.web)
-        for key in ("task", "from_trial", "iorec", "codex", "claude", "key_file", "token_file"):
+        for key in ("task", "from_trial", "iorec", "codex", "claude", "hermes_bundle", "key_file", "token_file"):
             if getattr(args, key):
                 setattr(args, key, getattr(args, key).absolute())
         # Preserve strict ownership checks on the key, but resolve CLI symlinks
@@ -512,6 +516,8 @@ def main():
             raise Failure("fresh_trial_requires_model_and_harbor_task")
         if args.preflight_only and not args.task:
             raise Failure("preflight_only_requires_fresh_task")
+        if args.task and args.agent == "hermes" and not args.hermes_bundle:
+            raise Failure("fresh_hermes_trial_requires_pinned_runtime_bundle")
         with Workspace(args.work_dir) as work:
             Workflow(args, work).run()
         print(json.dumps({"status": "preflight_only" if args.preflight_only else "completed",

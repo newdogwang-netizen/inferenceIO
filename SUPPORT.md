@@ -17,6 +17,10 @@ indicate process/database liveness, not successful job processing. A Harbor
 score attached by an operator is labeled `operator_reported_not_recomputed`,
 not promoted to platform-owned transport proof. Historical five-hour gates do
 not qualify current candidate binaries or images; M3 will need a new gate.
+The pinned [native Harbor installation checks](benchmarks/2026-09-18-native-harbor-install-linux-x86_64.json)
+and [Hermes installed-runtime check](benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)
+cover container setup/version compatibility only; they do not upgrade any real
+agent/provider transport cell below.
 
 | Surface | Status | Scope |
 |---|---|---|

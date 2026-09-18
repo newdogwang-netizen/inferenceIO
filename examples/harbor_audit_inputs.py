@@ -15,6 +15,8 @@ AGENTS = {
               "profile": "harbor_iorec_codex_audit:IorecCodexAudit"},
     "claude": {"provider": "anthropic", "upstream": "https://api.anthropic.com",
                "profile": "harbor_iorec_claude_audit:IorecClaudeAudit"},
+    "hermes": {"provider": "openai", "upstream": "https://api.openai.com/v1",
+               "profile": "harbor_iorec_hermes_audit:IorecHermesAudit"},
 }
 
 
@@ -50,7 +52,7 @@ def codex_uploads(*, codex: Path, iorec: Path, key: Path,
 
 def native_uploads(*, agent: str, executable: Path, iorec: Path, key: Path,
                    code_mode: Path | None = None, unshare: Path | None = None,
-                   nsenter: Path | None = None) -> dict[Path, str]:
+                   nsenter: Path | None = None, hermes_bundle: Path | None = None) -> dict[Path, str]:
     if agent not in AGENTS:
         raise ValueError("unsupported_native_audit_agent")
     examples = Path(__file__).resolve().parent
@@ -67,8 +69,12 @@ def native_uploads(*, agent: str, executable: Path, iorec: Path, key: Path,
     if agent == "codex":
         inputs.append((code_mode or executable.with_name("codex-code-mode-host"),
                        "/opt/iorec-agent/codex-code-mode-host"))
-    else:
+    elif agent == "claude":
         inputs.append((examples / "harbor-audit-claude-hook-probe", "/opt/iorec-agent/claude-hook-probe"))
+    elif agent == "hermes":
+        if hermes_bundle is None or executable != (examples / "harbor-audit-hermes").resolve(strict=True):
+            raise ValueError("hermes_requires_pinned_runtime_and_fixed_launcher")
+        inputs.append((hermes_bundle, "/tmp/iorec-hermes-runtime.tar.gz"))
     for name in ("ld-linux-x86-64.so.2", "libc.so.6", "libm.so.6", "libgcc_s.so.1",
                  "libselinux.so.1", "libpcre2-8.so.0"):
         inputs.append((Path("/lib/x86_64-linux-gnu") / name, "/tmp/iorec-runtime/" + name))
@@ -96,6 +102,13 @@ def cli_wrapper(agent: str, upstream: str) -> str:
     prefix += ('if [ "$#" -eq 1 ]; then\n'
                '  case "$1" in --version|-v|-V|--help|-h) exec ' + shlex.quote(cli) + ' "$@" ;; esac\n'
                'fi\n')
+    if agent == "hermes":
+        # Harbor's post-run local export must not create another recorded run.
+        # Only these exact read-only invocations bypass the recorder.
+        prefix += ('if [ "$#" -eq 1 ] && [ "$1" = version ]; then exec ' + cli + ' "$@"; fi\n'
+                   'if [ "$#" -eq 5 ] && [ "$1" = sessions ] && [ "$2" = export ] '
+                   '&& [ "$3" = /logs/agent/hermes-session.jsonl ] '
+                   '&& [ "$4" = --source ] && [ "$5" = cli ]; then exec ' + cli + ' "$@"; fi\n')
     # Claude hooks use current_exe() to re-enter the recorder. Explicitly
     # invoking ld.so makes that path point to the loader instead of iorec.
     # Require a natively runnable recorder for Claude; setup checks this before

@@ -29,7 +29,7 @@ class IorecAuditMixin:
             "IOREC_HARBOR_UPSTREAM", AGENTS[self.AUDIT_AGENT]["upstream"]))
         extra = dict(kwargs.pop("extra_env", None) or {})
         # Bind Harbor's model resolver and the recorder to the same endpoint.
-        name = "OPENAI_BASE_URL" if self.AUDIT_AGENT == "codex" else "ANTHROPIC_BASE_URL"
+        name = "ANTHROPIC_BASE_URL" if self.AUDIT_AGENT == "claude" else "OPENAI_BASE_URL"
         extra[name] = self.audit_upstream
         if self.AUDIT_AGENT == "claude":
             if any(os.environ.get(k) for k in ("CLAUDE_CODE_USE_BEDROCK", "AWS_BEARER_TOKEN_BEDROCK",
@@ -82,6 +82,7 @@ class IorecAuditMixin:
             '"$(command -v newuidmap)" "$(command -v newgidmap)" > /logs/agent/audit-tool-sha256.txt; '
             "/tmp/iorec-runtime/ld-linux-x86-64.so.2 --library-path /tmp/iorec-runtime /tmp/iorec-bin --version"
         ), timeout_sec=30)
+        await self.prepare_agent_runtime(environment)
         await self.exec_as_agent(environment, command="/usr/local/bin/" + self.AUDIT_AGENT + " --version", timeout_sec=30)
         if self.AUDIT_AGENT == "claude":
             # Fail during setup, before paid inference, if this container cannot
@@ -93,8 +94,15 @@ class IorecAuditMixin:
                 + shlex.quote(self.audit_upstream) + " -- /opt/iorec-agent/claude-hook-probe"
             ), timeout_sec=30)
 
+    async def prepare_agent_runtime(self, environment):
+        """Profiles with an installed runtime override this before CLI probes."""
+
     async def exec_as_agent(self, environment, command, env=None, cwd=None, timeout_sec=None):
         agent_env = {**(env or {}), "HOME": "/home/iorecagent", "USER": "iorecagent", "LOGNAME": "iorecagent"}
+        # Some Harbor agents construct per-call env directly from os.environ;
+        # never let it override the endpoint bound in the input manifest.
+        provider_url = "ANTHROPIC_BASE_URL" if self.AUDIT_AGENT == "claude" else "OPENAI_BASE_URL"
+        agent_env[provider_url] = self.audit_upstream
         if self.AUDIT_AGENT == "claude":
             agent_env.update(DISABLE_AUTOUPDATER="1", CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="1")
         inner = shlex.quote("set -o pipefail; " + command)

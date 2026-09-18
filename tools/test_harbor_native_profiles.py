@@ -77,6 +77,22 @@ class NativeProfileTests(unittest.TestCase):
         self.assertNotIn("ld-linux", claude)
         self.assertIn("ld-linux", codex)
 
+    def test_hermes_version_and_exact_session_export_only_bypass(self):
+        export = ["sessions", "export", "/logs/agent/hermes-session.jsonl", "--source", "cli"]
+        self.assertEqual(self.run_wrapper("hermes", ["version"])["route"], "native")
+        self.assertEqual(self.run_wrapper("hermes", export)["route"], "native")
+        self.assertEqual(self.run_wrapper("hermes", export + ["--model", "openai/fixture"])["route"], "recorder")
+        self.assertEqual(self.run_wrapper("hermes", ["version", "chat"])["route"], "recorder")
+        self.assertEqual(self.run_wrapper("hermes", ["--yolo", "chat", "-q", "test"])["route"], "recorder")
+
+    def test_hermes_configuration_uses_runtime_profile_not_unhandled_turn_flag(self):
+        args = workflow.parser().parse_args(["--work-dir", str(self.root), "--task", str(self.root),
+            "--key-file", str(self.root / "key"), "--agent", "hermes", "--model", "openai/fixture",
+            "--hermes-bundle", str(self.root / "runtime.tar.gz")])
+        agent = workflow.harbor_config(args, self.root)["agents"][0]
+        self.assertEqual(agent["import_path"], "harbor_iorec_hermes_audit:IorecHermesAudit")
+        self.assertEqual(agent["kwargs"], {})
+
     def test_endpoint_validation_has_no_shell_injection_or_secret_urls(self):
         self.assertEqual(definitions.upstream_url("https://api.example.com:443/anthropic/"),
                          "https://api.example.com:443/anthropic")
@@ -108,11 +124,13 @@ class NativeProfileTests(unittest.TestCase):
             p = Profile(extra_env={"ANTHROPIC_BASE_URL": "https://wrong.example.com"})
         self.assertEqual(p.args["extra_env"]["ANTHROPIC_BASE_URL"], "https://gateway.example.com/anthropic")
         command = "printf '%s' 'codex exec --marker'"
-        actual = asyncio.run(p.exec_as_agent(None, command, env={"HOME": "/root", "USER": "root"}, timeout_sec=42))
+        actual = asyncio.run(p.exec_as_agent(None, command, env={"HOME": "/root", "USER": "root",
+            "ANTHROPIC_BASE_URL": "https://wrong.example.com"}, timeout_sec=42))
         self.assertIn("--reuid=10001 --regid=10001", actual["command"])
         import shlex
         self.assertEqual(shlex.split(actual["command"])[-1], "set -o pipefail; " + command)
         self.assertEqual(actual["env"]["HOME"], "/home/iorecagent")
+        self.assertEqual(actual["env"]["ANTHROPIC_BASE_URL"], "https://gateway.example.com/anthropic")
         self.assertEqual(actual["timeout_sec"], 42)
         with mock.patch.dict(os.environ, {"CLAUDE_CODE_USE_BEDROCK": "1"}, clear=True):
             with self.assertRaisesRegex(ValueError, "direct_anthropic"):

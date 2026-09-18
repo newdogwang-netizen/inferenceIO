@@ -38,6 +38,16 @@ The work directory and output file must be new. Keep work paths short enough
 for recorder Unix sockets. The following run deliberately stops and restores
 the **qualification instance's** API and workers and restarts its collectors.
 
+Before reusing an isolated calibration instance, require zero online collectors,
+active/dead jobs, open recordings and parse lag. A stopped collector can remain
+`online` until the 90-second stale window and the next status sweep. The current
+frozen harness compares the online-collector count with its initial baseline;
+starting another run before previous collectors age out can therefore fail the
+final delta gate even after all uploads/processors have drained. Prefer a fresh
+instance or wait for the exact baseline to settle. Never bypass the count gate
+or reclassify the timed-out report as passing. Do not alter a harness bound to
+an ongoing five-hour qualification.
+
 ```bash
 python3 tools/qualification_platform.py soak \
   --state /var/tmp/iorec-qualification-candidate \

@@ -151,3 +151,15 @@ M3 尚未完成。已完成独立 token 认证实例上的 20-collector、120 �
 - 兼容候选的独立五小时测试已启动；旧候选的运行和证据保留，不冒用为新二进制验收。校准删除传播测试仅删除一条新合成录制 `run-01a0b5f6-ac58-748f-af5f-eb9870ce51b8`，不可恢复；历史真实录制未改动。
 
 机器记录：[原生 Harbor 安装与兼容性验证](../benchmarks/2026-09-18-native-harbor-install-linux-x86_64.json)。M3 仍未完成。
+
+## 实施记录：2026-09-18 Hermes 固定运行环境与兼容候选校准
+
+- 核对 Hermes 实际加载的是安装包 0.19.0，而相邻源码目录为 0.16.0。新增已安装运行环境打包与验证工具，固定 Python 3.11.15、204 个 distribution 和 34,812 个文件，不复制个人 Hermes home、配置、会话或凭据。原虚拟环境和源码未修改。
+- 包含有界 GNU 长文件名支持、逐文件摘要、源变化检测、路径/链接/特殊文件限制和输出不覆盖保护；106 字节依赖文件名引起的初次 USTAR 失败已保留在记录中，没有通过删依赖来规避。
+- 新 Harbor Hermes profile 在容器解包前核对上传文件摘要，以 root-owned 运行环境和 UID 10001 执行 agent；精确本地 session export 不生成第二条录制。显式固定 OpenAI 协议 endpoint，缺少原生 key 时拒绝自动回退 OpenRouter。
+- 禁网、无 provider 凭据的 Debian 12 版本检查通过；真实 Harbor `--install-only` 通过并报告 Hermes 0.19.0，无 agent execution 或 verifier 结果。最终预检同一目录连续两次通过，无 launch intent；97 项 Python 测试通过，无跳过。这些不算真实模型实验。
+- 兼容候选 `b54b88d6…e9c05da7` 的第七次短时校准通过：20 collectors、180 秒、1,200 次成功调用、600 次 WebSocket 调用、321 个分段、22,719 条事件；十路 WebSocket 均覆盖跨分段连接，共 47 条。全部完整性、上传、平台序列、调用投影、API/collector/worker 恢复和最终排空检查通过。
+- 第六次校准的 processing-drain 超时仍记失败。旧 collector 心跳与新启动时间重叠，可能污染 online delta 基线；失败报告未保留精确 overview，不能追补为确定诊断。第七次确认 online/pending 基线为零后，用相同负载参数和未修改的验收脚本通过。已补充复用校准实例前的检查要求。
+- 删除传播检查仅不可恢复地删除本轮新合成录制 `run-01a0b60a-e8bf-70bb-9d3e-d3f305f8acbb`，历史真实录制未动。两组五小时进程仍运行，绑定的 recorder、镜像和脚本未改变；不能把短时通过记为五小时通过。
+
+机器记录：[Hermes 运行环境与兼容候选校准](../benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)。剩余仍是预算/停止策略、全新真实 trial、12 次矩阵、录制开关对照及最终五小时验收。

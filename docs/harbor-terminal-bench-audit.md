@@ -198,8 +198,9 @@ python3 tools/harbor_audit_workflow.py \
 
 The default wrapper is Codex. A native Claude Code profile is also available
 with `--agent claude --claude /path/to/pinned/claude --model anthropic/YOUR_MODEL`;
-it does not use Harbor's floating curl/npm installer. Hermes support is still
-pending. Both profiles use one trial, one concurrent agent, no
+it does not use Harbor's floating curl/npm installer. Hermes is available with
+`--agent hermes --hermes-bundle /private/hermes-runtime.tar.gz --model openai/YOUR_MODEL`;
+see the installed-runtime preparation below. All profiles use one trial, one concurrent agent, no
 automatic retries, a Harbor-enforced agent timeout and bounded verifier/setup
 timeouts. The timeout is **not a hard monetary limit**; provision appropriate
 provider-side spending limits before a fresh paid experiment. The M3 matrix
@@ -213,11 +214,58 @@ Bedrock/Vertex are not covered by the Claude profile. `--agent-budget-usd N`
 passes Claude's own budget flag; it is not a provider-enforced spending cap and
 does not implement the total M3 budget.
 
-The container's `/usr/local/bin/codex` or `/usr/local/bin/claude` is a root-owned
+The container's `/usr/local/bin/codex`, `/usr/local/bin/claude` or `/usr/local/bin/hermes` is a root-owned
 wrapper around the pinned binary in `/opt/iorec-agent/`. Prompt strings are
 never searched or replaced. Only an exact single informational argument such
 as `--version` bypasses recording; regular arguments, stdin and exit status
 are preserved. Claude auto-updates and nonessential traffic are disabled.
+Hermes also bypasses recording for its exact `version` command and Harbor's
+exact local session-export command; exporting after a chat must not create a
+second recorded agent run.
+
+### Pinned Hermes runtime (no personal state)
+
+Do not copy the venv launcher alone: its absolute Python shebang is not portable.
+Do not assume an adjacent source checkout is the code actually loaded by the
+installed CLI. On this host the wheel is 0.19.0 while that checkout is 0.16.0.
+Explicitly select the actual standalone Python 3.11 prefix and installed venv
+`site-packages`. Build into a **new private directory**, outside both sources:
+
+```bash
+mkdir -m 700 /private/hermes-runtime
+python3 examples/hermes_runtime_bundle.py build \
+  --python-prefix /path/to/standalone-cpython-3.11 \
+  --site-packages /path/to/installed-hermes-venv/lib/python3.11/site-packages \
+  --archive /private/hermes-runtime/runtime.tar.gz
+python3 examples/hermes_runtime_bundle.py verify \
+  --archive /private/hermes-runtime/runtime.tar.gz
+```
+
+This freezes the installed wheel, Python and transitive installed dependencies,
+with per-file SHA-256 and distribution versions. It excludes bytecode caches,
+dereferences internal file aliases, rejects editable installations and escaping
+or directory symlinks, and never copies `~/.hermes` configuration or sessions.
+Only regular files, declared directories and bounded GNU longname headers are
+accepted; links, device files, PAX/sparse extensions, undeclared payloads and
+digest changes fail validation. The archive is private and contains executable
+third-party code: hashes detect drift, not a malicious host or package origin.
+
+The workflow binds the archive, fixed launcher and validator. Installation
+checks the uploaded archive hash before extraction into a fresh root-owned
+`/opt/iorec-hermes`; the non-root agent uses isolated Python (`-I -B`) and a
+fresh `/tmp/hermes` home. No floating Hermes installer is run. Version output
+must agree with the bundled distribution. This profile currently accepts
+explicit `openai/...` models with `OPENAI_API_KEY`; it refuses Harbor's implicit
+OpenRouter fallback and pins the configured endpoint even in per-command env.
+The native Hermes config has a 60-turn limit, in addition to Harbor's timeout.
+Neither is a provider-side monetary cap.
+
+Use `--preflight-only` first. An installation-only or version check is **not**
+proof of a real provider call, lifecycle/session capture or benchmark success;
+those remain part of the M3 real-agent matrix. The validated local runtime is
+Hermes 0.19.0, Python 3.11.15, OpenAI SDK 2.24.0 on Linux x86-64 / Debian 12.
+
+### Native recorder compatibility
 
 **Claude additionally requires a recorder that runs natively in the task
 container.** Explicit `ld-linux ... iorec` startup changes Linux `current_exe()`
