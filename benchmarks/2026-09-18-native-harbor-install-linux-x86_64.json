@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-18T19:26:04Z",
+  "subject": "Pinned native Codex/Claude Harbor installation and lifecycle preflight",
+  "installation_checks_passed": true,
+  "real_provider_trial_qualified": false,
+  "m3_complete": false,
+  "scope": "No provider credentials passed; Harbor install-only mode, CLI version checks and one synthetic lifecycle target. Not benchmark correctness or transport-complete real-agent qualification.",
+  "codex": {
+    "version": "0.154.0",
+    "trial": "html-js-filter__cugNqQ9",
+    "job": "iorec-native-codex-install-v3-final",
+    "result_sha256": "3ff496b864704e4992cb944b95a1f0af9aebe1e0d60fd3be7cd8ca8af9b3f9d8",
+    "exception": null,
+    "recorder_sha256": "03e805ee36a1bf20cf7f60d17f94ae02447c35bf98acb2132d804c94d2766da7"
+  },
+  "claude": {
+    "version": "2.1.274",
+    "trial": "html-js-filter__Ea7mc4Y",
+    "job": "iorec-native-claude-install-v4-compatible",
+    "result_sha256": "26024e329c780b7fc013cf6ec82f0b70111da21b1b4e1334036e4470a3d3fbd4",
+    "exception": null,
+    "recorder_sha256": "b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+    "synthetic_hook_capture": "run-01a0b5f8-02f8-73fe-b537-426251cc1e28",
+    "synthetic_hook_events": 16,
+    "session_start_saved": true,
+    "encrypted_integrity_passed": true,
+    "timeline_truncated": false,
+    "installed_package_inventory_sha256": "0713565215b38259956bb74c2cbda1ae99be1736a299cf47ede67101ca4bbbab",
+    "installed_tool_digest_inventory_sha256": "f153ae79a118943352257544b255a438594ee2e2c5d0330f49b51584e67c18a5"
+  },
+  "compatibility_finding": {
+    "explicit_loader_changes_current_exe_and_breaks_claude_hook": true,
+    "host_loader_probe_run": "run-01a0b5f1-277a-71d6-a868-3b1529a410c5",
+    "host_loader_probe_exit": 65,
+    "host_direct_probe_run": "run-01a0b5f1-27d1-74c9-9475-8eb9661fd2fd",
+    "host_direct_probe_exit": 0,
+    "old_binary_debian12_native_guard_correctly_failed": true,
+    "required_glibc_versions_missing_from_old_container": ["2.38", "2.39"],
+    "earlier_failures_preserved": [
+      "First Codex install inventory assumed an incorrect tcpdump path; resolved using command -v",
+      "First native-compatible hook probe used /usr/bin/python3 while task Python lives elsewhere; changed to env python3"
+    ]
+  },
+  "compatible_build": {
+    "path_on_host": "/var/tmp/iorec-m3-bookworm-20260918/iorec-bookworm",
+    "sha256": "b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+    "rust_sources_changed": false,
+    "rust_source_baseline": "9261b30",
+    "rustc_version": "1.97.1 (8bab26f4f 2026-07-14)",
+    "rustc_sha256": "d3a664c970a9fd8361b64194861bebc1ae37b9054e5ee3400dc1c9e691797eea",
+    "cargo_sha256": "828980723df339d62434390e9fb8ef8831036583343ae2316b7ab5646b5c1953",
+    "cargo_lock_sha256": "163f8e38bf184ff0360d769f3aafb04f5f6a09d0347a822ae5c4bddd030e79fb",
+    "build_image": "sha256:e401dae1bf814e29204a8cb7915682e1780951e609ca0dd8865ee1937f510c48",
+    "command": "cargo build --release --locked --offline",
+    "build_network": "none",
+    "highest_linked_glibc_version": "2.34",
+    "five_hour_qualified": false
+  },
+  "calibration_5": {
+    "path_on_host": "/var/tmp/iorec-m3-ws-cal-20260918/calibration-5-bookworm.json",
+    "sha256": "ef81c5e2eb988279c402fcb240455fd3c35e01a56f93b67dbf46ee6839652577",
+    "passed": false,
+    "client_requests": 1200,
+    "client_errors": 0,
+    "websocket_calls_reconciled": 600,
+    "websocket_projection_passed": true,
+    "local_integrity_spool_server_sequence_and_drain_passed": true,
+    "reason_not_passed": "2 of 10 WebSocket collectors did not exercise a connection crossing a segment; coverage gate retained",
+    "deleted_scoped_synthetic_run": "run-01a0b5f6-ac58-748f-af5f-eb9870ce51b8",
+    "deletion_irreversible": true,
+    "historical_real_recordings_untouched": true
+  },
+  "validation": {
+    "python_tests_with_compatible_binary_real_export_fixture": 78,
+    "test_failures": 0,
+    "tests_skipped": 0,
+    "generated_wrappers_executed_under_real_bash": true,
+    "exact_argv_stdin_and_exit_status_preserved": true,
+    "prompt_text_never_rewritten": true,
+    "claude_endpoint_flags_budget_and_uid_confinement_tested": true,
+    "claude_preflight_only_report_sha256": "6ffe2c9d6a60b7d208bca59b227828698072b1d3431c71ec819c5f1b41102c49"
+  },
+  "source_files": {
+    "examples/harbor_audit_inputs.py": "743ce4dcba8621b7f7283b98fa49148906d7ea1a72581a21cfb6491cdc5b935a",
+    "examples/harbor_iorec_audit_base.py": "99bfffd24a1d9964af9fbe7e8392bdcaf39cea3d14cb1dac5b66f0ddfd57c1ed",
+    "examples/harbor_iorec_codex_audit.py": "885bae808fe554866f3074903ca971d3d8f5b583da4c9e7a13820b3d0706d7d1",
+    "examples/harbor_iorec_claude_audit.py": "a45daad64ba133c75740d353ef0e11abe3d61b982d1b22683c666d588a96af90",
+    "examples/harbor-audit-claude-hook-probe": "24b08eef63a5b1e426b799afea899be32cff995302dccf3c23b94b777e2b88a3",
+    "tools/harbor_audit_workflow.py": "27576e62223e237e69b7a1c3daa4c1d7c7d052b36a70084938ba1003345e7b9e",
+    "tools/harbor_input_provenance.py": "6ee9bdb3f0719f18d4fee0c9c186d1dddd3d107b807046c48bc0a669c628b4d7"
+  },
+  "pending": [
+    "Hermes pinned runtime and Harbor audit profile",
+    "Fresh paid trial, approved budget, 12 real-provider matrix and paired recorder-on/off run",
+    "Additional cross-segment calibration and five-hour qualification on the compatible binary; these are running, not passed"
+  ]
+}

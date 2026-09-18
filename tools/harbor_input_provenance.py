@@ -121,7 +121,7 @@ print(json.dumps({'version': d.version, 'package': str(p)}))
             "scope": "launcher_interpreter_harbor_package_not_transitive_python_or_OS_dependencies"}
 
 
-def fresh_identity(args, launcher: Path | None = None):
+def audit_definitions():
     # Load exactly this checkout's stdlib-only upload definition. No inherited
     # Python module search path is used to resolve it.
     import importlib.util
@@ -129,12 +129,24 @@ def fresh_identity(args, launcher: Path | None = None):
     spec = importlib.util.spec_from_file_location("iorec_audit_inputs", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    uploads = module.codex_uploads(codex=args.codex, iorec=args.iorec, key=args.key_file)
+    return module
+
+
+def fresh_identity(args, launcher: Path | None = None):
+    module = audit_definitions()
+    path = ROOT / "examples/harbor_audit_inputs.py"
+    agent = getattr(args, "agent", "codex")
+    upstream = getattr(args, "upstream", "") or module.AGENTS[agent]["upstream"]
+    uploads = module.native_uploads(agent=agent, executable=getattr(args, agent),
+                                    iorec=args.iorec, key=args.key_file)
     return {"task": tree_identity(args.task, ignored_names=(".git",)),
+            "agent": agent, "upstream": module.upstream_url(upstream),
+            "cli_wrapper_sha256": hashlib.sha256(module.cli_wrapper(agent, upstream).encode()).hexdigest(),
             "uploads": {remote: file_identity(local) for local, remote in uploads.items()
                         if remote != "/tmp/iorec.key"},
             "harbor": harbor_runtime(launcher),
             "controller": {str(p.relative_to(ROOT)): file_identity(p) for p in (
                 Path(__file__), ROOT / "tools/harbor_audit_workflow.py", path,
-                ROOT / "examples/harbor_iorec_codex_audit.py",
+                ROOT / "examples/harbor_iorec_audit_base.py",
+                ROOT / ("examples/harbor_iorec_" + agent + "_audit.py"),
                 ROOT / "examples/harbor-audit-compose.yaml")}}

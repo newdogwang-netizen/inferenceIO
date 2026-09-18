@@ -120,7 +120,7 @@ class InputTests(unittest.TestCase):
         self.assertEqual(len(uploads), 13)
         for remote in ("/tmp/iorec-runtime/libc.so.6", "/tmp/iorec-runtime/libselinux.so.1",
                        "/usr/bin/unshare", "/tmp/iorec-runtime/unshare",
-                       "/usr/local/bin/codex-code-mode-host"):
+                       "/opt/iorec-agent/codex-code-mode-host"):
             self.assertIn(remote, uploads)
         self.assertNotIn("/tmp/iorec.key", uploads)
         self.assertNotIn(str(self.args.key_file), json.dumps(identity))

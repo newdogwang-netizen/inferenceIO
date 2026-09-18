@@ -140,3 +140,14 @@ M3 尚未完成。已完成独立 token 认证实例上的 20-collector、120 �
 - 这不是完整供应链锁定：传递 Python 依赖、容器内 apt 工具和 Claude/Hermes 的安装适配仍需处理，12 次真实实验及配对运行尚未完成。
 
 机器记录：[Harbor 输入预检](../benchmarks/2026-09-18-harbor-input-preflight-linux-x86_64.json)。
+
+## 实施记录：2026-09-18 原生 Claude 适配与兼容构建
+
+- 增加 Claude Harbor profile，共用固定 CLI 包装器、非 root 目标和输入锁定；Codex 不再依靠搜索替换命令文本来插入 recorder。包装器保留参数、stdin 和退出码，提示词中的命令字符串不会触发替换。
+- 真实容器内 Codex 0.154.0、Claude 2.1.274 的安装 / 版本检查已通过；全部采用 `--install-only`、清空 provider 凭据，不算真实模型实验。
+- 检查发现显式加载器启动 recorder 会把 `current_exe()` 指向加载器，导致 Claude 生命周期 hook 自执行失败。相同旧二进制在主机上显式加载器启动退出 65、原生启动退出 0。Claude profile 现在要求原生 recorder，并在安装阶段测试 hook，不能通过仅版本检查后冒充适配完成。
+- 未修改 Rust 源码，在固定 Bookworm 镜像内离线重建得到兼容二进制 `b54b88d6…e9c05da7`，最高 glibc 依赖 2.34。该二进制通过真实 Debian 12 Harbor 容器内的 synthetic hook 检查，16 个加密事件中包含 `hook:claude / SessionStart`，integrity 通过。78 项 Python 测试在新二进制真实导出夹具下通过，无跳过。
+- 新二进制 120 秒校准的 1,200 次调用全部成功，600 次 WebSocket 调用对账、完整性、上传及最终排空均通过，但两路未覆盖跨分段连接，**整体仍记录为失败**。保留报告；追加校准延长连接持有时间、缩短分段周期，保留相同调用数量和所有验收条件。
+- 兼容候选的独立五小时测试已启动；旧候选的运行和证据保留，不冒用为新二进制验收。校准删除传播测试仅删除一条新合成录制 `run-01a0b5f6-ac58-748f-af5f-eb9870ce51b8`，不可恢复；历史真实录制未改动。
+
+机器记录：[原生 Harbor 安装与兼容性验证](../benchmarks/2026-09-18-native-harbor-install-linux-x86_64.json)。M3 仍未完成。

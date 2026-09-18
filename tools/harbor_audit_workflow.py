@@ -28,7 +28,7 @@ import sys
 import time
 from urllib.parse import quote, urlsplit
 
-from harbor_input_provenance import InputFailure, fresh_identity, harbor_environment
+from harbor_input_provenance import InputFailure, audit_definitions, fresh_identity, harbor_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 IDENTIFIER = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:/@+~-]{0,255}\Z")
@@ -184,14 +184,18 @@ def benchmark_from_trial(trial: Path):
 
 
 def harbor_config(args, work):
+    agent = getattr(args, "agent", "codex")
+    kwargs = {"reasoning_effort": "high", "web_search": "disabled"} if agent == "codex" else {"max_turns": 60}
+    if agent == "claude" and getattr(args, "agent_budget_usd", None) is not None:
+        kwargs["max_budget_usd"] = str(args.agent_budget_usd)
     return {"job_name": "audit", "jobs_dir": str(work / "jobs"), "n_attempts": 1,
             "n_concurrent_trials": 1, "retry": {"max_retries": 0},
             "tasks": [{"path": str(args.task)}],
             "environment": {"type": "docker", "delete": True, "extra_docker_compose": [str(ROOT / "examples/harbor-audit-compose.yaml")]},
-            "agents": [{"import_path": "harbor_iorec_codex_audit:IorecCodexAudit", "model_name": args.model,
+            "agents": [{"import_path": audit_definitions().AGENTS[agent]["profile"], "model_name": args.model,
                         "override_timeout_sec": args.agent_timeout, "max_timeout_sec": args.agent_timeout,
                         "override_setup_timeout_sec": 600,
-                        "kwargs": {"reasoning_effort": "high", "web_search": "disabled"}}],
+                        "kwargs": kwargs}],
             "verifier": {"override_timeout_sec": 300, "max_timeout_sec": 300}}
 
 
@@ -266,6 +270,7 @@ class Workflow:
                   "iorec_sha256": digest(self.a.iorec), "key_fingerprint": hashlib.sha256(raw_key).hexdigest(),
                   "mode": "existing_trial" if self.a.from_trial else "fresh_trial"}
         if self.a.task:
+            config.update(agent=self.a.agent, upstream=self.a.upstream, agent_budget_usd=self.a.agent_budget_usd)
             # Match the profile's actual upload set, not a parallel hand-written
             # subset. A dependency change cannot silently reuse a paid trial.
             config["fresh_inputs"] = fresh_identity(self.a)
@@ -322,7 +327,8 @@ class Workflow:
                 atomic_json(config_path, harbor_config(self.a, self.work.path))
                 env = harbor_environment()
                 env.update(IOREC_HARBOR_BIN=str(self.a.iorec), IOREC_HARBOR_KEY_FILE=str(self.a.key_file),
-                           IOREC_HARBOR_CODEX_BIN=str(self.a.codex))
+                           IOREC_HARBOR_UPSTREAM=self.a.upstream)
+                env["IOREC_HARBOR_" + self.a.agent.upper() + "_BIN"] = str(getattr(self.a, self.a.agent))
                 self.state["launch_intent"] = {"at": now(), "agent_timeout_seconds": self.a.agent_timeout,
                                                "automatic_retries": 0}
                 self.save()
@@ -462,11 +468,15 @@ def parser():
     source.add_argument("--task", type=Path)
     source.add_argument("--from-trial", type=Path)
     p.add_argument("--model", default="")
+    p.add_argument("--agent", choices=("codex", "claude"), default="codex")
+    p.add_argument("--upstream", default="", help="explicit non-loopback HTTPS provider endpoint; defaults to the agent's native provider")
+    p.add_argument("--agent-budget-usd", type=float, help="Claude's native per-run budget flag; not a cross-agent or provider-side hard cap")
     p.add_argument("--preflight-only", action="store_true",
                    help="check and pin fresh-trial inputs and platform health; never launch an agent")
     p.add_argument("--key-file", type=Path, required=True)
     p.add_argument("--iorec", type=Path, default=ROOT / "target/release/iorec")
     p.add_argument("--codex", type=Path, default=Path(shutil.which("codex") or "/missing/codex"))
+    p.add_argument("--claude", type=Path, default=Path(shutil.which("claude") or "/missing/claude"))
     p.add_argument("--api", default="http://127.0.0.1:18080")
     p.add_argument("--web", default="http://127.0.0.1:8088")
     p.add_argument("--token-file", type=Path)
@@ -480,15 +490,25 @@ def main():
     args = parser().parse_args()
     try:
         args.api, args.web = local_url(args.api), local_url(args.web)
-        for key in ("task", "from_trial", "iorec", "codex", "key_file", "token_file"):
+        for key in ("task", "from_trial", "iorec", "codex", "claude", "key_file", "token_file"):
             if getattr(args, key):
                 setattr(args, key, getattr(args, key).absolute())
         # Preserve strict ownership checks on the key, but resolve CLI symlinks
         # so the adjacent code-mode-host is the actual installed helper.
         args.codex = args.codex.resolve()
+        args.claude = args.claude.resolve()
+        definitions = audit_definitions()
+        try:
+            args.upstream = definitions.upstream_url(args.upstream or definitions.AGENTS[args.agent]["upstream"])
+        except ValueError:
+            raise Failure("fresh_trial_requires_non_loopback_https_upstream") from None
+        if args.agent_budget_usd is not None and (args.agent != "claude" or not math.isfinite(args.agent_budget_usd) or args.agent_budget_usd <= 0):
+            raise Failure("positive_claude_only_agent_budget_required")
         if not 1 <= args.agent_timeout <= 3600 or not 1 <= args.wait_seconds <= 86400:
             raise Failure("invalid_timeout")
-        if args.task and (not IDENTIFIER.fullmatch(args.model) or not args.model.startswith("openai/") or not (args.task / "task.toml").is_file()):
+        provider = definitions.AGENTS[args.agent]["provider"]
+        if args.task and (not IDENTIFIER.fullmatch(args.model) or not args.model.startswith(provider + "/")
+                          or not args.model[len(provider) + 1:] or not (args.task / "task.toml").is_file()):
             raise Failure("fresh_trial_requires_model_and_harbor_task")
         if args.preflight_only and not args.task:
             raise Failure("preflight_only_requires_fresh_task")

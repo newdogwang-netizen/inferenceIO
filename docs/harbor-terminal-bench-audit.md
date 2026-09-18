@@ -196,12 +196,50 @@ python3 tools/harbor_audit_workflow.py \
   --key-file /private/iorec/master.key
 ```
 
-The current wrapper is Codex-specific; this command does not claim equivalent
-Harbor wrappers for Claude/Hermes. It uses one trial, one concurrent agent, no
+The default wrapper is Codex. A native Claude Code profile is also available
+with `--agent claude --claude /path/to/pinned/claude --model anthropic/YOUR_MODEL`;
+it does not use Harbor's floating curl/npm installer. Hermes support is still
+pending. Both profiles use one trial, one concurrent agent, no
 automatic retries, a Harbor-enforced agent timeout and bounded verifier/setup
 timeouts. The timeout is **not a hard monetary limit**; provision appropriate
 provider-side spending limits before a fresh paid experiment. The M3 matrix
 must separately record and enforce its chosen budget/stop policy.
+
+`--upstream https://YOUR_HOST/provider-prefix` explicitly selects the matching
+provider-protocol endpoint and pins it with the trial inputs. Credentials in
+URLs, query strings, non-HTTPS and literal non-global IP endpoints are rejected;
+the recorder also checks resolved addresses when creating the task namespace.
+Bedrock/Vertex are not covered by the Claude profile. `--agent-budget-usd N`
+passes Claude's own budget flag; it is not a provider-enforced spending cap and
+does not implement the total M3 budget.
+
+The container's `/usr/local/bin/codex` or `/usr/local/bin/claude` is a root-owned
+wrapper around the pinned binary in `/opt/iorec-agent/`. Prompt strings are
+never searched or replaced. Only an exact single informational argument such
+as `--version` bypasses recording; regular arguments, stdin and exit status
+are preserved. Claude auto-updates and nonessential traffic are disabled.
+
+**Claude additionally requires a recorder that runs natively in the task
+container.** Explicit `ld-linux ... iorec` startup changes Linux `current_exe()`
+to the loader and breaks the lifecycle hook's self-exec command. The profile
+therefore starts iorec directly and checks a synthetic `SessionStart` hook in
+installation, before any model call. The host-built candidate requiring glibc
+2.38/2.39 is correctly rejected by Debian 12; select a recorder built against
+the task container's compatible baseline and qualify that exact binary. A CLI
+version smoke alone is not sufficient. The probe uses no real agent/model,
+keeps its small encrypted recording under `agent/iorec-preflight`, and is not
+counted as a matrix trial.
+
+For the local Debian 12 compatibility check, the same recorder Rust sources
+were rebuilt offline with Rust 1.97.1 inside the pinned Bookworm build image
+`golang:1.25.13-bookworm@sha256:e401dae1bf814e29204a8cb7915682e1780951e609ca0dd8865ee1937f510c48`.
+The host Rust toolchain was mounted read-only, Cargo used the existing dependency
+cache with `--release --locked --offline`, and a separate external target directory
+kept the running candidate untouched. The resulting SHA-256 is
+`b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7`;
+its highest linked glibc requirement is 2.34. This is a distinct build artifact,
+not a patched copy of the old binary, and requires its own mixed-load/steady-state
+qualification. Do not reuse the old binary's five-hour report for it.
 
 Before authorizing a paid run, append `--preflight-only` to that fresh-trial
 command. It checks platform health, pins the task and upload inputs, and asks
