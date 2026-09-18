@@ -16,6 +16,9 @@ annotations, worker liveness, and a resumable controlled audit command; see its
 fresh-trial gate and the M3 real-agent matrix/final-candidate five-hour soak are
 not yet qualified. Historical release and soak reports qualify their own exact
 artifacts, not every newer worktree.
+The [M3 experiment declaration](docs/m3-experiment-plan.md) pins an explicit
+Terminal-Bench 2 snapshot, two task packages and immutable image references;
+its 12 real trials plus two on/off runs remain unapproved and unexecuted.
 
 For the **local development** platform (unauthenticated, loopback-only, with
 development database durability settings):

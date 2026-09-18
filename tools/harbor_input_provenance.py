@@ -15,6 +15,7 @@ import re
 import shutil
 import stat
 import subprocess
+import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 MAX_FILE_BYTES = 1 << 30
@@ -24,6 +25,58 @@ MAX_TREE_FILES = 100000
 
 class InputFailure(Exception):
     """Fixed error codes only; never propagate a subprocess's raw output."""
+
+
+def pinned_image_reference(value):
+    if not isinstance(value, str) or not re.fullmatch(r"[a-z0-9][a-z0-9._:/-]{0,200}@sha256:[0-9a-f]{64}", value):
+        raise InputFailure("task_image_requires_immutable_repository_digest")
+    return value
+
+
+def image_compose(reference):
+    return {"services": {"main": {"image": pinned_image_reference(reference), "pull_policy": "never"}}}
+
+
+def docker_image_identity(reference):
+    if not isinstance(reference, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/@-]{0,300}", reference):
+        raise InputFailure("invalid_task_image_reference")
+    # Do not expose Config.Env or other potentially sensitive image metadata.
+    fmt = '{"id":{{json .Id}},"digests":{{json .RepoDigests}},"os":{{json .Os}},"architecture":{{json .Architecture}}}'
+    result = subprocess.run(["docker", "image", "inspect", reference, "--format", fmt],
+                            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                            stderr=subprocess.DEVNULL, timeout=30, check=False)
+    if result.returncode or len(result.stdout) > 32768:
+        raise InputFailure("task_image_not_available_locally")
+    info = json.loads(result.stdout)
+    if (not re.fullmatch(r"sha256:[0-9a-f]{64}", info.get("id", ""))
+            or info.get("os") != "linux" or info.get("architecture") != "amd64"):
+        raise InputFailure("task_image_requires_linux_amd64")
+    return info
+
+
+def task_image_input(task: Path, reference: str):
+    reference = pinned_image_reference(reference)
+    with (task / "task.toml").open("rb") as src:
+        raw = src.read((1 << 20) + 1)
+    if len(raw) > 1 << 20:
+        raise InputFailure("task_config_too_large")
+    config = tomllib.loads(raw.decode())
+    # A shared overlay would also override a separate verifier's main service.
+    # Do not silently replace its independently specified image.
+    if config.get("verifier", {}).get("environment_mode", "same") not in ("same", "shared"):
+        raise InputFailure("task_image_override_requires_shared_verifier")
+    if any((task / "environment" / name).exists() for name in (
+            "docker-compose.yaml", "docker-compose.yml", "compose.yaml", "compose.yml")):
+        raise InputFailure("task_image_override_requires_single_service_task")
+    declared = config.get("environment", {}).get("docker_image")
+    actual = docker_image_identity(reference)
+    if reference not in (actual.get("digests") or []):
+        raise InputFailure("task_image_repository_digest_not_present")
+    if docker_image_identity(declared)["id"] != actual["id"]:
+        raise InputFailure("task_image_override_differs_from_published_image")
+    return {"declared_reference": declared, "pinned_reference": reference,
+            "image_id": actual["id"], "os": actual["os"], "architecture": actual["architecture"],
+            "scope": "single_main_service_shared_verifier_no_task_file_changes"}
 
 
 def file_identity(path: Path):
@@ -162,4 +215,6 @@ def fresh_identity(args, launcher: Path | None = None):
         if result["hermes_runtime"]["archive_sha256"] != result["uploads"]["/tmp/iorec-hermes-runtime.tar.gz"]["sha256"]:
             raise InputFailure("hermes_bundle_changed_during_preflight")
         result["controller"][str(verifier_path.relative_to(ROOT))] = file_identity(verifier_path)
+    if getattr(args, "task_image", None):
+        result["task_image_override"] = task_image_input(args.task, args.task_image)
     return result

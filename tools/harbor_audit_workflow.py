@@ -28,7 +28,7 @@ import sys
 import time
 from urllib.parse import quote, urlsplit
 
-from harbor_input_provenance import InputFailure, audit_definitions, fresh_identity, harbor_environment
+from harbor_input_provenance import InputFailure, audit_definitions, fresh_identity, harbor_environment, image_compose, file_identity
 
 ROOT = Path(__file__).resolve().parents[1]
 IDENTIFIER = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:/@+~-]{0,255}\Z")
@@ -188,15 +188,19 @@ def harbor_config(args, work):
     kwargs = {"reasoning_effort": "high", "web_search": "disabled"} if agent == "codex" else ({"max_turns": 60} if agent == "claude" else {})
     if agent == "claude" and getattr(args, "agent_budget_usd", None) is not None:
         kwargs["max_budget_usd"] = str(args.agent_budget_usd)
+    overlays = [str(ROOT / "examples/harbor-audit-compose.yaml")]
+    if getattr(args, "task_image", None):
+        overlays.append(str(work / "task-image.compose.json"))
     return {"job_name": "audit", "jobs_dir": str(work / "jobs"), "n_attempts": 1,
             "n_concurrent_trials": 1, "retry": {"max_retries": 0},
             "tasks": [{"path": str(args.task)}],
-            "environment": {"type": "docker", "delete": True, "extra_docker_compose": [str(ROOT / "examples/harbor-audit-compose.yaml")]},
+            "environment": {"type": "docker", "delete": True, "extra_docker_compose": overlays},
             "agents": [{"import_path": audit_definitions().AGENTS[agent]["profile"], "model_name": args.model,
                         "override_timeout_sec": args.agent_timeout, "max_timeout_sec": args.agent_timeout,
                         "override_setup_timeout_sec": 600,
                         "kwargs": kwargs}],
-            "verifier": {"override_timeout_sec": 300, "max_timeout_sec": 300}}
+            "verifier": {"override_timeout_sec": getattr(args, "verifier_timeout", 300),
+                         "max_timeout_sec": getattr(args, "verifier_timeout", 300)}}
 
 
 class Workflow:
@@ -267,6 +271,7 @@ class Workflow:
             raise Failure("invalid_recorder_key")
         config = {"source": str(self.a.from_trial or self.a.task), "model": self.a.model,
                   "api": self.a.api, "web": self.a.web, "agent_timeout": self.a.agent_timeout,
+                  "verifier_timeout": getattr(self.a, "verifier_timeout", 300),
                   "iorec_sha256": digest(self.a.iorec), "key_fingerprint": hashlib.sha256(raw_key).hexdigest(),
                   "mode": "existing_trial" if self.a.from_trial else "fresh_trial"}
         if self.a.task:
@@ -274,6 +279,10 @@ class Workflow:
             # Match the profile's actual upload set, not a parallel hand-written
             # subset. A dependency change cannot silently reuse a paid trial.
             config["fresh_inputs"] = fresh_identity(self.a)
+            if getattr(self.a, "task_image", None):
+                overlay = self.work.path / "task-image.compose.json"
+                atomic_json(overlay, image_compose(self.a.task_image))
+                config["task_image_compose"] = file_identity(overlay)
             config["fresh_inputs_sha256"] = hashlib.sha256(
                 json.dumps(config["fresh_inputs"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
             self.command(["docker", "info", "--format", "{{.ServerVersion}}"], timeout=30)
@@ -307,6 +316,11 @@ class Workflow:
         current = fresh_identity(self.a, Path(expected["harbor"]["launcher"]["path"]))
         if current != expected or digest(self.a.key_file) != self.state["config"]["key_fingerprint"]:
             raise Failure("fresh_trial_inputs_changed_no_launch_or_qualification")
+        if "task_image_compose" in self.state["config"]:
+            overlay = self.work.path / "task-image.compose.json"
+            private_path(overlay)
+            if file_identity(overlay) != self.state["config"]["task_image_compose"]:
+                raise Failure("task_image_overlay_changed_no_launch_or_qualification")
 
     def record(self):
         if self.a.from_trial:
@@ -481,10 +495,12 @@ def parser():
     p.add_argument("--codex", type=Path, default=Path(shutil.which("codex") or "/missing/codex"))
     p.add_argument("--claude", type=Path, default=Path(shutil.which("claude") or "/missing/claude"))
     p.add_argument("--hermes-bundle", type=Path, help="verified installed Hermes/Python archive; required for fresh Hermes trials")
+    p.add_argument("--task-image", help="locally available repository@sha256 digest matching the task image; single-service/shared-verifier tasks only")
     p.add_argument("--api", default="http://127.0.0.1:18080")
     p.add_argument("--web", default="http://127.0.0.1:8088")
     p.add_argument("--token-file", type=Path)
     p.add_argument("--agent-timeout", type=int, default=900)
+    p.add_argument("--verifier-timeout", type=int, default=300, help="explicit verifier limit; use the pinned task's value for benchmark-comparable runs")
     p.add_argument("--wait-seconds", type=int, default=3600, help="observation deadline; never automatically reruns an agent")
     return p
 
@@ -508,7 +524,7 @@ def main():
             raise Failure("fresh_trial_requires_non_loopback_https_upstream") from None
         if args.agent_budget_usd is not None and (args.agent != "claude" or not math.isfinite(args.agent_budget_usd) or args.agent_budget_usd <= 0):
             raise Failure("positive_claude_only_agent_budget_required")
-        if not 1 <= args.agent_timeout <= 3600 or not 1 <= args.wait_seconds <= 86400:
+        if not 1 <= args.agent_timeout <= 3600 or not 1 <= args.verifier_timeout <= 3600 or not 1 <= args.wait_seconds <= 86400:
             raise Failure("invalid_timeout")
         provider = definitions.AGENTS[args.agent]["provider"]
         if args.task and (not IDENTIFIER.fullmatch(args.model) or not args.model.startswith(provider + "/")
@@ -516,6 +532,8 @@ def main():
             raise Failure("fresh_trial_requires_model_and_harbor_task")
         if args.preflight_only and not args.task:
             raise Failure("preflight_only_requires_fresh_task")
+        if args.task_image and not args.task:
+            raise Failure("task_image_override_requires_fresh_task")
         if args.task and args.agent == "hermes" and not args.hermes_bundle:
             raise Failure("fresh_hermes_trial_requires_pinned_runtime_bundle")
         with Workspace(args.work_dir) as work:

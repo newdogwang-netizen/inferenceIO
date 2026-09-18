@@ -205,6 +205,16 @@ automatic retries, a Harbor-enforced agent timeout and bounded verifier/setup
 timeouts. The timeout is **not a hard monetary limit**; provision appropriate
 provider-side spending limits before a fresh paid experiment. The M3 matrix
 must separately record and enforce its chosen budget/stop policy.
+The [M3 declaration and dataset-version checks](m3-experiment-plan.md) retain
+12 real trials plus two additional recorder-off/on runs. The current declaration
+is intentionally unapproved; its checker does not launch paid experiments.
+
+`--task-image repository@sha256:...` pins a mutable task image through the last
+Compose overlay with `pull_policy: never`, without editing the published task.
+It requires the digest and the task's original image reference to resolve to
+the same local Linux amd64 image and rejects separate-verifier/multi-service
+tasks. `--verifier-timeout N` explicitly binds the verifier limit (default 300);
+the selected TB2 tasks use 900 seconds for both agent and verifier.
 
 `--upstream https://YOUR_HOST/provider-prefix` explicitly selects the matching
 provider-protocol endpoint and pins it with the trial inputs. Credentials in

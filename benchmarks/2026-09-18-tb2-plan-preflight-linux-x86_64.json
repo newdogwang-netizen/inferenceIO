@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-18T20:08:06Z",
+  "subject": "Terminal-Bench 2 identity, immutable task images and unpaid M3 declaration checks",
+  "source_baseline": "dddc364",
+  "preparation_checks_passed": true,
+  "real_provider_trials_run": 0,
+  "m3_complete": false,
+  "scope": "Anonymous registry reads, package hashes, local image resolution, no-provider preflight/install-only trials and regression fixtures. Not paid-trial or benchmark qualification.",
+  "dataset_identity": {
+    "registry_read_anonymous": true,
+    "download_telemetry_disabled": true,
+    "checked_on": "2026-09-18",
+    "dataset": "terminal-bench/terminal-bench-2",
+    "content_sha256": "c6fc2e2382c1dbae99b2d5ecd2f4f4a60c3c01e0d84642d69b4afd92e99d078b",
+    "task_count": 89,
+    "registry_page": "https://hub.harborframework.com/datasets/terminal-bench/terminal-bench-2",
+    "historical_correction": {
+      "html_js_filter_and_session_window_debug_in_this_tb2_snapshot": false,
+      "actual_dataset": "terminal-bench/terminal-bench",
+      "actual_dataset_content_sha256": "39d9f44b40420cde8fdcc087579c0d72a7e14fa3656d603c3f0d22fb35e27732",
+      "actual_dataset_task_count": 66,
+      "historical_recordings_or_rewards_rewritten": false
+    }
+  },
+  "tasks": [
+    {
+      "name": "terminal-bench/cancel-async-tasks",
+      "path_on_host": "/var/tmp/iorec-m3-tb2-tasks-20260918/cancel-async-tasks",
+      "package_sha256": "7c230a29f27c49c2fff88f4721165f4241e456bd87a94cd525be05ae98c6cbbb",
+      "package_files": 8,
+      "source_tree_sha256": "1fc91c717b97999da35db43cb7f8237ffda49278a4b7cab107c582c13616a6d4",
+      "published_image": "alexgshaw/cancel-async-tasks:20251031",
+      "pinned_image": "alexgshaw/cancel-async-tasks@sha256:84c7fae6b256dcc56a350790e2a9715eefc7dad662a9d8e8a472363aa71ef18d",
+      "local_image_id": "sha256:84c7fae6b256dcc56a350790e2a9715eefc7dad662a9d8e8a472363aa71ef18d",
+      "image_smoke_network": "none",
+      "image_glibc": "2.36",
+      "image_python": "3.13.7",
+      "workflow_preflight_report_sha256": "7490da50202a0b0644c1b4ae84fda638e95d5da689ad46617ab38ece7754b5fe",
+      "install_agent": "claude-code",
+      "install_agent_version": "2.1.274",
+      "install_trial": "cancel-async-tasks__2AXXBLf",
+      "install_job": "iorec-tb2-async-claude-install-v1",
+      "install_result_sha256": "c4e47eaa6a458f74c8fb82af0f96e27ea73e0cc13f879de96c623c7788bf72a5",
+      "install_exception": null,
+      "agent_execution": null,
+      "synthetic_hook_capture": "run-01a0b61e-f293-7219-964d-b1d64b2a3aeb",
+      "synthetic_hook_integrity_passed": true
+    },
+    {
+      "name": "terminal-bench/multi-source-data-merger",
+      "path_on_host": "/var/tmp/iorec-m3-tb2-tasks-20260918/multi-source-data-merger",
+      "package_sha256": "3f7ecbb6adc066596d40bb6b98e64e0e1f25eac542dcf5d47fa8bde65df92c5e",
+      "package_files": 10,
+      "source_tree_sha256": "889ae9653b491a92f1c7986e5bf9f76724fa36256f8d6bbcec6b0aed26f6c785",
+      "published_image": "alexgshaw/multi-source-data-merger:20251031",
+      "pinned_image": "alexgshaw/multi-source-data-merger@sha256:8b32782078ff7383a1b4e5d3cecca8ce287e30f50bb4c0e5db009a18064e666e",
+      "local_image_id": "sha256:8b32782078ff7383a1b4e5d3cecca8ce287e30f50bb4c0e5db009a18064e666e",
+      "image_smoke_network": "none",
+      "image_glibc": "2.41",
+      "image_python": "3.11.14",
+      "workflow_preflight_report_sha256": "2a00effa2257c300b12a6e205fe59e8dc1dd6aedf403dcc3744f7f10d774ea76",
+      "install_agent": "hermes",
+      "install_agent_version": "0.19.0",
+      "install_trial": "multi-source-data-merger__T8cWGi8",
+      "install_job": "iorec-tb2-data-hermes-install-v1",
+      "install_result_sha256": "56cc20fadf2dd92fc187514ccbdc96227762d47e83e96f0d8a8332a650d3ac61",
+      "install_exception": null,
+      "agent_execution": null
+    }
+  ],
+  "additional_codex_compatible_install": {
+    "job": "iorec-native-codex-install-v4-portable",
+    "trial": "f211960f1f7c66ace91c3d079db073ed__c5zNrBy",
+    "agent_version": "0.154.0",
+    "install_only": true,
+    "exception": null,
+    "agent_execution": null,
+    "result_sha256": "22ada426dce924ceccdf2ca6db1a2f578c3ee991fbc7fceea13342c77c46ac5b"
+  },
+  "plan": {
+    "path": "examples/m3-experiment-plan.json",
+    "sha256": "85138d47b00bc5d654bba1080ee573360af92d1b51829adce64e19e2061807bc",
+    "matrix_trials": 12,
+    "additional_paired_trials": 2,
+    "declaration_complete": false,
+    "local_runtime_task_tree_and_image_checks_passed": true,
+    "require_approved_exit_code": 2,
+    "missing": ["model:codex", "model:claude", "model:hermes", "budget:total_usd", "budget:per_trial_usd", "budget:approval_reference", "budget:provider_cap_evidence_sha256"],
+    "paid_launcher_available": false,
+    "provider_billing_cap_verified": false
+  },
+  "validation": {
+    "python_tests_with_real_encrypted_export_fixture": 110,
+    "test_failures": 0,
+    "tests_skipped": 0,
+    "downloaded_task_package_digests_match_registry": true,
+    "task_files_unchanged_by_image_pinning": true,
+    "compose_resolved_digest_and_pull_policy_never": true,
+    "mutable_or_wrong_image_rejected": true,
+    "separate_verifier_and_multi_service_override_rejected": true,
+    "changed_overlay_blocks_launch_before_intent": true,
+    "explicit_verifier_timeout_bound_in_workflow": true,
+    "plan_cannot_reduce_agents_categories_tasks_repetitions_or_pair": true,
+    "budget_reserves_fourteen_runs_with_exact_decimal_arithmetic": true,
+    "declared_stop_policy_required": true,
+    "installation_only_not_counted_as_real_matrix": true
+  },
+  "observation_limits": [
+    "No provider credentials were passed to the new install-only trials.",
+    "Compose rendering and local image resolution were checked. A post-exit Docker inspect was unavailable after Harbor removed the transient container; the historical Docker-event query returned no rows. No retained live-container attestation is claimed.",
+    "The plan checker is not a global Harbor authorization interceptor or provider billing enforcement service.",
+    "Task categories alone do not prove long-response, model-retry or API-cancellation coverage; actual traces and separate failure fixtures must be evaluated."
+  ],
+  "source_files": {
+    "tools/harbor_input_provenance.py": "e8e2bd6c7d159f0ba9cd1ee69741f50b498a4d74142d8abab4f921dffb5e93d6",
+    "tools/harbor_audit_workflow.py": "b7977d6196dbcb35d47384f758149ab4b339765bc3142400037f46909ee2ee85",
+    "tools/m3_experiment_plan.py": "27b16cc79d8c389a7a8998e436e22dd337046f244f5fbaf41111ded5f99e77b2",
+    "examples/m3-experiment-plan.json": "85138d47b00bc5d654bba1080ee573360af92d1b51829adce64e19e2061807bc"
+  },
+  "pending": [
+    "Actual user-approved models and monetary limits plus effective provider-cap evidence.",
+    "Fresh full-chain real trial, twelve real matrix trials and extra recorder-off/on pair.",
+    "Final compatible-candidate five-hour completion, reconciliation and release audit."
+  ]
+}

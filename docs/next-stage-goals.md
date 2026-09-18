@@ -163,3 +163,14 @@ M3 尚未完成。已完成独立 token 认证实例上的 20-collector、120 �
 - 删除传播检查仅不可恢复地删除本轮新合成录制 `run-01a0b60a-e8bf-70bb-9d3e-d3f305f8acbb`，历史真实录制未动。两组五小时进程仍运行，绑定的 recorder、镜像和脚本未改变；不能把短时通过记为五小时通过。
 
 机器记录：[Hermes 运行环境与兼容候选校准](../benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)。剩余仍是预算/停止策略、全新真实 trial、12 次矩阵、录制开关对照及最终五小时验收。
+
+## 实施记录：2026-09-18 TB2 版本校正与实验声明
+
+- 匿名查询官方 registry，确认历史 `html-js-filter` 与备选 `session-window-debug` 属于当前 66 题 `terminal-bench/terminal-bench`，不属于 89 题 TB2 快照。历史原始证据和得分不改，但不再笼统称其为 TB2 试验。
+- 从固定 TB2 数据集摘要选择 `cancel-async-tasks`、`multi-source-data-merger`；下载内容经 Harbor 发布包算法重算，与 registry 的两个 task digest 一致。任务文件原样保留。
+- 对两题可变 Docker tag 增加 `--task-image` 固定 digest、同镜像校验、禁止自动 pull 和 overlay 变化拒绝。独立 verifier/多服务任务不允许这种覆盖。增加显式 verifier 超时，当前计划保持两题原有 900 秒上限。
+- 两题新预检通过，Claude 在异步题容器中完成安装与 synthetic hook 完整性检查；Hermes 在数据题容器中完成安装与版本检查。Codex 另完成兼容 recorder 的安装检查。全部无 provider 凭据、无 agent execution，不计入真实矩阵。
+- [实验清单与说明](m3-experiment-plan.md) 包含完整 12 次矩阵和额外 2 次对照，固定候选 recorder、agent 文件、任务树与镜像摘要。模型和费用/审批证据保留空值，`--require-approved` 按预期返回 2。该工具仅检查声明，不伪装成 provider 的财务限额执行器。
+- 110 项 Python 测试在真实加密导出夹具下通过，无跳过。旧候选五小时实例的首次 API 中断后已恢复，所有本地日志仍推进；新兼容候选五小时实例仍运行。两者均未完成最终验收，绑定文件未修改。
+
+机器记录：[TB2 清单与预检](../benchmarks/2026-09-18-tb2-plan-preflight-linux-x86_64.json)。M3 仍未完成，真实矩阵与对照尚未启动。
