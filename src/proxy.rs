@@ -61,6 +61,10 @@ use crate::{
 
 const BODY_CHANNEL_CAPACITY: usize = 16;
 const WEBSOCKET_CLOSE_TIMEOUT: Duration = Duration::from_secs(3);
+const WEBSOCKET_CAPTURE_MESSAGES: usize = 256;
+const WEBSOCKET_CONNECTION_CAPTURE_BYTES: usize =
+    64 * 1024 * 1024 + std::mem::size_of::<CapturedWebSocketMessage>();
+const WEBSOCKET_PROXY_CAPTURE_BYTES: usize = 128 * 1024 * 1024;
 const MAX_NORMALIZED_REQUEST_BYTES: usize = 8 * 1024 * 1024;
 const MAX_CONCURRENT_REQUEST_NORMALIZATIONS: usize = 16;
 const MAX_PAYLOAD_DEPENDENCY_NODES: usize = 1_000_000;
@@ -90,6 +94,7 @@ struct ProxyState {
     client: reqwest::Client,
     connections: Arc<ConnectionTracker>,
     normalization_slots: Arc<Semaphore>,
+    websocket_capture_bytes: Arc<Semaphore>,
 }
 
 #[derive(Default)]
@@ -259,6 +264,7 @@ async fn start_with_transport(
         client,
         connections: Arc::clone(&connections),
         normalization_slots,
+        websocket_capture_bytes: Arc::new(Semaphore::new(WEBSOCKET_PROXY_CAPTURE_BYTES)),
     };
     let app = Router::new().fallback(forward).with_state(state);
     let listener = TcpListener::bind(config.listen).await?;
@@ -494,10 +500,11 @@ async fn forward_websocket(
     .await;
 
     let store = state.store;
+    let capture_bytes = state.websocket_capture_bytes;
     let connection_guard = state.connections.register();
     let upgraded = move |socket| async move {
         let _connection_guard = connection_guard;
-        bridge_websocket(socket, upstream, store, ids, path).await;
+        bridge_websocket(socket, upstream, store, ids, path, capture_bytes).await;
     };
     Ok(if let Some(protocol) = selected_protocol {
         websocket.protocols([protocol]).on_upgrade(upgraded)
@@ -532,6 +539,7 @@ async fn bridge_websocket(
     store: RunStore,
     ids: EventIds,
     path: String,
+    capture_bytes: Arc<Semaphore>,
 ) {
     let (mut downstream_tx, mut downstream_rx) = downstream.split();
     let (mut upstream_tx, mut upstream_rx) = upstream.split();
@@ -544,7 +552,11 @@ async fn bridge_websocket(
     let mut upstream_close_received = false;
     let mut close_deadline = None;
     let capture_failed = Arc::new(AtomicBool::new(false));
-    let (capture_sender, capture_receiver) = tokio::sync::mpsc::channel(BODY_CHANNEL_CAPACITY);
+    let capture_budget = WebSocketCaptureBudget {
+        shared: capture_bytes,
+        connection: Arc::new(Semaphore::new(WEBSOCKET_CONNECTION_CAPTURE_BYTES)),
+    };
+    let (capture_sender, capture_receiver) = tokio::sync::mpsc::channel(WEBSOCKET_CAPTURE_MESSAGES);
     let capture_task = tokio::spawn(capture_websocket_stream(
         capture_receiver,
         store.clone(),
@@ -572,9 +584,9 @@ async fn bridge_websocket(
                         downstream_sequence = downstream_sequence.saturating_add(1);
                         let (message, frame) = downstream_to_upstream(message);
                         let is_close = frame.opcode == "close";
-                        if capture_sender.try_send((
+                        if capture_budget.enqueue(&capture_sender,
                             "client_to_upstream", downstream_sequence, frame,
-                        )).is_err() {
+                        ).is_err() {
                             store.note_capture_drop();
                             capture_failed.store(true, Ordering::Release);
                         }
@@ -636,9 +648,9 @@ async fn bridge_websocket(
                             break;
                         };
                         let is_close = frame.opcode == "close";
-                        if capture_sender.try_send((
+                        if capture_budget.enqueue(&capture_sender,
                             "upstream_to_client", upstream_sequence, frame,
-                        )).is_err() {
+                        ).is_err() {
                             store.note_capture_drop();
                             capture_failed.store(true, Ordering::Release);
                         }
@@ -785,7 +797,7 @@ fn websocket_error_detail(error: &(dyn std::error::Error + 'static)) -> Value {
 }
 
 async fn capture_websocket_stream(
-    mut receiver: tokio::sync::mpsc::Receiver<(&'static str, u64, WebSocketFrame)>,
+    mut receiver: tokio::sync::mpsc::Receiver<CapturedWebSocketMessage>,
     store: RunStore,
     ids: EventIds,
     path: String,
@@ -794,17 +806,25 @@ async fn capture_websocket_stream(
     let mut downstream_captured = 0_u64;
     let mut upstream_captured = 0_u64;
     let mut persistence_available = true;
-    while let Some((direction, sequence, frame)) = receiver.recv().await {
+    while let Some(message) = receiver.recv().await {
         if !persistence_available {
             continue;
         }
-        let captured = if direction == "client_to_upstream" {
+        let captured = if message.direction == "client_to_upstream" {
             &mut downstream_captured
         } else {
             &mut upstream_captured
         };
-        if let Err(error) =
-            record_websocket_frame(&store, &ids, direction, sequence, &frame, &path, captured).await
+        if let Err(error) = record_websocket_frame(
+            &store,
+            &ids,
+            message.direction,
+            message.sequence,
+            &message.frame,
+            &path,
+            captured,
+        )
+        .await
         {
             store.note_capture_drop();
             capture_failed.store(true, Ordering::Release);
@@ -817,6 +837,54 @@ async fn capture_websocket_stream(
     }
 }
 
+struct CapturedWebSocketMessage {
+    direction: &'static str,
+    sequence: u64,
+    frame: WebSocketFrame,
+    // Keep both reservations until this message is persisted or discarded.
+    _shared: OwnedSemaphorePermit,
+    _connection: OwnedSemaphorePermit,
+}
+
+struct WebSocketCaptureBudget {
+    shared: Arc<Semaphore>,
+    connection: Arc<Semaphore>,
+}
+
+impl WebSocketCaptureBudget {
+    fn enqueue(
+        &self,
+        sender: &tokio::sync::mpsc::Sender<CapturedWebSocketMessage>,
+        direction: &'static str,
+        sequence: u64,
+        frame: WebSocketFrame,
+    ) -> Result<(), ()> {
+        // Charge queue metadata too: many empty control frames across many
+        // connections must not evade the proxy-wide memory reservation.
+        let size = frame
+            .payload
+            .len()
+            .checked_add(std::mem::size_of::<CapturedWebSocketMessage>())
+            .ok_or(())?;
+        let size = u32::try_from(size).map_err(|_| ())?;
+        let shared = Arc::clone(&self.shared)
+            .try_acquire_many_owned(size)
+            .map_err(|_| ())?;
+        let connection = Arc::clone(&self.connection)
+            .try_acquire_many_owned(size)
+            .map_err(|_| ())?;
+        sender
+            .try_send(CapturedWebSocketMessage {
+                direction,
+                sequence,
+                frame,
+                _shared: shared,
+                _connection: connection,
+            })
+            .map_err(|_| ())
+    }
+}
+
 struct WebSocketFrame {
     opcode: &'static str,
     payload: Bytes,
@@ -826,9 +894,11 @@ struct WebSocketFrame {
 fn downstream_to_upstream(message: AxumMessage) -> (TungsteniteMessage, WebSocketFrame) {
     match message {
         AxumMessage::Text(text) => {
-            let payload = Bytes::copy_from_slice(text.as_bytes());
+            let payload: Bytes = text.into();
             (
-                TungsteniteMessage::Text(text.to_string().into()),
+                TungsteniteMessage::Text(
+                    payload.clone().try_into().expect("validated UTF-8 message"),
+                ),
                 WebSocketFrame {
                     opcode: "text",
                     payload,
@@ -884,9 +954,9 @@ fn downstream_to_upstream(message: AxumMessage) -> (TungsteniteMessage, WebSocke
 fn upstream_to_downstream(message: TungsteniteMessage) -> Option<(AxumMessage, WebSocketFrame)> {
     match message {
         TungsteniteMessage::Text(text) => {
-            let payload = Bytes::copy_from_slice(text.as_bytes());
+            let payload: Bytes = text.into();
             Some((
-                AxumMessage::Text(text.to_string().into()),
+                AxumMessage::Text(payload.clone().try_into().expect("validated UTF-8 message")),
                 WebSocketFrame {
                     opcode: "text",
                     payload,
@@ -2158,6 +2228,77 @@ mod tests {
         let detail = websocket_error_detail(other.as_ref());
         assert_eq!(detail["category"], "unknown");
         assert!(!detail.to_string().contains("secret"));
+    }
+
+    #[test]
+    fn websocket_capture_reservations_bound_bytes_and_release_on_every_exit() {
+        let overhead = std::mem::size_of::<CapturedWebSocketMessage>();
+        let total = 3 * overhead + 10;
+        let shared = Arc::new(Semaphore::new(total));
+        let a = WebSocketCaptureBudget {
+            shared: Arc::clone(&shared),
+            connection: Arc::new(Semaphore::new(2 * overhead + 5)),
+        };
+        let b = WebSocketCaptureBudget {
+            shared: Arc::clone(&shared),
+            connection: Arc::new(Semaphore::new(2 * overhead + 5)),
+        };
+        let (sender, mut receiver) = tokio::sync::mpsc::channel(2);
+        let frame = |bytes: usize| WebSocketFrame {
+            opcode: "text",
+            payload: Bytes::from(vec![b'x'; bytes]),
+            close_code: None,
+        };
+        assert!(
+            a.enqueue(&sender, "client_to_upstream", 1, frame(4))
+                .is_ok()
+        );
+        assert!(
+            a.enqueue(&sender, "client_to_upstream", 2, frame(2))
+                .is_err()
+        );
+        assert_eq!(shared.available_permits(), 2 * overhead + 6); // Failed per-connection reservation was released.
+        assert!(
+            b.enqueue(&sender, "upstream_to_client", 1, frame(4))
+                .is_ok()
+        );
+        assert!(
+            b.enqueue(&sender, "upstream_to_client", 2, frame(3))
+                .is_err()
+        );
+        assert_eq!(shared.available_permits(), overhead + 2);
+        assert!(
+            a.enqueue(&sender, "client_to_upstream", 3, frame(1))
+                .is_err()
+        ); // Full message queue.
+        assert_eq!(shared.available_permits(), overhead + 2);
+        let active = receiver.try_recv().unwrap();
+        assert_eq!(shared.available_permits(), overhead + 2); // Still reserved during persistence.
+        drop(active);
+        assert_eq!(shared.available_permits(), 2 * overhead + 6);
+        drop(receiver);
+        assert_eq!(shared.available_permits(), total);
+        assert!(
+            a.enqueue(&sender, "client_to_upstream", 4, frame(1))
+                .is_err()
+        );
+        assert_eq!(shared.available_permits(), total); // Closed receiver releases both permits.
+    }
+
+    #[test]
+    fn websocket_text_forwarding_shares_validated_utf8_storage() {
+        let input = AxumMessage::Text("中文🙂".into());
+        let (forwarded, captured) = downstream_to_upstream(input);
+        let TungsteniteMessage::Text(text) = forwarded else {
+            panic!("text expected")
+        };
+        assert_eq!(text.as_ptr(), captured.payload.as_ptr());
+        let (forwarded, captured) = upstream_to_downstream(TungsteniteMessage::Text(text)).unwrap();
+        let AxumMessage::Text(text) = forwarded else {
+            panic!("text expected")
+        };
+        assert_eq!(text.as_ptr(), captured.payload.as_ptr());
+        assert_eq!(text.as_str(), "中文🙂");
     }
 
     #[test]

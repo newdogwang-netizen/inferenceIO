@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-18T18:49:07.452972+00:00",
+  "subject": "M3 preparation: 20-collector mixed HTTP/SSE and Responses-WebSocket calibration",
+  "calibration_passed": true,
+  "milestone_complete": false,
+  "five_hour_qualified": false,
+  "scope": "Synthetic loopback workload through real recorder/collector/platform processes; not real-provider qualification or independent pcap/TLS proof",
+  "source_baseline": "35fb6f798d69cfd4960f5948c29c4d961620d569",
+  "report": {
+    "path_on_qualification_host": "/var/tmp/iorec-m3-ws-cal-20260918/calibration-4.json",
+    "sha256": "e431d568d7b0a68284b3e639e079a99605c5630fe7980fa6213fcea3f50440b1",
+    "work_dir": "/tmp/iowcal4",
+    "recorder_sha256": "03e805ee36a1bf20cf7f60d17f94ae02447c35bf98acb2132d804c94d2766da7",
+    "running_recorder_executable_hashes_matched": 20,
+    "artifacts_unchanged": true,
+    "node_version": "v22.22.3",
+    "node_sha256": "e6ec2c188d83d813f81f2de8aea084d74dce603ac1abedd0a30ad941b10087b2"
+  },
+  "configuration": {
+    "collectors": 20,
+    "http_sse_collectors": 10,
+    "websocket_collectors": 10,
+    "duration_seconds": 120,
+    "request_interval_seconds": 2,
+    "segment_seconds": 15,
+    "drain_seconds": 600,
+    "api_outage_at_seconds": 24,
+    "api_outage_seconds": 6,
+    "collector_restart_at_seconds": 60,
+    "worker_restart_at_seconds": 84
+  },
+  "measurement": {
+    "minimum_client_seconds": 120.00069134099999,
+    "orchestrator_seconds": 120.72160662896931,
+    "client_requests": 1200,
+    "client_successes": 1200,
+    "client_errors": 0,
+    "local_events": 22722,
+    "physical_transport_attempts": 660,
+    "recording_segments": 61,
+    "websocket_calls": 600,
+    "websocket_connections": 60,
+    "websocket_messages": 4652,
+    "control_messages": 1312,
+    "tool_calls": 300,
+    "tool_results": 300,
+    "input_tokens": 77700,
+    "output_tokens": 7740,
+    "connections_crossing_recording_segments": 13
+  },
+  "checks": {
+    "all_client_requests_passed": true,
+    "all_local_integrity_passed": true,
+    "all_spool_and_platform_sequence_chains_passed": true,
+    "all_server_recordings_passed": true,
+    "all_expected_calls_accounted_for": true,
+    "request_and_response_snapshots_match_client_digests": true,
+    "text_tools_usage_state_references_and_event_ownership_match": true,
+    "bidirectional_close_evidence_for_all_connections": true,
+    "all_websocket_collectors_exercised_cross_segment_connections": true,
+    "all_local_recordings_advanced_during_api_outage": true,
+    "all_collector_identities_survived_restart": true,
+    "workers_restarted_and_queue_drained": true,
+    "platform_image_ids_and_hardening_unchanged": true,
+    "scoped_synthetic_deletion_propagated": true
+  },
+  "deletion": {
+    "run_id": "run-01a0b5d6-4f51-77f7-b360-adbe85860ed0",
+    "scope": "One newly generated synthetic HTTP/SSE run, local and isolated remote instance; irreversible",
+    "historical_real_agent_recordings_untouched": true
+  },
+  "validation": {
+    "rust_all_targets_all_features_tests": 322,
+    "rust_test_failures": 0,
+    "clippy_warnings_denied": true,
+    "python_tests_with_real_export_fixture": 61,
+    "python_test_failures": 0,
+    "python_tests_skipped": 0,
+    "close_cases": ["client initiated", "server initiated", "missing acknowledgement timeout", "TCP reset without acknowledgement"],
+    "burst_test": "80 consecutive WebSocket text messages preserved exactly with zero capture drops",
+    "memory_reservation_tests": "Per-connection/shared byte limits, queue limit, consumer lifetime, closed receiver, and zero-copy UTF-8 conversion"
+  },
+  "prior_calibrations": [
+    {"number": 1, "passed": false, "finding": "Missing flushed close acknowledgement caused client reconnect assertion failures; fixed in 35fb6f7"},
+    {"number": 2, "passed": false, "report_sha256": "21230755b4d610d312a940350272ae733382bc8909d8cbe4cffe5645a5f1d29e", "finding": "16-message capture queue dropped burst events; incomplete status correctly retained"},
+    {"number": 3, "passed": true, "report_sha256": "173fd9c1ab303037542f0a61b18f1113f4d38d04d5470f7abc48edec7544dd14", "finding": "Intermediate binary passed; final candidate additionally charges queue metadata and bounds timer-edge call counts"}
+  ],
+  "images": {
+    "api": "sha256:ea7556877c74697f3049c549431b4cdadda4139a32f83216072a3799ecb981f3",
+    "worker": "sha256:69c961c1be1bc4db371881286a2bb5db5caa593a286f0d4937b448773e452d4a",
+    "web": "sha256:9884e3ada730c6126a98e2c5dc1739988063610654ea7ccc999be08e678981d5"
+  },
+  "source_files": {
+    "src/proxy.rs": "1ab3fb13d81d2fa480c7c3430ff1ef1b57f205d63f032f0cd9c5c83ab517b015",
+    "tests/proxy_e2e.rs": "428e2c9fb94313136588255475f60fe7ca29606c8f12ddf901939bb3bfd11f50",
+    "tools/connected_soak.py": "551384f1bf3db2d553d3a919a250555d3335d4b117e1925fcb1a30acabb29f53",
+    "tools/websocket_fixture.py": "9a6040db7ae9643207876bfac8e5e3740f311cf83b8bbfb89a6b7485ceab2ae7",
+    "tools/websocket_soak_client.mjs": "984748c03ea1de078c5941d61351ffeb64a2adb2f0254f8f7d9fb19c6e20904d",
+    "tools/websocket_soak_validation.py": "48e06622db67badacaaf16de33415a395280e1379225455668b1d648ad776903",
+    "tools/qualification_platform.py": "3d89c883c072b0bcc8f0dc7e3134136f8c24542d7ee3bfc96668e5c048e3795d"
+  },
+  "pending": [
+    "New Harbor trial through the one-command M2 workflow",
+    "Approved real-provider cost ceiling and pinned experiment plan",
+    "12 real Codex/Claude/Hermes experiments and recorder-on/off comparison",
+    "Five-hour mixed workload on the frozen candidate; this 120-second calibration cannot satisfy that gate"
+  ]
+}

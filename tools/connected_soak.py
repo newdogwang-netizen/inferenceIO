@@ -38,6 +38,8 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 import perf_harness
+import websocket_fixture
+import websocket_soak_validation
 
 
 SCHEMA_VERSION = 1
@@ -112,6 +114,8 @@ def arguments() -> argparse.Namespace:
     parser.add_argument("--work-dir", required=True, type=pathlib.Path)
     parser.add_argument("--duration-seconds", required=True, type=positive_float)
     parser.add_argument("--collectors", type=positive_int, default=QUALIFYING_COLLECTORS)
+    parser.add_argument("--workload", choices=("http-sse", "mixed-websocket"), default="http-sse")
+    parser.add_argument("--node", type=pathlib.Path, default=pathlib.Path("/usr/bin/node"))
     parser.add_argument(
         "--request-interval-seconds", type=positive_float, default=60.0
     )
@@ -238,6 +242,9 @@ def validate_limits(args: argparse.Namespace) -> None:
         raise ValueError("segment interval exceeds one hour")
     if not PROJECT_RE.fullmatch(args.compose_project):
         raise ValueError("compose project has an invalid name")
+    if args.workload == "mixed-websocket":
+        if args.collectors < 2 or math.ceil(args.duration_seconds / args.request_interval_seconds) > 1000:
+            raise ValueError("mixed workload requires at least two collectors and at most 1000 calls per collector")
 
 
 def urlopen_with_rate_limit_retry(
@@ -572,6 +579,13 @@ def open_private_log(path: pathlib.Path) -> Any:
     return os.fdopen(descriptor, "wb", buffering=0)
 
 
+def workload_environment() -> dict[str, str]:
+    # Compose credentials belong to the controller, never to the synthetic
+    # agent. The collector receives its scoped credentials via explicit files.
+    return {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "LANG": "C.UTF-8",
+            "LC_ALL": "C.UTF-8", "TZ": "UTC"}
+
+
 def start_collector(
     index: int,
     iorec: pathlib.Path,
@@ -609,6 +623,7 @@ def start_collector(
         stdout=log_file,
         stderr=subprocess.STDOUT,
         start_new_session=True,
+        env=workload_environment(),
     )
     return ManagedProcess(index, "collector", process, log_file, log_path)
 
@@ -621,6 +636,8 @@ def start_recorder(
     collector_dir: pathlib.Path,
     duration: float,
     request_interval: float,
+    websocket: bool = False,
+    node: pathlib.Path | None = None,
 ) -> ManagedProcess:
     log_path = collector_dir / "recorder.log"
     log_file = open_private_log(log_path)
@@ -645,6 +662,10 @@ def start_recorder(
         "--delay-ms",
         "5",
     ]
+    if websocket:
+        client = [str(node), str(pathlib.Path(__file__).with_name("websocket_soak_client.mjs").resolve()),
+                  "--url-env", "IOREC_PROXY_URL", "--duration-seconds", str(duration),
+                  "--interval-seconds", str(request_interval), "--calls-per-connection", "11"]
     command = [
         str(iorec),
         "run",
@@ -669,6 +690,7 @@ def start_recorder(
         stdout=log_file,
         stderr=subprocess.STDOUT,
         start_new_session=True,
+        env=workload_environment(),
     )
     return ManagedProcess(index, "recorder", process, log_file, log_path)
 
@@ -998,7 +1020,21 @@ def report_qualifies(report: dict[str, Any]) -> bool:
         and report["faults"]["worker_restart_passed"] is True
         and report["checks"]["deletion_propagation"] is True
         and report["checks"]["platform_runtime_provenance"] is True
+        and report.get("checks", {}).get("artifacts_unchanged", True) is True
+        and (report["configuration"].get("workload") != "mixed-websocket" or (
+            report["checks"].get("websocket_projection") is True
+            and report["checks"].get("websocket_cross_segment_connections") is True
+            and len(report.get("websocket_projections", [])) == QUALIFYING_COLLECTORS // 2))
     )
+
+
+def artifact_snapshot(iorec: pathlib.Path, node: pathlib.Path | None) -> dict[str, str]:
+    paths = [iorec, pathlib.Path(__file__).resolve(), pathlib.Path(perf_harness.__file__).resolve(),
+             pathlib.Path(websocket_fixture.__file__).resolve(), pathlib.Path(websocket_soak_validation.__file__).resolve(),
+             pathlib.Path(__file__).with_name("websocket_soak_client.mjs").resolve()]
+    if node:
+        paths.append(node)
+    return {str(path): perf_harness.sha256_file(path) for path in paths}
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
@@ -1006,6 +1042,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     schedule = derive_schedule(args)
     api = validate_api(args.api)
     iorec = resolve_file(args.iorec, "iorec", executable=True)
+    node = resolve_file(args.node, "Node", executable=True) if args.workload == "mixed-websocket" else None
+    artifact_start = artifact_snapshot(iorec, node)
     project_token_file = resolve_file(args.project_token_file, "project token")
     admin_token_file = resolve_file(args.admin_token_file, "admin token")
     read_private_file(project_token_file, "project token")
@@ -1031,6 +1069,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         collector_dirs.append(path)
 
     fake_process, fake_url = perf_harness.start_fake_server(iorec)
+    websocket_server = websocket_fixture.Server() if args.workload == "mixed-websocket" else None
     collectors: list[ManagedProcess] = []
     recorders: list[ManagedProcess] = []
     faults = FaultEvidence()
@@ -1041,8 +1080,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     collectors_restarted = False
     workers_restarted = False
     try:
-        collectors = [
-            start_collector(
+        for index in range(args.collectors):
+            collectors.append(start_collector(
                 index,
                 iorec,
                 api,
@@ -1051,28 +1090,30 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 collector_dirs[index],
                 args.segment_seconds,
                 0,
-            )
-            for index in range(args.collectors)
-        ]
+            ))
         wait_until("all collector registrations", 120.0, lambda: len(collector_ids(collector_dirs)) == args.collectors)
         started = time.monotonic()
-        recorders = [
-            start_recorder(
+        for index in range(args.collectors):
+            recorders.append(start_recorder(
                 index,
                 iorec,
-                fake_url,
+                websocket_server.url if websocket_server and index % 2 else fake_url,
                 key_file,
                 collector_dirs[index],
                 args.duration_seconds,
                 args.request_interval_seconds,
-            )
-            for index in range(args.collectors)
-        ]
+                websocket=bool(websocket_server and index % 2),
+                node=node,
+            ))
         wait_until(
             "all active recorder directories",
             60.0,
             lambda: all(only_run_dir(path) for path in collector_dirs),
         )
+        running_recorder_hashes = [perf_harness.sha256_file(pathlib.Path(f"/proc/{item.process.pid}/exe")) for item in recorders]
+        if any(value != artifact_start[str(iorec)] for value in running_recorder_hashes):
+            raise RuntimeError("running recorder does not match the pinned executable")
+        print(json.dumps({"stage": "recording", "collectors": args.collectors, "duration_seconds": args.duration_seconds}), flush=True)
         while True:
             elapsed = time.monotonic() - started
             if elapsed >= args.duration_seconds:
@@ -1086,6 +1127,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 wait_until("platform API unavailability", 30.0, lambda: not api_available(api, admin_token))
                 faults.platform_unavailable_observed = True
                 outage_started = True
+                print(json.dumps({"stage": "api_outage_observed"}), flush=True)
             if outage_started and not outage_restored and elapsed >= outage_end:
                 faults.outage_post_events = event_snapshot(iorec, collector_dirs, key_file)
                 faults.local_recording_advanced = {
@@ -1096,6 +1138,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 wait_until("platform API restoration", 120.0, lambda: api_available(api, admin_token))
                 faults.platform_restored_at = utc_now()
                 outage_restored = True
+                print(json.dumps({"stage": "api_restored", "all_local_logs_advanced": all(faults.local_recording_advanced.values())}), flush=True)
             if (
                 outage_restored
                 and not collectors_restarted
@@ -1103,8 +1146,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             ):
                 faults.collector_ids_before = collector_ids(collector_dirs)
                 stop_processes(collectors)
-                collectors = [
-                    start_collector(
+                collectors = []
+                for index in range(args.collectors):
+                    collectors.append(start_collector(
                         index,
                         iorec,
                         api,
@@ -1113,9 +1157,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                         collector_dirs[index],
                         args.segment_seconds,
                         1,
-                    )
-                    for index in range(args.collectors)
-                ]
+                    ))
                 wait_until("collector re-registration", 120.0, lambda: len(collector_ids(collector_dirs)) == args.collectors)
                 faults.collector_ids_after = collector_ids(collector_dirs)
                 faults.collector_identity_stable = {
@@ -1124,6 +1166,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 }
                 faults.collector_restart_at = utc_now()
                 collectors_restarted = True
+                print(json.dumps({"stage": "collectors_restarted", "identities_stable": all(faults.collector_identity_stable.values())}), flush=True)
             if (
                 collectors_restarted
                 and not workers_restarted
@@ -1133,6 +1176,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 faults.worker_restart_at = utc_now()
                 faults.worker_restart_passed = True
                 workers_restarted = True
+                print(json.dumps({"stage": "workers_restarted"}), flush=True)
             time.sleep(0.2)
 
         recorder_codes = [close_completed(item) for item in recorders]
@@ -1140,6 +1184,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         orchestrator_seconds = time.monotonic() - started
         if any(code != 0 for code in recorder_codes):
             raise RuntimeError(f"recorders failed: {recorder_codes}")
+        print(json.dumps({"stage": "drain_and_reconcile"}), flush=True)
         client_results = [
             parse_client_result(path / "recorder.log") for path in collector_dirs
         ]
@@ -1203,6 +1248,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 errors.append(f"remote chain ends at {expected - 1}, local evidence ends at {final_sequence}")
             platform_sequence_checks.append({"passed": not errors, "errors": errors})
 
+        websocket_projections = []
+        for local, client in zip(local_reports, client_results):
+            if client.get("workload") == "responses_websocket":
+                websocket_projections.append(websocket_soak_validation.verify(
+                    lambda path: api_json(api, path, admin_token, timeout=30), local["manifest"]["run_id"], client))
+                print(json.dumps({"stage": "websocket_reconciled", "index": len(websocket_projections),
+                                  "passed": websocket_projections[-1]["passed"],
+                                  "calls": websocket_projections[-1]["calls"]}), flush=True)
+
         deletion_report = verify_deletion_propagation(
             api,
             admin_token,
@@ -1223,9 +1277,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         )
         attempt_counts_match = all(
             int(local["manifest"]["counts"]["transport_attempts"])
-            == int(client["successes"])
+            == int(client.get("transport_attempts", client["successes"]))
             for local, client in zip(local_reports, client_results)
         )
+        artifact_end = artifact_snapshot(iorec, node)
+        websocket_ok = not websocket_server or (len(websocket_projections) == args.collectors // 2 and all(item["passed"] for item in websocket_projections))
+        websocket_cross_segment = not websocket_server or all(item["connections_crossing_segments"] > 0 for item in websocket_projections)
         passed = (
             all_clients_pass
             and attempt_counts_match
@@ -1241,6 +1298,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             and all(faults.collector_identity_stable.values())
             and faults.worker_restart_passed
             and runtime["passed"]
+            and artifact_start == artifact_end
+            and websocket_ok
+            and websocket_cross_segment
         )
         report: dict[str, Any] = {
             "schema_version": SCHEMA_VERSION,
@@ -1266,6 +1326,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             },
             "configuration": {
                 "collectors": args.collectors,
+                "workload": args.workload,
                 "duration_seconds": args.duration_seconds,
                 "request_interval_seconds": args.request_interval_seconds,
                 "segment_seconds": args.segment_seconds,
@@ -1293,8 +1354,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "platform_drained": all(final_overview.get("checks", {}).values()),
                 "deletion_propagation": deletion_report["passed"],
                 "platform_runtime_provenance": runtime["passed"],
+                "artifacts_unchanged": artifact_start == artifact_end,
+                "websocket_projection": websocket_ok,
+                "websocket_cross_segment_connections": websocket_cross_segment,
             },
             "client_results": client_results,
+            "websocket_projections": websocket_projections,
+            "artifact_digests": {"start": artifact_start, "end": artifact_end, "running_recorders": running_recorder_hashes},
             "local_runs": [
                 {
                     "run_id": item["manifest"]["run_id"],
@@ -1314,7 +1380,25 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         perf_harness.write_report_atomic(output, report)
         print(json.dumps({"output": str(output), "passed": passed, "qualified": report["qualified"]}))
         return report
+    except Exception as error:
+        # Retain a machine-readable failure even when the run cannot reach the
+        # final reconciliation. Never include raw provider bodies or secrets.
+        if not output.exists():
+            perf_harness.write_report_atomic(output, {
+                "schema_version": SCHEMA_VERSION, "format": "iorec-connected-soak-report-v1",
+                "created_at": utc_now(), "passed": False, "qualified": False,
+                "failure_type": type(error).__name__, "work_dir": str(work_dir),
+                "faults": vars(faults), "artifact_digests": {"start": artifact_start},
+                "configuration": {"collectors": args.collectors, "workload": args.workload,
+                                  "duration_seconds": args.duration_seconds},
+            })
+        raise
     finally:
+        if outage_started and not outage_restored:
+            try:
+                compose_action(compose, "start", ["platform-api"])
+            except (OSError, subprocess.SubprocessError):
+                pass
         try:
             stop_processes(recorders)
         except (OSError, subprocess.SubprocessError):
@@ -1324,6 +1408,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         except (OSError, subprocess.SubprocessError):
             pass
         perf_harness.stop_fake_server(fake_process)
+        if websocket_server:
+            websocket_server.stop()
 
 
 def main() -> int:

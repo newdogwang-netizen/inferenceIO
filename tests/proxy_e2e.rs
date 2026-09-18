@@ -637,6 +637,83 @@ async fn websocket_reconnects_share_logical_id_and_preserve_both_directions() {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn websocket_burst_keeps_exact_payloads_without_capture_loss() {
+    let temporary = tempfile::tempdir().unwrap();
+    let policy = CapturePolicy::default();
+    write_test_manifest(temporary.path(), "ws-burst", policy.clone());
+    let (store, _) = RunStore::create(temporary.path(), "ws-burst", policy).unwrap();
+    let listener = tokio::net::TcpListener::bind(loopback()).await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let payloads: Vec<String> = (0..80)
+        .map(|index| format!("{index}:{}中文🙂", "x".repeat(2048)))
+        .collect();
+    let sent = payloads.clone();
+    let server = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut socket = tokio_tungstenite::accept_async(stream).await.unwrap();
+        for payload in sent {
+            socket.send(Message::Text(payload.into())).await.unwrap();
+        }
+        assert!(matches!(
+            socket.next().await.unwrap().unwrap(),
+            Message::Close(_)
+        ));
+        socket.flush().await.unwrap();
+    });
+    let proxy = start_proxy(
+        ProxyConfig {
+            listen: loopback(),
+            upstream: Url::parse(&format!("http://{address}")).unwrap(),
+        },
+        store.clone(),
+    )
+    .await
+    .unwrap();
+    let (mut socket, _) = connect_async(format!("ws://{}/v1/responses", proxy.address))
+        .await
+        .unwrap();
+    for expected in &payloads {
+        let response = tokio::time::timeout(Duration::from_secs(3), socket.next())
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        assert_eq!(response, Message::Text(expected.clone().into()));
+    }
+    socket.close(None).await.unwrap();
+    assert_eq!(socket.next().await.unwrap().unwrap(), Message::Close(None));
+    server.await.unwrap();
+    proxy.stop(Duration::from_secs(5)).await.unwrap();
+    store.shutdown().await.unwrap();
+    assert_eq!(store.stats().capture_drops, 0);
+    let events = read_events(temporary.path());
+    let captured: Vec<_> = events
+        .iter()
+        .filter(|event| {
+            event.event == "websocket_frame"
+                && event
+                    .normalized
+                    .as_ref()
+                    .is_some_and(|value| value["opcode"] == "text")
+        })
+        .map(|event| blob(temporary.path(), &event.raw.as_ref().unwrap().sha256))
+        .collect();
+    assert_eq!(
+        captured,
+        payloads
+            .iter()
+            .map(|value| value.as_bytes().to_vec())
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        events
+            .iter()
+            .any(|event| event.event == "transport_attempt_finished"
+                && event.terminal_state == Some(TerminalState::Complete))
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn websocket_close_handshake_requires_both_peers_and_is_bounded() {
     use tokio_tungstenite::tungstenite::protocol::{CloseFrame, frame::coding::CloseCode};
     for scenario in ["client", "upstream", "missing_ack", "reset"] {

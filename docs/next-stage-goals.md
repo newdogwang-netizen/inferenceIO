@@ -117,3 +117,17 @@ node tools/verify_websocket_projection.mjs http://127.0.0.1:18080 \
 - 当前 worker 镜像重新生成独立 proof，仍为 verified，整体 coverage 保持 unknown；队列排空、失败任务为零。Go 全包 PostgreSQL 测试、Vet、Race、前端构建及含真实导出故障夹具的 51 项 Python 测试通过。
 
 机器可读记录：[M2 证据视图与既有 trial 工作流验收](../benchmarks/2026-09-18-m2-evidence-workflow-linux-x86_64.json)。新 Harbor 配置已通过安装版本的 `--print-config` 校验，尚未启动新付费 agent；已向用户询问 M3 新增实验的总费用上限。下一步补全新 trial 和实验预算 / 停止策略，再运行 M3 矩阵、录制开关对照及最终候选版本五小时稳态。
+
+## 实施记录：2026-09-18 M3 稳态准备与缺陷修复
+
+M3 尚未完成。已完成独立 token 认证实例上的 20-collector、120 秒混合 HTTP/SSE/WebSocket 校准；它不是五小时报告，也不替代真实 provider 实验。
+
+- 最新资格二进制 SHA-256：`03e805ee36a1bf20cf7f60d17f94ae02447c35bf98acb2132d804c94d2766da7`。1,200 次客户端调用全部成功，600 次 WebSocket 模型调用对应 60 条物理连接；300 次工具调用 / 结果、用量、请求与最终响应摘要、逐条事件归属全部对账通过。61 个录制分段连续且完成 ACK / seal，22,722 条本地事件完整。
+- API 中断期间 20 个本地录制继续推进；collector 重启保留身份，worker 重启后队列排空。每个 WebSocket collector 都覆盖跨录制分段的连接。
+- 第一轮校准发现 Close 回复未 flush 就退出，客户端正常关闭因此失败。修复后仅在双向 Close 已观察到时记为完成；缺少回复限时降级。增加客户端发起、服务端发起、未回复和 TCP reset 的真实 socket 回归。这不构成历史 `client_read` 的具体原因证明。
+- 第二轮发现 16 条消息的异步采集队列在长响应突发时丢事件；系统正确标为 incomplete，没有伪报通过。改为 256 条消息上限并增加每连接 / 共享字节预算，连空消息的队列元数据也计费；文本转发共享已验证 UTF-8 内存，避免额外正文复制。压力或存储失败仍不阻断模型数据路径，继续记录缺口。
+- 第三轮为中间版本通过，第四轮为当前候选版本通过；失败记录保留。三轮执行删除传播检查的校准分别删除了各自新生成的一条合成 HTTP/SSE 录制，均不可恢复；历史真实录制未改动。
+- 修复了 bridge 测试中 buffered `readline` 与 `communicate` 混用漏读 evidence 的测试问题；旧代码在延迟读取夹具下可重现，修复后重复 100 次通过。握手修复提交 `35fb6f7` 的 GitHub CI 已全绿。候选版本本机 322 项 Rust 测试、Clippy、含真实导出故障夹具的 61 项 Python 测试通过。
+- 浏览平台仍是原 `iorec-local`，未用于故障注入。新准备的五小时实例使用独立数据库 / 对象卷、固定镜像 ID、token 认证和正常 PostgreSQL 持久性配置，匿名访问返回 401。
+
+操作方法：[混合协议资格验收](mixed-protocol-qualification.md)。机器记录：[M3 短时校准](../benchmarks/2026-09-18-m3-mixed-calibration-linux-x86_64.json)。接下来运行冻结候选版本的五小时验收，并在费用上限确认后补全新 Harbor trial、真实三 agent 矩阵和录制开关对照；这些未完成项不能由合成负载替代。

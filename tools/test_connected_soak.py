@@ -12,6 +12,13 @@ import connected_soak
 
 
 class ConnectedSoakTests(unittest.TestCase):
+    def test_compose_and_provider_secrets_do_not_reach_workload_children(self) -> None:
+        with mock.patch.dict("os.environ", {"IOREC_USER_TOKENS": "private", "POSTGRES_PASSWORD": "private",
+                                           "OPENAI_API_KEY": "private", "PATH": "/usr/bin"}, clear=True):
+            env = connected_soak.workload_environment()
+        self.assertEqual(set(env), {"PATH", "LANG", "LC_ALL", "TZ"})
+        self.assertEqual(env["PATH"], "/usr/bin")
+
     def test_api_json_retries_rate_limit_with_bounded_retry_after(self) -> None:
         limited = urllib.error.HTTPError(
             "http://127.0.0.1:1/v1/overview",
@@ -133,6 +140,13 @@ class ConnectedSoakTests(unittest.TestCase):
         self.assertFalse(connected_soak.report_qualifies(report))
         report["measurement"]["minimum_recorder_seconds"] = 18_000.0
         self.assertTrue(connected_soak.report_qualifies(report))
+        report["configuration"]["workload"] = "mixed-websocket"
+        self.assertFalse(connected_soak.report_qualifies(report))
+        report["checks"].update(websocket_projection=True, websocket_cross_segment_connections=True, artifacts_unchanged=True)
+        report["websocket_projections"] = [{} for _ in range(10)]
+        self.assertTrue(connected_soak.report_qualifies(report))
+        report["checks"]["artifacts_unchanged"] = False
+        self.assertFalse(connected_soak.report_qualifies(report))
 
 
 if __name__ == "__main__":
