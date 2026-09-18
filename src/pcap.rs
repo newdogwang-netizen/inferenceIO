@@ -493,6 +493,7 @@ async fn capture_stream(
     let mut report = CaptureReport::default();
     let mut buffer = vec![0_u8; CHUNK_BYTES].into_boxed_slice();
     let mut header = Vec::with_capacity(PCAP_GLOBAL_HEADER_BYTES);
+    let mut pending = Vec::with_capacity(CHUNK_BYTES);
     let mut header_persisted = false;
     loop {
         let length = match input.read(&mut buffer).await {
@@ -508,6 +509,9 @@ async fn capture_stream(
                 io::ErrorKind::UnexpectedEof,
                 "pcap helper exited before writing a complete capture header",
             );
+            if header_persisted && !pending.is_empty() {
+                persist_capture_bytes(&pending, max_bytes, &store, &mut report, evidence).await?;
+            }
             break;
         }
 
@@ -535,14 +539,17 @@ async fn capture_stream(
             }
         }
         if consumed < length {
-            persist_capture_bytes(
-                &buffer[consumed..length],
-                max_bytes,
-                &store,
-                &mut report,
-                evidence,
-            )
-            .await?;
+            let mut remaining = &buffer[consumed..length];
+            while !remaining.is_empty() {
+                let copied = remaining.len().min(CHUNK_BYTES - pending.len());
+                pending.extend_from_slice(&remaining[..copied]);
+                remaining = &remaining[copied..];
+                if pending.len() == CHUNK_BYTES {
+                    persist_capture_bytes(&pending, max_bytes, &store, &mut report, evidence)
+                        .await?;
+                    pending.clear();
+                }
+            }
         }
     }
     Ok(report)
@@ -832,6 +839,47 @@ mod tests {
         )
         .unwrap();
         assert!(found);
+    }
+
+    #[tokio::test]
+    async fn capture_stream_coalesces_fragmented_pipe_reads() {
+        use tokio::io::AsyncWriteExt;
+
+        let temporary = tempfile::tempdir().unwrap();
+        let key = EncryptionKey::new([74; 32]);
+        let (store, _) = RunStore::create_with_encryption(
+            temporary.path(),
+            "fragmented-pcap",
+            CapturePolicy::default(),
+            Some(key),
+        )
+        .unwrap();
+        let (mut writer, reader) = tokio::io::duplex(127);
+        let payload = vec![19_u8; CHUNK_BYTES + 17];
+        let expected_bytes = PCAP_GLOBAL_HEADER_BYTES + payload.len();
+        let writer_task = tokio::spawn(async move {
+            writer.write_all(&pcap_header()).await.unwrap();
+            for fragment in payload.chunks(31) {
+                writer.write_all(fragment).await.unwrap();
+                tokio::task::yield_now().await;
+            }
+            writer.shutdown().await.unwrap();
+        });
+        let (ready, started) = oneshot::channel();
+        let report = capture_stream(
+            reader,
+            expected_bytes as u64,
+            store.clone(),
+            ready,
+            "fragmented_test_filter",
+        )
+        .await
+        .unwrap();
+        started.await.unwrap().unwrap();
+        writer_task.await.unwrap();
+        assert_eq!(report.chunks, 3);
+        assert_eq!(report.bytes, expected_bytes as u64);
+        assert_eq!(store.shutdown().await.unwrap().events, 3);
     }
 
     #[tokio::test]

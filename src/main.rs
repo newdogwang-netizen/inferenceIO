@@ -595,7 +595,10 @@ fn safe_error_summary(error: &anyhow::Error) -> String {
         "token",
         "sk-",
     ];
-    let message = error.to_string();
+    // Keep the causal chain so operators can act on a safe root cause instead
+    // of seeing only the outer anyhow context. The complete chain is screened
+    // for sensitive markers before any part of it is printed.
+    let message = format!("{error:#}");
     let lowercase = message.to_ascii_lowercase();
     if SENSITIVE_MARKERS
         .iter()
@@ -1471,6 +1474,7 @@ fn print_inspection(run_dir: &Path, inspection: &iorec::inspect::Inspection) {
 
 #[cfg(test)]
 mod diagnostic_tests {
+    use anyhow::Context as _;
     use clap::Parser;
 
     use super::{
@@ -1490,6 +1494,13 @@ mod diagnostic_tests {
         let rendered = safe_error_summary(&control);
         assert!(!rendered.contains('\u{1b}'));
         assert!(rendered.contains('�'));
+
+        let chained = Err::<(), _>(anyhow::anyhow!("root cause"))
+            .context("outer context")
+            .unwrap_err();
+        let rendered = safe_error_summary(&chained);
+        assert!(rendered.contains("outer context"));
+        assert!(rendered.contains("root cause"));
 
         let terminal = terminal_safe("name\u{1b}[31m\nnext");
         assert!(!terminal.chars().any(char::is_control));

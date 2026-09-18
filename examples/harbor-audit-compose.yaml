@@ -1,0 +1,6 @@
+services:
+  main:
+    # Audit-only outer capability envelope. iorec creates a nested user/network
+    # namespace and launches the actual agent as UID 10001 with an empty
+    # capability bounding set and no_new_privs.
+    privileged: true

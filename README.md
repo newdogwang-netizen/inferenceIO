@@ -2,7 +2,7 @@
 
 `iorec` is a local, auditable flight recorder for agent inference I/O. It wraps one command, records lifecycle and process evidence, tees supported model HTTP/SSE/WebSocket traffic, imports supported agent session files, and produces an explicit coverage manifest.
 
-[Project blog](https://newdogwang-netizen.github.io/inferenceIO/) | [Production readiness](PRODUCTION_READINESS.md) | [Support matrix](SUPPORT.md)
+[Project blog](https://newdogwang-netizen.github.io/inferenceIO/) | [Production readiness](PRODUCTION_READINESS.md) | [Support matrix](SUPPORT.md) | [Harbor / Terminal-Bench audit runbook](docs/harbor-terminal-bench-audit.md)
 
 The current release deliberately reports `claim: "best-effort"`. A successful run means the recorder completed cleanly; it does not mean every model call on the host was observed.
 

@@ -1,0 +1,4 @@
+#!/bin/sh
+exec /tmp/iorec-runtime/ld-linux-x86-64.so.2 \
+  --library-path /tmp/iorec-runtime \
+  /tmp/iorec-runtime/unshare "$@"

@@ -4,7 +4,7 @@ use std::{
     fs,
     io::{self, Read},
     net::SocketAddr,
-    os::unix::{fs::MetadataExt, fs::PermissionsExt, process::ExitStatusExt},
+    os::unix::{fs::MetadataExt, fs::PermissionsExt, io::AsRawFd, process::ExitStatusExt},
     path::{Path, PathBuf},
     process::Stdio,
     time::Duration,
@@ -1022,7 +1022,7 @@ fn namespace_command(tools: &TaskNetnsTools, target_pid: u32, program: &OsStr) -
 fn firewall_script(proxy_port: u16, policy: &TaskNetnsPolicy) -> String {
     let mut script = String::from("flush ruleset\n");
     if !policy.endpoints().is_empty() {
-        script.push_str("table ip iorec_nat {\n chain output {\n  type nat hook output priority dstnat; policy accept;\n");
+        script.push_str("table ip iorec_nat {\n chain output {\n  type nat hook output priority -100; policy accept;\n");
         for (index, endpoint) in policy.endpoints().iter().enumerate() {
             let _ = writeln!(
                 script,
@@ -1328,7 +1328,8 @@ fn verify_hosts_snapshot(target_pid: u32, expected_path: &Path) -> io::Result<()
     let mounted_path = Path::new("/proc")
         .join(target_pid.to_string())
         .join("root/etc/hosts");
-    let mounted = fs::symlink_metadata(&mounted_path)?;
+    let mounted_file = fs::File::open(&mounted_path)?;
+    let mounted = mounted_file.metadata()?;
     if !mounted.file_type().is_file()
         || mounted.dev() != expected.dev()
         || mounted.ino() != expected.ino()
@@ -1346,10 +1347,17 @@ fn verify_hosts_snapshot(target_pid: u32, expected_path: &Path) -> io::Result<()
     )?;
     let mountinfo = std::str::from_utf8(&mountinfo)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "mountinfo is not UTF-8"))?;
+    let effective_mount_id = effective_mount_id(&mounted_file)?;
+    verify_effective_hosts_mount(mountinfo, effective_mount_id)
+}
+
+fn verify_effective_hosts_mount(mountinfo: &str, effective_mount_id: u64) -> io::Result<()> {
     let mut matching_mounts = 0_usize;
     for line in mountinfo.lines() {
         let fields = line.split_ascii_whitespace().collect::<Vec<_>>();
-        if fields.get(4).copied() == Some("/etc/hosts") {
+        if fields.first().and_then(|value| value.parse::<u64>().ok()) == Some(effective_mount_id)
+            && fields.get(4).copied() == Some("/etc/hosts")
+        {
             matching_mounts = matching_mounts.saturating_add(1);
             let options = fields.get(5).copied().unwrap_or_default();
             if !options.split(',').any(|option| option == "ro") {
@@ -1367,6 +1375,37 @@ fn verify_hosts_snapshot(target_pid: u32, expected_path: &Path) -> io::Result<()
         ));
     }
     Ok(())
+}
+
+fn effective_mount_id(file: &fs::File) -> io::Result<u64> {
+    let fdinfo = read_limited(
+        &Path::new("/proc/self/fdinfo").join(file.as_raw_fd().to_string()),
+        4 * 1024,
+    )?;
+    let fdinfo = std::str::from_utf8(&fdinfo)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "fdinfo is not UTF-8"))?;
+    let mut mount_id = None;
+    for line in fdinfo.lines() {
+        let mut fields = line.split_ascii_whitespace();
+        if fields.next() != Some("mnt_id:") {
+            continue;
+        }
+        let value = fields
+            .next()
+            .and_then(|value| value.parse::<u64>().ok())
+            .filter(|value| *value != 0)
+            .ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidData, "fdinfo mount ID is invalid")
+            })?;
+        if fields.next().is_some() || mount_id.replace(value).is_some() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "fdinfo mount ID is ambiguous",
+            ));
+        }
+    }
+    mount_id
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "fdinfo is missing its mount ID"))
 }
 
 fn require_tool(name: &str, candidates: &[&str]) -> io::Result<PathBuf> {
@@ -1684,6 +1723,7 @@ mod tests {
         let script = firewall_script(43123, &policy);
         assert!(script.contains("ip daddr 192.0.2.10 tcp dport 443"));
         assert!(script.contains("dnat to 10.0.2.2:43123"));
+        assert!(script.contains("type nat hook output priority -100"));
         let counters =
             parse_firewall_report(VALID_TRANSPARENT_NFT.as_bytes(), 43123, &policy).unwrap();
         assert_eq!(counters.transparent_packets, 7);
@@ -1750,5 +1790,16 @@ mod tests {
             }
         );
         assert!(firewall_delta(before, after).is_err());
+    }
+
+    #[test]
+    fn hosts_verification_uses_the_effective_stacked_mount() {
+        let stacked = concat!(
+            "1762 1730 259:1 /docker/hosts /etc/hosts rw,relatime - ext4 /dev/root rw\n",
+            "1763 1762 0:231 /tmp/snapshot /etc/hosts ro,relatime - overlay overlay rw\n",
+        );
+        verify_effective_hosts_mount(stacked, 1763).unwrap();
+        assert!(verify_effective_hosts_mount(stacked, 1762).is_err());
+        assert!(verify_effective_hosts_mount(stacked, 9999).is_err());
     }
 }
