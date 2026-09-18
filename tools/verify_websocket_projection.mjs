@@ -25,7 +25,19 @@ function canonical(value) {
 }
 function hash(value) { return createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex"); }
 
-const parent = await read(`/v1/attempts/${encodeURIComponent(connectionID)}`);
+async function allEvents(id) {
+  const events = []; let after = 0;
+  for (let pageIndex = 0; pageIndex < 1000; pageIndex++) {
+    const page = await read(`/v1/attempts/${encodeURIComponent(id)}/events?limit=1000&after_seq=${after}`);
+    for (const event of page.items) { check(event.seq > after, "non_monotonic_event_page"); after = event.seq; events.push(event); }
+    if (!page.has_more) { check(events.length === page.total, "incomplete_event_pagination"); return events; }
+    check(page.next_after_seq === after && page.items.length > 0, "invalid_event_cursor");
+  }
+  throw new Error("event_pagination_safety_limit");
+}
+
+const parent = await read(`/v1/attempts/${encodeURIComponent(connectionID)}?view=normalized`);
+parent.events = await allEvents(connectionID);
 check(parent.entity_kind === "websocket_connection", "parent_is_not_a_connection");
 check(parent.normalized === null && parent.usage === null && parent.inference_id === null, "connection_contains_aggregate_call_fields");
 const frames = parent.events.filter(e => e.event === "websocket_frame");
@@ -33,7 +45,8 @@ const seen = new Set(), usage = { input_tokens: 0, output_tokens: 0 };
 const outcomes = {}, fingerprints = [];
 let toolCalls = 0, toolResults = 0, terminalChecks = 0;
 for (const row of parent.calls) {
-  const call = await read(`/v1/attempts/${encodeURIComponent(row.id)}`);
+  const call = await read(`/v1/attempts/${encodeURIComponent(row.id)}?view=normalized`);
+  call.events = await allEvents(row.id);
   check(call.parent_connection.id === connectionID, "wrong_parent_connection");
   check(call.entity_kind === "websocket_call", "wrong_child_kind");
   const inference = await read(`/v1/inferences/${encodeURIComponent(call.inference_id)}`);

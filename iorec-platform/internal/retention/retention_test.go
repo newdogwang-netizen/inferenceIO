@@ -95,6 +95,9 @@ func TestFullDeletionIsDurableScopedAndPropagated(t *testing.T) {
 	if _, err := db.Pool.Exec(ctx, `insert into capture_runs(id,project_id,collector_id,ended_at) values($1,$3,$4,now()),($2,$3,null,now())`, run, otherRun, fixture.project, fixture.collector); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Pool.Exec(ctx, `update capture_runs set benchmark_result='{"result":{"task":"private-task"}}' where id=$1`, run); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := db.Pool.Exec(ctx, `insert into recordings(id,project_id,capture_run_id,state,final_seq,durable_seq,parsed_seq) values($1,$3,$4,'sealed',1,1,1),($2,$3,$5,'sealed',1,1,1)`, recording, otherRecording, fixture.project, run, otherRun); err != nil {
 		t.Fatal(err)
 	}
@@ -185,6 +188,10 @@ func TestFullDeletionIsDurableScopedAndPropagated(t *testing.T) {
 	}
 	if runState != "deleted" || recState != "deleted" || deletionState != "local_pending" {
 		t.Fatalf("remote deletion did not converge: run=%s recording=%s request=%s", runState, recState, deletionState)
+	}
+	var benchmarkScrubbed bool
+	if err := db.Pool.QueryRow(ctx, `select benchmark_result is null from capture_runs where id=$1`, run).Scan(&benchmarkScrubbed); err != nil || !benchmarkScrubbed {
+		t.Fatalf("benchmark annotation not scrubbed: %v", err)
 	}
 	for table, query := range map[string]string{
 		"batches":          `select count(*) from batches where recording_id=$1`,

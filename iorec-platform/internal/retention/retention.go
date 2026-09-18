@@ -899,7 +899,7 @@ func (s *Service) finalizeFull(ctx context.Context, tx pgx.Tx, work deletionWork
 	if _, err := tx.Exec(ctx, `update recordings set state='deleted',manifest=null,manifest_sha256=null,coverage=null,coverage_revision=0,integrity_alerts='[]'::jsonb,missing_blobs='[]'::jsonb,durable_seq=sequence_base,parsed_seq=sequence_base,final_seq=null,sealed_at=null,retention_until=null,deleted_at=now(),deleted_by=(select requested_by from deletion_requests where id=$3),updated_at=now() where project_id=$1 and capture_run_id=$2`, work.project, work.run, work.id); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `update capture_runs set state='deleted',collector_id=null,command=null,cwd=null,agent_kind=null,agent_version=null,started_at=null,ended_at=null,exit_code=null,metadata='{}'::jsonb,relation_revision=0,analysis_revision=0,transport_proof=null,transport_proof_revision=0,retention_until=null,deleted_at=now(),deleted_by=(select requested_by from deletion_requests where id=$3) where project_id=$1 and id=$2`, work.project, work.run, work.id); err != nil {
+	if _, err := tx.Exec(ctx, `update capture_runs set state='deleted',collector_id=null,command=null,cwd=null,agent_kind=null,agent_version=null,started_at=null,ended_at=null,exit_code=null,metadata='{}'::jsonb,relation_revision=0,analysis_revision=0,transport_proof=null,transport_proof_revision=0,benchmark_result=null,retention_until=null,deleted_at=now(),deleted_by=(select requested_by from deletion_requests where id=$3) where project_id=$1 and id=$2`, work.project, work.run, work.id); err != nil {
 		return err
 	}
 	var collectorRequestID *uuid.UUID

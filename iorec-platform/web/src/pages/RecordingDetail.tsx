@@ -4,6 +4,8 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, enc, fmtDur, fmtTime, short } from "../api";
 import { Claim, Json, Loading, RelStatus, Terminal, UiState } from "../components";
 import DeletionAction from "../DeletionAction";
+import EvidenceContext from "../EvidenceContext";
+import BenchmarkResult from "../BenchmarkResult";
 
 export default function RecordingDetail() {
   const { id = "" } = useParams();
@@ -33,6 +35,7 @@ export default function RecordingDetail() {
             <span className="k">Agent</span><span>{r.agent_kind} {r.agent_version} <code>{r.command}</code> <span className="muted">{r.cwd}</span></span>
             <span className="k">时间</span><span>{fmtTime(r.run_started_at)} → {fmtTime(r.run_ended_at)} <span className="muted">exit {r.exit_code ?? "–"}</span></span>
             <span className="k">统计</span><span>{r.inference_count} 次逻辑调用 · {r.attempt_count} 次 attempt · {r.failed_jobs} 失败任务 · {r.active_jobs} 进行中</span>
+            <span className="k">基准判分</span><BenchmarkResult value={r.benchmark_result} />
             {Array.isArray(r.integrity_alerts) && r.integrity_alerts.length ? (<><span className="k error">完整性告警</span><span><Json v={r.integrity_alerts} max={120} /></span></>) : null}
           </div>
         </div>
@@ -52,7 +55,7 @@ export default function RecordingDetail() {
       <Loading q={tl} />
       {tab === "timeline" && tl.data ? <Timeline d={tl.data} /> : null}
       {tab === "attempts" && tl.data ? <Attempts recId={id} /> : null}
-      {tab === "coverage" ? <CoveragePanel cov={cov} manifest={r?.manifest} /> : null}
+      {tab === "coverage" ? <><EvidenceContext coverage={cov} proof={r?.transport_proof} /><CoveragePanel cov={cov} manifest={r?.manifest} /></> : null}
       {tab === "lifecycle" && tl.data ? <Json v={tl.data.lifecycle} max={700} /> : null}
       {tab === "batches" && r ? <Json v={r.batches} max={700} /> : null}
       <DeletionAction entity="recording" id={id} />

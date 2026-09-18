@@ -69,4 +69,64 @@ func TestWebSocketChildQueryReturnsOnlyAssignedEvidence(t *testing.T) {
 	if response.Code != http.StatusNotFound {
 		t.Fatalf("cross-project child access: %d", response.Code)
 	}
+	getPage := func(id, query string) (attemptEventPage, int) {
+		request := requestWithID(t, p, id)
+		request.URL.RawQuery = query
+		rr := httptest.NewRecorder()
+		s.GetAttemptEvents(rr, request)
+		var page attemptEventPage
+		if rr.Code == http.StatusOK {
+			if err := json.Unmarshal(rr.Body.Bytes(), &page); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return page, rr.Code
+	}
+	page, status := getPage(child, "limit=1")
+	if status != http.StatusOK || page.Total != 2 || !page.HasMore || page.NextAfterSeq == nil || *page.NextAfterSeq != 1 || len(page.Items) != 1 {
+		t.Fatalf("first child page: %+v status %d", page, status)
+	}
+	page, status = getPage(child, "limit=1&after_seq=1")
+	if status != http.StatusOK || page.HasMore || page.NextAfterSeq != nil || len(page.Items) != 1 || page.Items[0]["seq"] != float64(3) {
+		t.Fatalf("second child page: %+v status %d", page, status)
+	}
+	page, status = getPage(parent, "filter=unresolved")
+	if status != http.StatusOK || page.Total != 1 || len(page.Items) != 1 || page.Items[0]["seq"] != float64(2) {
+		t.Fatalf("unresolved page: %+v status %d", page, status)
+	}
+	for _, query := range []string{"after_seq=-1", "after_seq=not-an-integer", "after_seq=999999999999999999999", "filter=sql"} {
+		if _, status := getPage(child, query); status != http.StatusBadRequest {
+			t.Fatalf("invalid query accepted: %s -> %d", query, status)
+		}
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into recording_events(recording_id,seq,monotonic_ns,wall_time,source,event,attempt_id,payload,batch_id) select $1,n,n,now(),'proxy','websocket_frame','connection','{"direction":"upstream_to_client","opcode":"text"}','b' from generate_series(4,1204) as n`, rec); err != nil {
+		t.Fatal(err)
+	}
+	page, status = getPage(parent, "")
+	if status != http.StatusOK || len(page.Items) != 200 || page.Total != 1204 || !page.HasMore {
+		t.Fatalf("default page not bounded: %d items of %d", len(page.Items), page.Total)
+	}
+	page, status = getPage(parent, "limit=99999")
+	if status != http.StatusOK || len(page.Items) != 1000 || page.Limit != 1000 {
+		t.Fatal("page limit not capped")
+	}
+	response = httptest.NewRecorder()
+	s.GetAttempt(response, requestWithID(t, p, parent))
+	if err := json.Unmarshal(response.Body.Bytes(), &parentBody); err != nil {
+		t.Fatal(err)
+	}
+	if len(parentBody.Events) != 200 {
+		t.Fatal("legacy attempt detail unbounded")
+	}
+	response = httptest.NewRecorder()
+	s.GetAttemptEvents(response, requestWithID(t, other, parent))
+	if response.Code != http.StatusNotFound {
+		t.Fatal("event page leaked across projects")
+	}
+	if _, err := db.Pool.Exec(ctx, `update capture_runs set state='deleting' where id=$1`, run); err != nil {
+		t.Fatal(err)
+	}
+	if _, status := getPage(parent, ""); status != http.StatusNotFound {
+		t.Fatal("deletion fence bypassed")
+	}
 }

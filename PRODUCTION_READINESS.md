@@ -2,6 +2,16 @@
 
 Assessment date: 2026-09-16
 
+Current-worktree qualification note (2026-09-18): the assessment and “final”
+artifact hashes below describe the frozen September 16 release, not the newer
+WebSocket/M1/M2 changes. [M1](benchmarks/2026-09-18-websocket-call-projection-linux-x86_64.json)
+qualifies per-call reconstruction against one real Harbor capture and its
+regression fixtures. M2 adds bounded event navigation, externally reported
+benchmark scores, worker heartbeats and local workflow tooling; its full
+fresh-trial acceptance is still pending. M3's 12 real experiments and a new
+five-hour soak on the final candidate remain required. Do not deploy a newer
+worktree based solely on the historical “release-hardened” statement below.
+
 `iorec 0.1.0` is release-hardened for local, best-effort recording on Linux x86-64. It is not a host-wide or transport-complete inference monitor. Every manifest claim remains `best-effort`, regardless of process exit status or verifier profile.
 
 ## Shipped boundary

@@ -6,6 +6,36 @@
 
 The current release deliberately reports `claim: "best-effort"`. A successful run means the recorder completed cleanly; it does not mean every model call on the host was observed.
 
+## Current development qualification (2026-09-18)
+
+The real Harbor WebSocket capture now has 19 separately traceable calls on one
+connection; see the [M1 qualification](benchmarks/2026-09-18-websocket-call-projection-linux-x86_64.json).
+M2 adds paginated evidence views, explicit proof boundaries, external benchmark
+annotations, worker liveness, and a resumable controlled audit command; see its
+[scoped qualification](benchmarks/2026-09-18-m2-evidence-workflow-linux-x86_64.json). M2's
+fresh-trial gate and the M3 real-agent matrix/final-candidate five-hour soak are
+not yet qualified. Historical release and soak reports qualify their own exact
+artifacts, not every newer worktree.
+
+For the **local development** platform (unauthenticated, loopback-only, with
+development database durability settings):
+
+```bash
+python3 tools/local_platform.py start --build
+python3 tools/local_platform.py status
+```
+
+On the host running iorec, the stable Web URL is `http://127.0.0.1:8088` and the
+API is `http://127.0.0.1:18080`. A desktop/SSH forwarded port is a separate,
+possibly temporary address. The launcher preserves existing credentials in an
+owner-only state file and refuses to downgrade an authenticated deployment.
+Worker heartbeat health checks process/database liveness; processing success
+and queue drain are reported separately.
+
+See the [one-command Harbor workflow](docs/harbor-terminal-bench-audit.md#controlled-one-command-workflow)
+for record → verify → independent audit → import → proof, safe retry behavior,
+and plaintext staging cleanup.
+
 ## Build
 
 Linux x86-64 and Rust 1.89 or newer are the supported build baseline.

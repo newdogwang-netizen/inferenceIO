@@ -74,6 +74,11 @@ func main() {
 		}
 	}
 	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		jobs.Heartbeat(ctx, db.Pool, owner, pools)
+	}()
 	for typ, n := range pools {
 		for i := 0; i < n; i++ {
 			wg.Add(1)

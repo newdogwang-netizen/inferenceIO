@@ -203,6 +203,8 @@ func main() {
 		r.Use(httpapi.ProjectRateLimit(projectRateLimiter))
 		r.Get("/me", qs.Me)
 		r.Get("/overview", qs.Overview)
+		r.Get("/system/health", qs.SystemHealth)
+		r.Put("/capture-runs/{id}/benchmark-result", qs.PutBenchmarkResult)
 
 		// data plane
 		r.Post("/recordings", func(w http.ResponseWriter, r *http.Request) {
@@ -509,6 +511,7 @@ func main() {
 		r.Delete("/capture-runs/{id}", ret.DeleteHandler("capture_run"))
 		r.Get("/attempts", qs.ListAttempts)
 		r.Get("/attempts/{id}", qs.GetAttempt)
+		r.Get("/attempts/{id}/events", qs.GetAttemptEvents)
 		r.Get("/inferences/{id}", qs.GetInference)
 		r.Get("/sessions/{id}", qs.GetSession)
 		r.Delete("/sessions/{id}", ret.DeleteHandler("session"))

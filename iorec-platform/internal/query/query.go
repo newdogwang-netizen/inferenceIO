@@ -199,7 +199,7 @@ func (s *Service) GetRecording(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	it, err := s.one(r.Context(), `select r.*, c.agent_kind, c.agent_version, c.command, c.cwd, c.started_at as run_started_at, c.ended_at as run_ended_at, c.exit_code, c.relation_revision, c.analysis_revision, c.metadata as run_metadata, c.transport_proof, c.transport_proof_revision,
+	it, err := s.one(r.Context(), `select r.*, c.agent_kind, c.agent_version, c.command, c.cwd, c.started_at as run_started_at, c.ended_at as run_ended_at, c.exit_code, c.relation_revision, c.analysis_revision, c.metadata as run_metadata, c.transport_proof, c.transport_proof_revision,c.benchmark_result,
 			(select count(*) from model_attempts a where a.recording_id=r.id) as attempt_count,
 			(select count(*) from model_inferences i where i.recording_id=r.id) as inference_count,
 			(select count(*) from processing_jobs pj where pj.recording_id=r.id and pj.status in ('dead','failed')) as failed_jobs,
@@ -358,38 +358,45 @@ func (s *Service) GetAttempt(w http.ResponseWriter, r *http.Request) {
 		it["calls"] = calls
 	}
 	if r.URL.Query().Get("view") != "normalized" {
-		events, err := s.list(r.Context(), `select e.recording_id, e.seq, e.wall_time, e.monotonic_ns, e.event, e.task_id, e.agent_session_id, e.payload, e.payload_sha256, e.payload_size,l.call_attempt_id,l.reason as assignment_reason
-			from recording_events e join recordings r on r.id=e.recording_id
-			left join attempt_event_links l on l.recording_id=e.recording_id and l.seq=e.seq and l.parent_attempt_id=$4 and l.project_id=$2
-			where r.capture_run_id=$1 and r.project_id=$2 and e.attempt_id=$3 and (not $5::boolean or l.call_attempt_id=$6)
-			order by e.seq, e.recording_id`, run, p.ProjectID, native, parentID, child, id)
+		after, err := eventCursor(r)
 		if err != nil {
 			httpapi.WriteError(w, r, err)
 			return
 		}
-		it["events"] = events
+		scope := attemptEventScope{Project: p.ProjectID, Run: run, Native: native, Parent: parentID, ID: id, Child: child}
+		page, err := s.attemptEvents(r.Context(), scope, after, limitParam(r, 200, 1000), "all")
+		if err != nil {
+			httpapi.WriteError(w, r, err)
+			return
+		}
+		it["events"] = page.Items
+		it["events_page"] = map[string]any{"total": page.Total, "has_more": page.HasMore, "next_after_seq": page.NextAfterSeq, "limit": page.Limit}
+		bodies, err := s.attemptEvents(r.Context(), scope, after, limitParam(r, 200, 1000), "body")
+		if err != nil {
+			httpapi.WriteError(w, r, err)
+			return
+		}
+		requestParts, responseParts := []map[string]any{}, []map[string]any{}
+		for _, e := range bodies.Items {
+			part := map[string]any{"recording_id": e["recording_id"], "seq": e["seq"], "event": e["event"], "direction": e["direction"], "sha256": e["payload_sha256"], "size": e["payload_size"], "media_type": e["raw_media_type"], "raw_truncated": e["raw_truncated"]}
+			if payload, ok := e["payload"].(map[string]any); ok {
+				part["chunk_sequence"] = payload["chunk_sequence"]
+			}
+			if e["event"] == protocol.EvRequestBodyChunk || e["direction"] == "client_to_upstream" {
+				requestParts = append(requestParts, part)
+			} else {
+				responseParts = append(responseParts, part)
+			}
+		}
+		it["request_body_parts"], it["response_body_parts"] = requestParts, responseParts
+		it["body_parts_page"] = map[string]any{"total": bodies.Total, "has_more": bodies.HasMore, "next_after_seq": bodies.NextAfterSeq, "limit": bodies.Limit}
 	}
-	bodyParts, err := s.list(r.Context(), `select e.recording_id, e.seq, e.event, e.payload->>'direction' as direction, e.payload_sha256 as sha256, e.payload_size as size, e.raw_media_type as media_type, e.raw_truncated,
-			case when coalesce(e.payload->>'chunk_sequence','') ~ '^[0-9]+$' then (e.payload->>'chunk_sequence')::bigint else 0 end as chunk_sequence
-		from recording_events e join recordings r on r.id=e.recording_id
-		left join attempt_event_links l on l.recording_id=e.recording_id and l.seq=e.seq and l.parent_attempt_id=$4 and l.project_id=$2
-		where r.capture_run_id=$1 and r.project_id=$2 and e.attempt_id=$3 and (not $5::boolean or l.call_attempt_id=$6) and (e.event in ('request_body_chunk','response_body_chunk') or (e.event='websocket_frame' and e.payload->>'opcode'='text'))
-		order by e.seq, e.recording_id`, run, p.ProjectID, native, parentID, child, id)
+	proof, err := s.one(r.Context(), `select c.transport_proof,c.transport_proof_revision,c.benchmark_result,r.coverage,r.coverage_revision from recordings r join capture_runs c on c.id=r.capture_run_id and c.project_id=r.project_id where r.id=$1 and r.project_id=$2 and c.state='active' and r.state not in ('deleting','deleted')`, it["recording_id"], p.ProjectID)
 	if err != nil {
 		httpapi.WriteError(w, r, err)
 		return
 	}
-	requestParts := make([]map[string]any, 0)
-	responseParts := make([]map[string]any, 0)
-	for _, part := range bodyParts {
-		if part["event"] == protocol.EvRequestBodyChunk || part["direction"] == "client_to_upstream" {
-			requestParts = append(requestParts, part)
-		} else {
-			responseParts = append(responseParts, part)
-		}
-	}
-	it["request_body_parts"] = requestParts
-	it["response_body_parts"] = responseParts
+	it["evidence_context"] = proof
 	rels, err := s.list(r.Context(), `select type, to_id, status, confidence, evidence, revision from relations where from_id=$1 and project_id=$2 and superseded_by is null order by revision desc`, id, p.ProjectID)
 	if err == nil {
 		it["relations"] = rels

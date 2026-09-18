@@ -167,3 +167,86 @@ temporary bundle immediately.
 Remove disposable preflight containers and plaintext audit reports after the
 result has been qualified. Retain the encrypted run, its key under separate
 access control, the Harbor verifier result, and a non-sensitive summary.
+
+## Controlled one-command workflow
+
+The new controller `tools/harbor_audit_workflow.py` performs explicit stages:
+preflight → Harbor trial → encrypted integrity → independent transport audit →
+trusted local import → platform proof and benchmark annotation. It accepts
+only explicit loopback HTTP origins, does not use HTTP proxies or redirects,
+and never gives the recorder master key to the platform.
+
+First start/check the local **development** platform and build the recorder:
+
+```bash
+python3 tools/local_platform.py start --build
+cargo build --release --locked
+```
+
+Then use an empty, private work directory and a pre-existing private recorder
+key. Agent/provider credentials remain in the operator environment, not command
+arguments, the job config, or the public summary:
+
+```bash
+python3 tools/harbor_audit_workflow.py \
+  --work-dir /tmp/iorec-harbor-new-audit \
+  --task /path/to/terminal-bench/html-js-filter \
+  --model openai/YOUR_MODEL \
+  --agent-timeout 900 \
+  --key-file /private/iorec/master.key
+```
+
+The current wrapper is Codex-specific; this command does not claim equivalent
+Harbor wrappers for Claude/Hermes. It uses one trial, one concurrent agent, no
+automatic retries, a Harbor-enforced agent timeout and bounded verifier/setup
+timeouts. The timeout is **not a hard monetary limit**; provision appropriate
+provider-side spending limits before a fresh paid experiment. The M3 matrix
+must separately record and enforce its chosen budget/stop policy.
+
+To validate the downstream stages using an already finished trial without
+starting or paying for another agent run:
+
+```bash
+python3 tools/harbor_audit_workflow.py \
+  --work-dir /tmp/iorec-harbor-existing-audit \
+  --from-trial /path/to/harbor/job/task__trial \
+  --key-file /private/iorec/master.key
+```
+
+For authenticated local platforms, pass an owner-only `--token-file` containing
+an operator token. `--api` and `--web` default to the actual host listeners
+`http://127.0.0.1:18080` and `http://127.0.0.1:8088`; they are not temporary
+desktop forwarding ports. The emitted recording URL uses that stable Web origin.
+
+Repeat **exactly the same command and work directory** to recover. The controller
+pins recorder/key/task inputs and source evidence, authenticates evidence again,
+uses the platform's idempotent import, and attaches an immutable, project-scoped
+benchmark annotation. Changed inputs require another work directory. An already
+launched but incomplete Harbor job is never silently resubmitted. A child-held
+workspace lock prevents concurrent controllers from deleting an active export
+or starting a duplicate paid trial. An observation timeout does not mean the
+Harbor process has stopped; inspect its existing process/job, and do not start
+a second job merely because a wait expired.
+
+`state.json` gives stage status and bounded failure codes. `report.json` contains
+selected counts, artifact digests, provenance and the recording link; no payload,
+TLS keys, verifier logs or raw exception messages. Review identifiers before
+publication. The Harbor reward stays separate from capture qualification: reward
+zero does not fail a clean recording, and a verified recording does not mean the
+agent solved the task. The platform labels the attached score as externally
+reported, not independently recomputed correctness.
+
+Temporary plaintext exports and transport reports live only under the owned
+`scratch` directory and are removed on success and ordinary failure, including
+import failure. After SIGKILL/power loss, they can remain mode-0700 protected;
+the next invocation removes that exact staging directory after obtaining the
+child-held lock. This is deletion, **not secure erasure**. Encrypted original
+runs, the separately held key and private Harbor logs are preserved. Do not
+publish the entire work directory.
+
+The existing September 18 recording has since been reprocessed by M1 into 19
+individual calls and 18 resolved state references. Its original connection
+`client_read` and unknown static TLS indicators remain visible. The older
+24-message aggregate above describes the historical transport qualification,
+not the current call-level semantic projection. See
+[next-stage acceptance](next-stage-goals.md) for the pending fresh-trial/M3 gates.
