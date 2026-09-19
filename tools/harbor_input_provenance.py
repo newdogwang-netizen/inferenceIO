@@ -194,6 +194,19 @@ def measurement_definitions():
     return module
 
 
+def task_reported_name(task: Path):
+    """Harbor reports [task].name verbatim, not necessarily the folder name."""
+    with (task / "task.toml").open("rb") as source:
+        raw = source.read((1 << 20) + 1)
+    if len(raw) > 1 << 20:
+        raise InputFailure("task_config_too_large")
+    config = tomllib.loads(raw.decode())
+    name = config.get("task", {}).get("name", task.name)
+    if not isinstance(name, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.~/-]{0,255}", name):
+        raise InputFailure("invalid_reported_task_name")
+    return name
+
+
 def fresh_identity(args, launcher: Path | None = None):
     module = audit_definitions()
     path = ROOT / "examples/harbor_audit_inputs.py"
@@ -215,6 +228,7 @@ def fresh_identity(args, launcher: Path | None = None):
                 ROOT / "examples/harbor_iorec_audit_base.py",
                 ROOT / ("examples/harbor_iorec_" + agent + "_audit.py"),
                 ROOT / "examples/harbor-audit-compose.yaml")}}
+    result["task"]["harbor_name"] = task_reported_name(args.task)
     if agent == "hermes":
         import importlib.util
         verifier_path = ROOT / "examples/hermes_runtime_bundle.py"

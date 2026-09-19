@@ -39,6 +39,13 @@ class InputTests(unittest.TestCase):
         path.chmod(0o500)
         self.assertNotEqual(inputs.file_identity(path), before)
 
+    def test_harbor_reported_task_name_preserves_namespace_and_legacy_fallback(self):
+        self.assertEqual(inputs.task_reported_name(self.task), "task")
+        (self.task / "task.toml").write_text('[task]\nname = "terminal-bench/task"\n')
+        self.assertEqual(inputs.task_reported_name(self.task), "terminal-bench/task")
+        with mock.patch.object(inputs, "harbor_runtime", return_value=self.runtime):
+            self.assertEqual(inputs.fresh_identity(self.args)["task"]["harbor_name"], "terminal-bench/task")
+
     def test_file_retarget_and_fifo_fail_closed_without_blocking(self):
         link = self.base / "link"
         link.symlink_to(self.base / "codex")

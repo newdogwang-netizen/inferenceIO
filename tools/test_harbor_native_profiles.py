@@ -8,6 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest import mock
 
@@ -151,6 +152,34 @@ class NativeProfileTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {"CLAUDE_CODE_USE_BEDROCK": "1"}, clear=True):
             with self.assertRaisesRegex(ValueError, "direct_anthropic"):
                 Profile()
+
+    def test_codex_private_config_upload_is_owned_by_confined_agent(self):
+        class Parent:
+            _REMOTE_CODEX_HOME = Path("/tmp/codex-home")
+            def __init__(self, **kwargs):
+                self.calls = []
+            async def _upload_effective_config(self, environment, config, remote_path):
+                self.calls.append(("upload", config, remote_path))
+            async def exec_as_root(self, environment, command, **kwargs):
+                self.calls.append(("root", command))
+        spec = importlib.util.spec_from_file_location("codex_profile_fixture", workflow.ROOT / "examples/harbor_iorec_codex_audit.py")
+        module = importlib.util.module_from_spec(spec)
+        with mock.patch.dict(sys.modules, {"harbor.agents.installed.codex": SimpleNamespace(Codex=Parent),
+                                          "harbor_iorec_audit_base": base}):
+            spec.loader.exec_module(module)
+        with mock.patch.dict(os.environ, {}, clear=True):
+            profile = module.IorecCodexAudit()
+        remote = "/tmp/codex-home/config.toml"
+        asyncio.run(profile._upload_effective_config(None, {"fixture": True}, remote))
+        self.assertEqual(profile.calls[0], ("upload", {"fixture": True}, remote))
+        self.assertEqual(profile.calls[1], ("root", f"test -f {remote} && test ! -L {remote} && chown 10001:10001 {remote} && chmod 600 {remote}"))
+        profile.calls.clear()
+        asyncio.run(profile._upload_effective_config(None, {}, remote))
+        self.assertEqual(len(profile.calls), 1)
+        for other in ("/tmp/other", "/tmp/codex-home/config.toml; false"):
+            with self.assertRaisesRegex(ValueError, "unexpected_codex_config_destination"):
+                asyncio.run(profile._upload_effective_config(None, {"fixture": True}, other))
+        self.assertEqual(len(profile.calls), 1)
 
 
 if __name__ == "__main__":

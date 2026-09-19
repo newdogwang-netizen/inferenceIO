@@ -172,6 +172,11 @@ class CaseBindingTests(unittest.TestCase):
         self.assertEqual(bound["expected_result"]["agent_version"], "0.154.0")
         self.assertEqual(bound["expected_result"]["model"], "openai/test-model")
 
+    def test_binds_namespaced_reported_name_from_frozen_task_config(self):
+        self.fresh["task"]["harbor_name"] = "terminal-bench/cancel-async-tasks"
+        bound = plans.bind_case(self.args, self.fresh)
+        self.assertEqual(bound["expected_result"]["task"], "terminal-bench/cancel-async-tasks")
+
     def test_wrong_case_mode_model_task_artifact_timeout_and_partial_flags_reject(self):
         for field, value in (("experiment_case", "missing"), ("experiment_case", "paired-on"),
                              ("model", "openai/other"), ("agent_timeout", 899), ("task_image", None),

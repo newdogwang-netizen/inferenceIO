@@ -216,7 +216,8 @@ def bind_case(args, fresh):
     return {"case_id": case_id, "plan_path": str(path.absolute()), "plan_sha256": identity["sha256"],
             "ledger_path": str(ledger.absolute()),
             "expected_result": {"agent": {"codex": "codex", "claude": "claude-code", "hermes": "hermes"}[args.agent],
-                                "agent_version": agent["version"], "model": agent["model"], "task": task["id"]}}
+                                "agent_version": agent["version"], "model": agent["model"],
+                                "task": fresh["task"].get("harbor_name", task["id"])}}
 
 
 if __name__ == "__main__":

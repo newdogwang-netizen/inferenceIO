@@ -137,7 +137,8 @@ def read_case(root, mode, plan, plan_sha256):
     agent = plan["agents"][pair["agent"]]
     task = next(t for t in plan["tasks"] if t["id"] == pair["task"])
     require(binding["expected_result"] == {"agent": {"codex": "codex", "claude": "claude-code", "hermes": "hermes"}[pair["agent"]],
-            "agent_version": agent["version"], "model": agent["model"], "task": task["id"]}, "launch_identity_differs_from_plan")
+            "agent_version": agent["version"], "model": agent["model"],
+            "task": fresh["task"].get("harbor_name", task["id"])}, "launch_identity_differs_from_plan")
     require(cfg.get("agent") == fresh.get("agent") == pair["agent"]
             and cfg.get("model") == agent["model"] and cfg.get("upstream") == fresh.get("upstream") == agent["upstream"]
             and cfg.get("source") == task["path"] and cfg.get("iorec_sha256") == plan["recorder"]["sha256"]
