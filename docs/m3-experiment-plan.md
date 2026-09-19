@@ -11,6 +11,17 @@ schema 2 必须记录 `scope_amendment` 的排除项和审批引用；预算中�
 同一共享账本。`provider_billing_cap_verified` 始终为 false；本地账本不能保证
 正在执行的调用不超支。两题、重复次数、录制完整性和对照要求均不变。
 
+Hermes 0.19 的受控 profile 使用显式 custom 配置、canonical model ID 和环境变量
+引用密钥，不依赖旧 Harbor 的 provider auto / `OPENAI_BASE_URL` 路由。
+费用优先读取带来源的单 CLI session 原生估算；多 session、压缩、未知来源不猜测。
+固定运行包缺少 `deepseek-v4-pro-0813` 的费率时，仅该精确 Fireworks standard 路由
+可以用原生不重叠 token 桶与 2026-09-19 核对的
+[官方价格](https://docs.fireworks.ai/serverless/pricing)估算：每百万非缓存输入 /
+缓存输入 / 输出 token 分别为 USD 1.32 / 0.044 / 3.96。不套用旧型号费率；
+未指定 tier 为 [Standard 默认模式](https://docs.fireworks.ai/serverless/serverless-modes)。
+该估算不是账单核实，也不证明原生 session 已覆盖全部辅助服务开销；计费来源、
+价格版本及 session 导出摘要随 Harbor metadata 保留，未知字段仍使费用停止规则生效。
+
 状态：**尚无本轮真实实验结果**。仓库机器清单示例位于
 [`examples/m3-experiment-plan.json`](../examples/m3-experiment-plan.json)。模型和预算
 故意保留 `null`；操作员实际授权、模型选择、凭据来源及费用限制检查保留在本机

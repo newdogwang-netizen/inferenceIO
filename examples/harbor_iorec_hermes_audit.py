@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 import os
+from decimal import Decimal
 import re
 import shlex
 
@@ -62,9 +63,12 @@ class IorecHermesAudit(IorecAuditMixin, Hermes):
             raise ValueError("unrecognized_hermes_version_output")
         return versions[0]
 
-    @staticmethod
-    def _build_config_yaml(model):
+    def _build_config_yaml(self, model):
         config = yaml.safe_load(Hermes._build_config_yaml(model))
+        config["model"] = {"default": model.removeprefix("openai/"), "provider": "custom",
+                           "base_url": self.audit_upstream, "api_mode": "chat_completions",
+                           "api_key": "${OPENAI_API_KEY}"}
+        config["provider"] = "custom"
         config["agent"]["max_turns"] = 60
         return yaml.safe_dump(config, sort_keys=False)
 
@@ -73,7 +77,37 @@ class IorecHermesAudit(IorecAuditMixin, Hermes):
         # key is absent, contradicting the recorded endpoint/provider inputs.
         if not self.model_name or not self.model_name.startswith("openai/") or not os.environ.get("OPENAI_API_KEY"):
             raise ValueError("hermes_audit_requires_explicit_openai_model_and_key_no_fallback")
-        return await super().run(instruction, environment, context)
+        # Hermes 0.19 no longer uses OPENAI_BASE_URL as its custom endpoint
+        # configuration. Explicitly bind the native provider, canonical model
+        # ID and env-referenced key; do not send Harbor's openai/ routing prefix
+        # to a Fireworks-compatible endpoint or rely on provider auto-detection.
+        if getattr(self, "mcp_servers", None) or getattr(self, "skills", None):
+            raise ValueError("hermes_audit_custom_skills_or_mcp_not_qualified")
+        instruction = self.render_instruction(instruction)
+        model = self.model_name.split("/", 1)[1]
+        env = {"OPENAI_API_KEY": os.environ["OPENAI_API_KEY"],
+               "OPENAI_BASE_URL": self.audit_upstream, "TERMINAL_ENV": "local",
+               "HARBOR_INSTRUCTION": instruction}
+        config = self._build_config_yaml(self.model_name)
+        await self.exec_as_agent(environment, command=(
+            "umask 077; mkdir -p /tmp/hermes; printf '%s' " + shlex.quote(config)
+            + " > /tmp/hermes/config.yaml"), env=env, timeout_sec=10)
+        command = 'hermes --yolo chat -q "$HARBOR_INSTRUCTION" -Q --provider custom --model ' + shlex.quote(model)
+        toolsets = getattr(self, "_resolved_flags", {}).get("toolsets")
+        if toolsets:
+            command += " --toolsets " + shlex.quote(str(toolsets))
+        try:
+            await self.exec_as_agent(environment,
+                command=command + " 2>&1 | stdbuf -oL tee /logs/agent/hermes.txt", env=env)
+        finally:
+            try:
+                await self.exec_as_agent(environment,
+                    command="hermes sessions export /logs/agent/hermes-session.jsonl --source cli",
+                    env={}, timeout_sec=30)
+            except Exception:
+                # Missing export remains observable: costs stay unknown and
+                # the shared ledger halts, even if the agent command succeeded.
+                pass
 
     def populate_context_post_run(self, context):
         super().populate_context_post_run(context)
@@ -96,16 +130,37 @@ class IorecHermesAudit(IorecAuditMixin, Hermes):
                     or row.get("end_reason") == "compression" or row.get("segments")
                     or row.get("model") not in (self.model_name, self.model_name.split("/", 1)[-1])
                     or row.get("billing_base_url", "").rstrip("/") != self.audit_upstream
-                    or row.get("cost_status") != "estimated"
-                    or row.get("cost_source") != "official_docs_snapshot"
-                    or not isinstance(row.get("pricing_version"), str) or not row["pricing_version"]
-                    or type(row.get("api_call_count")) is not int or row["api_call_count"] <= 0
+                    or type(row.get("api_call_count")) is not int or row["api_call_count"] <= 0):
+                return
+            pricing_source, pricing_version = row.get("cost_source"), row.get("pricing_version")
+            source_name = "hermes_session_estimate"
+            if row.get("cost_status") == "unknown":
+                # The frozen runtime predates this exact model's price entry.
+                # Price only this explicitly pinned standard-mode route from
+                # Hermes' canonical, non-overlapping token buckets. Never
+                # substitute the older deepseek-v4-pro model's rates.
+                if (self.model_name != "openai/accounts/fireworks/models/deepseek-v4-pro-0813"
+                        or self.audit_upstream != "https://api.fireworks.ai/inference/v1"
+                        or row.get("service_tier") not in (None, "default", "standard")):
+                    return
+                buckets = [row.get(k) for k in ("input_tokens", "cache_read_tokens", "output_tokens", "cache_write_tokens")]
+                if any(type(n) is not int or not 0 <= n <= 1_000_000_000 for n in buckets) or buckets[3] != 0:
+                    return
+                # https://docs.fireworks.ai/serverless/pricing, checked 2026-09-19.
+                amount = float(sum(Decimal(n) * rate for n, rate in zip(buckets[:3],
+                    (Decimal("1.32"), Decimal("0.044"), Decimal("3.96")))) / Decimal(1_000_000))
+                pricing_source, pricing_version = "official_docs_snapshot", "fireworks-deepseek-v4-pro-0813-standard-2026-09-19"
+                source_name = "native_usage_official_standard_price_estimate"
+            elif row.get("cost_status") != "estimated":
+                return
+            if (pricing_source not in ("official_docs_snapshot", "provider_models_api")
+                    or not isinstance(pricing_version, str) or not pricing_version
                     or type(amount) not in (int, float) or not math.isfinite(amount) or amount <= 0):
                 return
             context.cost_usd = amount
             context.metadata = {**(context.metadata or {}), "iorec_native_cost": {
-                "source": "hermes_session_estimate", "cost_status": "estimated",
-                "pricing_source": row["cost_source"], "pricing_version": row["pricing_version"],
+                "source": source_name, "cost_status": "estimated",
+                "pricing_source": pricing_source, "pricing_version": pricing_version,
                 "session_export_sha256": hashlib.sha256(raw).hexdigest(),
                 "billing_verified": False,
                 "scope": "native_single_cli_session_report_not_independent_billing_or_complete_auxiliary_spend"}}

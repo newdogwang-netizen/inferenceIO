@@ -42,6 +42,9 @@ class Parent:
     def populate_context_post_run(self, context):
         pass
 
+    def render_instruction(self, instruction):
+        return instruction
+
     @staticmethod
     def _build_config_yaml(model):
         return json.dumps({"model": model, "agent": {"max_turns": 90}, "terminal": {"backend": "local"}})
@@ -73,7 +76,14 @@ class HermesProfileTests(unittest.TestCase):
                 self.assertEqual(p.commands, [])
         with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "fixture"}, clear=True):
             p = self.profile(model_name="openai/fixture")
-            self.assertEqual(asyncio.run(p.run("test", None, None)), "parent_run")
+            self.assertIsNone(asyncio.run(p.run("test", None, None)))
+            self.assertEqual(len(p.commands), 3)
+            self.assertIn("--provider custom --model fixture", p.commands[1]["command"])
+            self.assertNotIn("--model openai/", p.commands[1]["command"])
+            self.assertEqual(p.commands[1]["env"]["HARBOR_INSTRUCTION"], "test")
+            self.assertNotIn("fixture", p.commands[0]["env"].get("HARBOR_INSTRUCTION", ""))
+            self.assertIn("${OPENAI_API_KEY}", p.commands[0]["command"])
+            self.assertIn("hermes sessions export", p.commands[2]["command"])
 
     def test_exact_version_parse_and_explicit_turn_budget(self):
         p = self.profile()
@@ -84,6 +94,10 @@ class HermesProfileTests(unittest.TestCase):
         config = json.loads(p._build_config_yaml("openai/fixture"))
         self.assertEqual(config["agent"]["max_turns"], 60)
         self.assertEqual(config["terminal"], {"backend": "local"})
+        self.assertEqual(config["model"]["provider"], "custom")
+        self.assertEqual(config["model"]["default"], "fixture")
+        self.assertEqual(config["model"]["base_url"], p.audit_upstream)
+        self.assertEqual(config["model"]["api_key"], "${OPENAI_API_KEY}")
 
     def test_runtime_digest_checked_before_extraction_and_version_bound(self):
         with mock.patch.dict(os.environ, {}, clear=True):
@@ -139,6 +153,28 @@ class HermesProfileTests(unittest.TestCase):
             path.write_text(json.dumps(row) + "\n" + json.dumps(row))
             p.populate_context_post_run(context)
             self.assertIsNone(context.cost_usd)
+
+    def test_exact_fireworks_snapshot_prices_disjoint_usage_not_older_model_alias(self):
+        with tempfile.TemporaryDirectory() as temp, mock.patch.dict(os.environ,
+                {"IOREC_HARBOR_UPSTREAM": "https://api.fireworks.ai/inference/v1"}, clear=True):
+            p = self.profile(model_name="openai/accounts/fireworks/models/deepseek-v4-pro-0813")
+            p.logs_dir = Path(temp)
+            row = {"source": "cli", "model": p.model_name.split("/", 1)[1],
+                   "billing_base_url": p.audit_upstream, "api_call_count": 3, "cost_status": "unknown",
+                   "input_tokens": 1000, "cache_read_tokens": 2000, "output_tokens": 500, "cache_write_tokens": 0}
+            path = p.logs_dir / "hermes-session.jsonl"
+            path.write_text(json.dumps(row))
+            context = types.SimpleNamespace(cost_usd=None, metadata=None)
+            p.populate_context_post_run(context)
+            self.assertAlmostEqual(context.cost_usd, 0.003388)
+            self.assertIn("0813-standard-2026-09-19", context.metadata["iorec_native_cost"]["pricing_version"])
+            for key, value in (("service_tier", "priority"), ("cache_write_tokens", 1),
+                               ("input_tokens", None), ("input_tokens", True), ("output_tokens", -1),
+                               ("input_tokens", 1_000_000_001), ("model", "accounts/fireworks/models/deepseek-v4-pro")):
+                path.write_text(json.dumps({**row, key: value}))
+                context = types.SimpleNamespace(cost_usd=None, metadata=None)
+                p.populate_context_post_run(context)
+                self.assertIsNone(context.cost_usd, (key, value))
 
 
 if __name__ == "__main__":
