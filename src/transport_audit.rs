@@ -2029,8 +2029,11 @@ fn finish_stream(
         request: request.finish(),
         response: response.finish(),
         tls_decrypted: builder.tls_decrypted,
-        request_end_observed: request_end || !require_end,
-        response_end_observed: response_end || !require_end,
+        // HTTP/1 messages are emitted after TShark reassembly; a missing
+        // response (for example chunked SSE closed before its zero chunk)
+        // must not acquire an observed end merely because it is not HTTP/2.
+        request_end_observed: request_end,
+        response_end_observed: response_end,
         eligible_for_diff: eligible,
         gaps: gaps.into_iter().collect(),
     }
@@ -2909,6 +2912,22 @@ mod tests {
                 .process_ek_line(&websocket_ek_line(1, vec![invalid]))
                 .is_err()
         );
+    }
+
+    #[test]
+    fn http1_missing_response_does_not_claim_observed_response_end() {
+        let client = Endpoint("127.0.0.1:50000".to_owned());
+        let mut builder = StreamBuilder {
+            method: Some("POST".to_owned()),
+            target: Some(safe_target("/v1/chat/completions").unwrap()),
+            ..StreamBuilder::default()
+        };
+        builder.ended.insert(client.clone());
+        let stream = finish_stream("http/1.1", 4, None, Some(client), &mut builder, false);
+        assert!(stream.request_end_observed);
+        assert!(!stream.response_end_observed);
+        assert!(!stream.eligible_for_diff);
+        assert!(stream.gaps.iter().any(|gap| gap == "stream_status_missing"));
     }
 
     #[test]

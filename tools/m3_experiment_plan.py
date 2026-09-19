@@ -59,10 +59,12 @@ def reference(value):
 def validate(plan, verify_local=False):
     require(isinstance(plan, dict), "unexpected_plan_fields")
     recovery = type(plan.get("schema_version")) is int and plan["schema_version"] == 3
-    amended = type(plan.get("schema_version")) is int and plan["schema_version"] in (2, 3)
+    continuation = type(plan.get("schema_version")) is int and plan["schema_version"] == 4
+    amended = type(plan.get("schema_version")) is int and plan["schema_version"] in (2, 3, 4)
     fields(plan, "schema_version kind dataset recorder agents tasks repetitions paired limits budget"
-           + (" scope_amendment" if amended else "") + (" authorized_recovery" if recovery else ""))
-    require(type(plan["schema_version"]) is int and plan["schema_version"] in (1, 2, 3)
+           + (" scope_amendment" if amended else "") + (" authorized_recovery" if recovery else "")
+           + (" authorized_continuation" if continuation else ""))
+    require(type(plan["schema_version"]) is int and plan["schema_version"] in (1, 2, 3, 4)
             and plan["kind"] == "iorec-m3-real-experiment-plan", "unsupported_plan_schema")
     if amended:
         fields(plan["scope_amendment"], "excluded_agents approval_reference")
@@ -112,15 +114,21 @@ def validate(plan, verify_local=False):
     require(pair["agent"] in plan["agents"] and pair["task"] in ids
             and isinstance(pair["order"], list) and len(pair["order"]) == 2
             and set(pair["order"]) == {"off", "on"}, "additional_on_off_pair_required")
-    fields(plan["limits"], "agent_timeout_seconds verifier_timeout_seconds setup_timeout_seconds concurrency automatic_retries stop_on_recording_gap stop_on_unclassified_failure stop_on_unknown_or_exceeded_cost preserve_failed_trials")
+    fields(plan["limits"], "agent_timeout_seconds verifier_timeout_seconds setup_timeout_seconds concurrency automatic_retries stop_on_recording_gap stop_on_unclassified_failure preserve_failed_trials"
+           + (" stop_on_unknown_cost stop_on_exceeded_cost" if continuation else " stop_on_unknown_or_exceeded_cost"))
     limits = plan["limits"]
     for name in ("agent_timeout_seconds", "verifier_timeout_seconds", "setup_timeout_seconds"):
         require(type(limits[name]) is int and 1 <= limits[name] <= 3600, "bounded_timeouts_required")
     require(type(limits["concurrency"]) is int and limits["concurrency"] == 1
             and type(limits["automatic_retries"]) is int and limits["automatic_retries"] == 0,
             "serial_execution_without_automatic_retries_required")
-    require(all(limits[name] is True for name in ("stop_on_recording_gap", "stop_on_unclassified_failure",
-            "stop_on_unknown_or_exceeded_cost", "preserve_failed_trials")), "fail_closed_stop_policy_required")
+    if continuation:
+        require(limits["preserve_failed_trials"] is True and limits["stop_on_exceeded_cost"] is True
+                and all(limits[name] is False for name in ("stop_on_recording_gap", "stop_on_unclassified_failure", "stop_on_unknown_cost")),
+                "continuation_requires_preserved_failures_and_bounded_cost")
+    else:
+        require(all(limits[name] is True for name in ("stop_on_recording_gap", "stop_on_unclassified_failure",
+                "stop_on_unknown_or_exceeded_cost", "preserve_failed_trials")), "fail_closed_stop_policy_required")
     fields(plan["budget"], "currency total_usd per_trial_usd approval_reference provider_cap_evidence_sha256"
            + (" provider_cap_waiver" if amended else ""))
     budget = plan["budget"]
@@ -170,14 +178,94 @@ def validate(plan, verify_local=False):
         # This is a one-shot execution authorization, NOT a reduced M3 target.
         # A fresh ledger cannot admit any other case or restart this case.
         cases = selected
+    if continuation:
+        amendment = plan["authorized_continuation"]
+        fields(amendment, "case_ids approval prior_runs retained_liability_usd original_total_usd")
+        artifact(amendment["approval"])
+        require(isinstance(amendment["prior_runs"], list) and 1 <= len(amendment["prior_runs"]) <= 16,
+                "continuation_requires_prior_runs")
+        for prior in amendment["prior_runs"]:
+            fields(prior, "plan ledger")
+            artifact(prior["plan"])
+            artifact(prior["ledger"])
+        selected = [case for case in cases if case["id"] in amendment["case_ids"]]
+        require(bool(selected) and [case["id"] for case in selected] == amendment["case_ids"],
+                "continuation_requires_ordered_unique_remaining_cases")
+        require(budget["total_usd"] is not None
+                and money(budget["total_usd"]) + money(amendment["retained_liability_usd"]) == money(amendment["original_total_usd"]),
+                "continuation_must_retain_prior_liabilities")
+        if verify_local:
+            verify_continuation(plan)
+        cases = selected
     return {"declaration_complete": not missing, "missing": missing, "local_inputs_checked": verify_local,
             "real_matrix_trials": matrix_trials, "additional_paired_trials": 2, "cases": cases,
             "single_case_recovery": recovery,
+            "authorized_continuation": continuation,
             "excluded_agents": ["claude"] if amended else [],
             "provider_cap_verification_waived": waiver is not None,
             "qualification_passed": False, "paid_launcher_available": False,
             "provider_billing_cap_verified": False,
             "scope": "declaration_and_optional_local_hash_checks_not_spending_authority_or_experiment_results"}
+
+
+def continuation_artifact(item):
+    with Path(item["path"]).open("rb") as src:
+        raw = src.read((1 << 20) + 1)
+    require(len(raw) <= 1 << 20 and hashlib.sha256(raw).hexdigest() == item["sha256"],
+            "continuation_evidence_digest_changed")
+    return json.loads(raw)
+
+
+def verify_continuation(plan):
+    """Explicit forward-only policy amendment; never turn failures into passes."""
+    amendment = plan["authorized_continuation"]
+    approval = continuation_artifact(amendment["approval"])
+    require(approval.get("case_ids") == amendment["case_ids"]
+            and approval.get("recorder_sha256") == plan["recorder"]["sha256"]
+            and approval.get("prior_runs") == amendment["prior_runs"]
+            and approval.get("retained_liability_usd") == amendment["retained_liability_usd"]
+            and approval.get("original_total_usd") == amendment["original_total_usd"]
+            and approval.get("policy") == "retain_failed_results_continue_unknown_cost_no_retries",
+            "continuation_approval_not_bound")
+    reference(approval.get("user_reply"))
+    seen, liability, prior_hashes = set(), Decimal(0), set()
+    for prior in amendment["prior_runs"]:
+        previous = continuation_artifact(prior["plan"])
+        book = continuation_artifact(prior["ledger"])
+        require(previous.get("schema_version") in (1, 2, 3), "unsupported_continuation_prior_plan")
+        declaration = validate(previous)
+        require(book.get("plan_sha256") == prior["plan"]["sha256"]
+                and prior["ledger"]["sha256"] not in prior_hashes, "continuation_prior_ledger_mismatch")
+        prior_hashes.add(prior["ledger"]["sha256"])
+        for name in ("dataset", "agents", "tasks", "repetitions", "paired", "scope_amendment"):
+            require(plan[name] == previous[name], "continuation_experiment_identity_changed")
+        for name in ("agent_timeout_seconds", "verifier_timeout_seconds", "setup_timeout_seconds", "concurrency", "automatic_retries"):
+            require(plan["limits"][name] == previous["limits"][name], "continuation_execution_limits_changed")
+        require(plan["budget"]["per_trial_usd"] == previous["budget"]["per_trial_usd"], "continuation_per_trial_limit_changed")
+        allowance = money(previous["budget"]["per_trial_usd"])
+        ids = [c["id"] for c in declaration["cases"]]
+        entries = book.get("cases")
+        require(isinstance(entries, list) and [e.get("case_id") for e in entries] == ids[:len(entries)],
+                "continuation_prior_sequence_invalid")
+        for entry in entries:
+            require(entry.get("status") in ("ready", "halted") and isinstance(entry.get("receipt"), dict),
+                    "continuation_prior_trial_not_settled")
+            seen.add(entry["case_id"])
+            receipts = entry.get("history", []) + [entry["receipt"]]
+            amounts = [Decimal(str(r["reported_cost_usd"])) for r in receipts if r.get("reported_cost_usd") is not None]
+            require(all(a.is_finite() and a >= 0 for a in amounts), "continuation_invalid_prior_cost")
+            known = max(amounts) if amounts else None
+            require(entry["status"] != "ready" or known is not None, "continuation_ready_cost_unknown")
+            liability += known if entry["status"] == "ready" else max(allowance, known or Decimal(0))
+    require(not seen.intersection(amendment["case_ids"]), "continuation_cannot_restart_prior_case")
+    # All old matrix identities remain targets, but none can be run again here.
+    full = [f"{agent}-{task['id']}-r{repeat}" for repeat in (1, 2)
+            for agent in ("codex", "hermes") for task in plan["tasks"]]
+    full += ["paired-" + mode for mode in plan["paired"]["order"]]
+    require(amendment["case_ids"] == [case for case in full if case not in seen],
+            "continuation_requires_all_unstarted_cases")
+    require(money(amendment["retained_liability_usd"]) >= liability,
+            "continuation_cannot_release_prior_liability")
 
 
 def verify_recovery(plan):
@@ -259,6 +347,8 @@ def bind_case(args, fresh):
     declaration = validate(plan)
     if plan["schema_version"] == 3:
         verify_recovery(plan)
+    if plan["schema_version"] == 4:
+        verify_continuation(plan)
     require(declaration["declaration_complete"], "experiment_declaration_incomplete_no_launch")
     cases = [case for case in declaration["cases"] if case["id"] == case_id]
     require(len(cases) == 1, "experiment_case_not_in_plan")

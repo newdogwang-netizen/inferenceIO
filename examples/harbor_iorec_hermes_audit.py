@@ -110,11 +110,16 @@ class IorecHermesAudit(IorecAuditMixin, Hermes):
         finally:
             try:
                 await self.exec_as_agent(environment,
-                    command="hermes sessions export /logs/agent/hermes-session.jsonl --source cli",
+                    # Hermes 0.19 sends --source through prune filters, which
+                    # exclude rows with ended_at=NULL. One-shot CLI sessions
+                    # can persist messages without setting ended_at. This home
+                    # is fresh and job-isolated, so export all of it; retain
+                    # the source/model/route and ambiguity checks below.
+                    command="hermes sessions export /logs/agent/hermes-session.jsonl",
                     env={}, timeout_sec=30)
             except Exception:
-                # Missing export remains observable: costs stay unknown and
-                # the shared ledger halts, even if the agent command succeeded.
+                # Missing export stays observable and costs stay unknown. The
+                # bound ledger's explicit policy controls later admission.
                 pass
 
     def populate_context_post_run(self, context):
@@ -173,8 +178,8 @@ class IorecHermesAudit(IorecAuditMixin, Hermes):
                 "billing_verified": False,
                 "scope": "native_single_cli_session_report_not_independent_billing_or_complete_auxiliary_spend"}}
         except (OSError, ValueError, TypeError, AttributeError):
-            # Missing or unusable native cost remains None and the shared
-            # ledger stops subsequent trials. Do not guess pricing here.
+            # Missing or unusable native cost remains None; the bound ledger's
+            # explicit policy decides continuation. Do not guess pricing here.
             return
 
     async def exec_as_agent(self, environment, command, env=None, cwd=None, timeout_sec=None):

@@ -91,6 +91,33 @@ def duration(stage):
     return elapsed
 
 
+def terminal_job_time(job, trial, intent):
+    """Never silently interpret Harbor's naive job wall clock as UTC."""
+    finish = job.get("finished_at")
+    require(isinstance(finish, str) and len(finish) <= 40, "invalid_trial_timestamp")
+    parsed = dt.datetime.fromisoformat(finish)
+    if parsed.utcoffset() is not None:
+        require(parsed >= timestamp(trial.get("finished_at")), "harbor_job_not_terminal_after_trial")
+        return "timezone_aware_job_and_trial"
+    # Harbor 0.22 job.py uses datetime.now(), while trial/observer timestamps
+    # are aware. Check that local interval without converting clock domains.
+    # A waited successful process plus terminal progress counters supplies the
+    # job-termination evidence; serial order still uses aware trial times.
+    start = job.get("started_at")
+    require(isinstance(start, str) and len(start) <= 40, "invalid_trial_timestamp")
+    start = dt.datetime.fromisoformat(start)
+    require(start.utcoffset() is None and 0 <= (parsed - start).total_seconds() <= 86400,
+            "invalid_local_job_interval")
+    expected = {"n_completed_trials": 1, "n_errored_trials": 0, "n_running_trials": 0,
+                "n_pending_trials": 0, "n_cancelled_trials": 0, "n_retries": 0}
+    stats = job.get("stats") or {}
+    require(type(intent.get("exit_code")) is int and intent["exit_code"] == 0
+            and type(job.get("n_total_trials")) is int and job["n_total_trials"] == 1
+            and all(type(stats.get(k)) is int and stats[k] == v for k, v in expected.items()),
+            "naive_job_time_requires_successful_terminal_process_and_counters")
+    return "local_job_clock_not_cross_compared_aware_trial_order_and_waited_exit"
+
+
 def read_case(root, mode, plan, plan_sha256):
     state_path, report_path = root / "state.json", root / "report.json"
     workflow.private_path(state_path)
@@ -179,11 +206,11 @@ def read_case(root, mode, plan, plan_sha256):
                 completed.append(entry.name)
     require(completed == [benchmark["trial"]], "pair_requires_exactly_one_terminal_trial_per_job")
     result = json_file(artifact(trial, "result.json"))
-    require(timestamp(job_result.get("finished_at")) >= timestamp(result.get("finished_at")), "harbor_job_not_terminal_after_trial")
+    job_time_basis = terminal_job_time(job_result, result, intent)
     actual, provenance = workflow.benchmark_from_trial(trial)
     require(actual == benchmark and state["trial_summary"] == {"benchmark": actual, **provenance}, "trial_result_changed")
     require(all(recorded.get(k) == v for k, v in {**state["source_identity"], **provenance}.items()), "record_stage_differs_from_source")
-    require(actual["task"] == task["id"] and actual["model"] == agent["model"]
+    require(actual["task"] == fresh["task"].get("harbor_name", task["id"]) and actual["model"] == agent["model"]
             and actual["agent"] == {"codex": "codex", "claude": "claude-code", "hermes": "hermes"}[pair["agent"]]
             and provenance["agent_version"] == agent["version"], "reported_trial_identity_differs_from_plan")
     timing = {name: duration(result.get(name)) for name in ("environment_setup", "agent_setup", "agent_execution", "verifier")}
@@ -220,6 +247,7 @@ def read_case(root, mode, plan, plan_sha256):
             "finished": timestamp(result["finished_at"]), "summary": {
                 "workflow_report_sha256": digest(report_path), "benchmark": benchmark, **provenance,
                 "measurement": metrics, "harbor_stage_seconds": timing,
+                "job_time_basis": job_time_basis,
                 "installed_inventory_sha256": inventories}}
 
 
@@ -253,6 +281,7 @@ def compare(off: Path, on: Path, plan_path: Path):
                 "scope": "consistent_completed_workflow_observations_not_crypto_reaudit_or_causal_overhead",
                 "limitations": ["Recorder-on adds network/capability confinement; off retains native container networking.",
                     "Single-pair order effects, model nondeterminism and external dependency failures need separate interpretation.",
+                    "Naive Harbor job times are not treated as UTC; trial/observer ordering uses aware timestamps and terminal process/counter evidence.",
                     "RSS is the largest individual process peak including possible pre-exec memory, not simultaneous tree memory.",
                     "Existing workflow proof and current index hashes are checked; encrypted blobs and network proof are not re-audited here.",
                     "Harbor-reported costs are not provider billing evidence or enforcement of the total matrix budget."]}

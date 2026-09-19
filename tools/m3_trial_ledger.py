@@ -1,9 +1,9 @@
 """Private, serial M3 admission ledger for one explicitly shared directory.
 
 This is not user approval, a provider billing cap, or a machine-wide intercept.
-Only callers using the same ledger coordinate. Unknown outcomes reserve their
-full declared allowance and block later cases; same-case evidence recovery is
-allowed, never an automatic replacement model run.
+Only callers using the same ledger coordinate. Unknown costs reserve their
+allowance. Schema 4 may continue after a terminal, failed observation, without
+calling it qualified; uncertain launches still block. Never automatically retry.
 """
 from __future__ import annotations
 
@@ -18,7 +18,9 @@ import re
 import stat
 import uuid
 
-from m3_experiment_plan import validate
+from m3_experiment_plan import validate, verify_continuation
+
+OBSERVATION_REASONS = {"workflow_incomplete_or_failed", "benchmark_not_completed", "reported_cost_unknown"}
 
 
 class LedgerFailure(Exception):
@@ -85,6 +87,9 @@ class Ledger:
         declaration = validate(self.plan)
         require(declaration["declaration_complete"] and actual == plan_sha256, "ledger_requires_bound_complete_plan")
         self.plan_sha256 = actual
+        self.continuation = self.plan["schema_version"] == 4
+        if self.continuation:
+            verify_continuation(self.plan)
         self.cases = declaration["cases"]
         self.ids = [case["id"] for case in self.cases]
         self.per_trial = Decimal(self.plan["budget"]["per_trial_usd"])
@@ -135,7 +140,7 @@ class Ledger:
         for index, entry in enumerate(entries):
             require(isinstance(entry, dict) and set(entry) == {"case_id", "work_dir", "inputs_sha256", "reserved_usd", "reserved_at", "status", "receipt", "reservation_id", "launch_started", "history"}, "invalid_ledger_entry")
             require(entry["case_id"] == self.ids[index] and entry["reserved_usd"] == str(self.per_trial)
-                    and entry["status"] in ("reserved", "ready", "halted")
+                    and entry["status"] in (("reserved", "ready", "halted", "observed") if self.continuation else ("reserved", "ready", "halted"))
                     and isinstance(entry["work_dir"], str) and Path(entry["work_dir"]).is_absolute()
                     and isinstance(entry["inputs_sha256"], str) and re.fullmatch(r"[0-9a-f]{64}", entry["inputs_sha256"])
                     and isinstance(entry["reservation_id"], str) and re.fullmatch(r"[0-9a-f]{32}", entry["reservation_id"])
@@ -157,6 +162,13 @@ class Ledger:
                             and receipt["workflow_status"] in ("completed", "baseline_completed"), "invalid_ready_ledger_entry")
             if entry["status"] == "halted":
                 require(bool(receipt["stop_reasons"]), "halted_ledger_requires_stop_reason")
+            if entry["status"] == "observed":
+                require(entry["launch_started"] and bool(receipt["stop_reasons"])
+                        and set(receipt["stop_reasons"]) <= OBSERVATION_REASONS
+                        and isinstance(receipt["trial_result_sha256"], str)
+                        and re.fullmatch(r"[0-9a-f]{64}", receipt["trial_result_sha256"])
+                        and all(set(r["stop_reasons"]) <= OBSERVATION_REASONS for r in entry["history"]),
+                        "invalid_observed_ledger_entry")
 
     def save(self):
         self.check()
@@ -226,7 +238,8 @@ class Ledger:
             self.active = existing
             self.save()
             return {"resumed": True, "reserved_usd": existing["reserved_usd"], "reservation_id": existing["reservation_id"]}
-        require(all(entry["status"] == "ready" for entry in entries), "prior_case_not_settled_no_next_launch")
+        require(all(entry["status"] in (("ready", "observed") if self.continuation else ("ready",)) for entry in entries),
+                "prior_case_not_settled_no_next_launch")
         require(not launch_intent, "existing_workflow_launch_not_admitted_by_ledger")
         require(len(entries) < len(self.ids) and self.ids[len(entries)] == case_id, "case_not_next_in_declared_sequence")
         require(self.liabilities() + self.per_trial <= self.total, "declared_total_budget_exhausted")
@@ -273,10 +286,24 @@ class Ledger:
             "reported_cost_usd": str(amount) if amount is not None else None,
             "stop_reasons": reasons, "billing_verified": False}
         self.active["status"] = "halted" if reasons else "ready"
+        # A changed qualification outcome is not permission to repeat a model
+        # call. Continue only after a real terminal result with bound identity;
+        # a live/uncertain launch, tampered input, or overspend still halts.
+        expected = binding.get("expected_result", {})
+        actual = {**benchmark, **summary}
+        terminal = (isinstance(benchmark.get("artifact_sha256"), str)
+                    and re.fullmatch(r"[0-9a-f]{64}", benchmark["artifact_sha256"])
+                    and benchmark.get("status") in ("completed", "error", "timeout")
+                    and type((state.get("launch_intent") or {}).get("exit_code")) is int
+                    and bool(expected) and all(actual.get(k) == v for k, v in expected.items()))
+        if (self.continuation and reasons and set(reasons) <= OBSERVATION_REASONS and terminal
+                and all(set(r["stop_reasons"]) <= OBSERVATION_REASONS for r in self.active["history"])):
+            self.active["status"] = "observed"
         if self.liabilities() > self.total:
             self.active["status"] = "halted"
             reasons.append("declared_total_budget_exceeded")
         self.save()
         return {"case_id": self.active["case_id"], "ledger_status": self.active["status"],
-                "stop_further_paid_trials": bool(reasons), "stop_reasons": reasons,
+                "stop_further_paid_trials": self.active["status"] == "halted", "stop_reasons": reasons,
+                "unresolved_findings_retained": self.active["status"] == "observed",
                 "accounted_liability_usd": str(self.liabilities()), "billing_verified": False}

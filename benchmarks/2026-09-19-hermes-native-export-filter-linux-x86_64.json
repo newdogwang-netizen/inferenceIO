@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "report_kind": "model_free_native_cli_export_filter_reproduction",
+  "observed_at": "2026-09-19",
+  "paid_model_calls": 0,
+  "agent": "hermes",
+  "agent_version": "0.19.0",
+  "native_cli_files_match_frozen_trial_bundle": true,
+  "native_files_sha256": {
+    "cli.py": "cbcf1780174a03b225508244575915225a36502f54ad4cddf1da644d9174fec4",
+    "hermes_cli/main.py": "d6bf89a33fb708376a7ab354cff8081a3c3726dbfb91d84bbb679cd667db596c",
+    "hermes_state.py": "0c6bc23bf4bfbc3c9410765cd49e65b7aee40e9e01eb733372f0fe7ac9bd64ef"
+  },
+  "fixture": {
+    "provider": "local_fake_server",
+    "network_boundary": "recorder_task_netns",
+    "personal_state_or_credentials_used": false,
+    "preinitialized_native_session_database": true,
+    "recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+    "run_id": "run-01a0b8bd-ea62-70d9-bab3-219c94294b85",
+    "native_cli_exit_code": 0,
+    "integrity_passed": true,
+    "synthetic_model_requests": 1,
+    "independently_matched_requests": 1,
+    "transport_complete": true,
+    "payload_diff_passed": true,
+    "capture_drops": 0
+  },
+  "same_persisted_session": {
+    "source": "cli",
+    "ended_at": null,
+    "database_sessions": 1,
+    "database_messages": 2,
+    "message_roles": ["user", "assistant"]
+  },
+  "exports_without_another_conversation": [
+    {"selection": "--source cli", "exit_code": 0, "sessions": 0, "bytes": 0},
+    {"selection": "unfiltered_job_isolated_home", "exit_code": 0, "sessions": 1, "messages": 2, "bytes": 11785},
+    {"selection": "--session-id exact_id", "exit_code": 0, "sessions": 1, "messages": 2, "bytes": 11750}
+  ],
+  "finding": "Hermes 0.19 routes source-filtered exports through list_prune_candidates, which requires ended_at IS NOT NULL. Its one-shot CLI persisted a session/messages but left ended_at NULL, so --source cli silently exported zero sessions.",
+  "safe_correction": "Use an unfiltered export only from the fresh job-isolated Hermes home. Retain native session source/model/route checks and reject ambiguous multi-session cost estimates. Never fake an ended_at value or mutate the database to pass export.",
+  "limits": [
+    "This is a model-free native CLI reproduction, not a new public-provider trial.",
+    "Existing real trials used the old export command; their empty exports and unknown native costs are not rewritten.",
+    "The older trial databases were not retained, so this does not retroactively prove each old empty export had the identical cause.",
+    "Native export recovery does not repair independent wire-evidence gaps or qualify M3."
+  ],
+  "m3_complete": false,
+  "privacy": "No personal configuration, credentials, prompts, response bodies, pcap or TLS secrets included."
+}

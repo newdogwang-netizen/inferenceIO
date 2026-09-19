@@ -31,7 +31,17 @@ broad provider/version support. The [one approved Hermes replacement](benchmarks
 also fails: 10/13 model requests match independent wire evidence; one cancellation,
 two unmatched full responses and the missing native export/cost remain. Empty-tail
 false cancellations are fixed, but that is not proof of full Hermes support.
-Seven cases remain unstarted. Historical gates remain bound to their artifacts.
+The [completed experiment report](benchmarks/2026-09-19-m3-completed-experiments-linux-x86_64.json)
+now covers all eight matrix cases plus both off/on cases. Six matrix captures
+qualify: Codex 4/4 and Hermes 2/4. Hermes merger repetition two scores `1.0` but
+matches only five of six model responses independently; its diagnostic platform
+proof remains incomplete. Both off/on tasks score `1.0`, with measured wall times
+33.94/46.36 seconds, not a causal overhead claim. No cases remain unstarted.
+The [native export filter](benchmarks/2026-09-19-hermes-native-export-filter-linux-x86_64.json)
+has a model-free reproduction and post-trial correction, not a new paid-provider
+qualification. M3 still needs the new candidate's five-hour gate and resolution
+or explicit qualification of the remaining evidence boundaries. Historical gates
+remain bound to their artifacts; no broad provider cell is upgraded here.
 The pinned [native Harbor installation checks](benchmarks/2026-09-18-native-harbor-install-linux-x86_64.json)
 and [Hermes installed-runtime check](benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)
 cover container setup/version compatibility only; they do not upgrade any real

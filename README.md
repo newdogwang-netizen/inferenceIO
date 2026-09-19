@@ -13,32 +13,43 @@ connection; see the [M1 qualification](benchmarks/2026-09-18-websocket-call-proj
 M2 adds paginated evidence views, explicit proof boundaries, external benchmark
 annotations, worker liveness, and a resumable controlled audit command; see its
 [scoped qualification](benchmarks/2026-09-18-m2-evidence-workflow-linux-x86_64.json). M2's
-fresh-trial path has now passed for two new Codex tasks; the M3 matrix remains
-incomplete. The [partial real-provider report](benchmarks/2026-09-19-m3-real-provider-progress-linux-x86_64.json)
-retains both passing captures (Harbor reward `1.0` each), the first failed Hermes
-capture gate and the original setup-only failure. The subsequently
-[authorized Hermes replacement](benchmarks/2026-09-19-hermes-authorized-replacement-linux-x86_64.json)
-also fails qualification (reward `0.0`): 10/13 model requests match independent
-wire evidence, one is genuinely cancelled on nonempty data, and two lack a full
-decoded wire response. Its native export/cost is still missing; preinitializing
-the database alone was insufficient. Diagnostic import is not qualification. Paid execution
-is halted, with seven declared cases unstarted. The
+fresh-trial path is exercised in the
+[completed experiment matrix](benchmarks/2026-09-19-m3-completed-experiments-linux-x86_64.json):
+**8/8 Codex/Hermes matrix cases and both additional off/on cases have run**.
+Six matrix captures qualify (Codex 4/4, Hermes 2/4); benchmark reward is `1.0`
+for five matrix cases, a separate result. Both paired runs score `1.0`; observed
+agent wall time is 33.94 seconds off versus 46.36 seconds on. This single pair
+does not establish causal recorder overhead. All nine selected recorded cases
+are available in the local platform, including two diagnostic-only Hermes cases.
+The [original failures](benchmarks/2026-09-19-m3-real-provider-progress-linux-x86_64.json)
+and [one approved Hermes replacement](benchmarks/2026-09-19-hermes-authorized-replacement-linux-x86_64.json)
+remain unchanged. The newer Hermes merger run matches five of six model responses;
+one lacks a full decoded wire match, despite zero manifest capture drops.
+No failed case was automatically retried or promoted to qualified.
+
+The [native Hermes export reproduction](benchmarks/2026-09-19-hermes-native-export-filter-linux-x86_64.json)
+found that `--source cli` filters out persisted one-shot sessions whose `ended_at`
+is null. The isolated-job export is now fixed and model-free tested; old empty
+exports/costs are not rewritten and the fix has not had another paid trial.
+All 184 Python tests pass. **Experiment execution is complete; M3 release
+qualification is not.** Remaining boundaries include incomplete Hermes wire
+evidence, native correlation and a five-hour gate for the new recorder/worker. The
 [compatible-candidate five-hour soak](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
 passed with 20 collectors, 6,000 successful calls, interruption recovery and final
 reconciliation. This qualifies only its frozen artifacts, not every newer worktree
-or the pending real-provider experiments.
+or the newer recorder/worker used for the continuation.
 The [M3 experiment declaration](docs/m3-experiment-plan.md) pins an explicit
 Terminal-Bench 2 snapshot, two task packages and immutable image references;
 the approved scope now excludes Claude and requires eight matrix trials plus
-two additional off/on runs. Three distinct matrix cases have been attempted
-(four model trials including the approved replacement), two capture-qualified;
+two additional off/on runs. All ten cases have terminal results; eleven real
+model trials include the retained original Hermes failure, plus one setup-only failure;
 the original three-agent scope is not claimed complete. Operator-specific
 approvals, credentials and spend-control checks belong in a private plan; the
 repository example deliberately remains incomplete.
 The [shared on/off observer checks](benchmarks/2026-09-18-harbor-measured-modes-linux-x86_64.json)
 verify CLI argument/signal handling, bounded resource reports and no-provider
 container installation. An off run is only a baseline, never capture-qualified;
-these checks are not a real paired performance result.
+the real paired observations above supplement these checks, without a causal performance claim.
 M3 cases can now bind a complete plan/case identity before launch and use a
 [read-only paired comparison](docs/m3-experiment-plan.md#完成后汇总额外对照) afterwards.
 Its [tooling checks](benchmarks/2026-09-18-m3-plan-binding-and-comparison-linux-x86_64.json)

@@ -1,0 +1,940 @@
+{
+  "continuation_policy": {
+    "budget_tracking": "approximate_not_provider_billing",
+    "one_launch_per_unstarted_case": true,
+    "prior_failures_preserved": true,
+    "provider_billing_cap_verified": false,
+    "terminal_failed_observations_do_not_block_next_case": true,
+    "unknown_cost_is_not_zero": true
+  },
+  "cross_repetition_limit": "The first two Codex cases used recorder b54; subsequent cases used repaired recorder 89bb. Each result retains its own hashes; do not treat all repetitions as one unchanged-recorder performance experiment.",
+  "m3_complete": false,
+  "model_free_regression": {
+    "python_tests": 184,
+    "skipped": 0
+  },
+  "native_export_reproduction_report": "2026-09-19-hermes-native-export-filter-linux-x86_64.json",
+  "observed_at": "2026-09-19T08:33:21.431890+00:00",
+  "paired_comparison": {
+    "common_inputs_sha256": "7aa456d783dd5f81aec1882df2b7c8da17b5ad8d2ad921d332ea0ca4d02fa358",
+    "declared_order": [
+      "off",
+      "on"
+    ],
+    "limitations": [
+      "Recorder-on adds network/capability confinement; off retains native container networking.",
+      "Single-pair order effects, model nondeterminism and external dependency failures need separate interpretation.",
+      "Naive Harbor job times are not treated as UTC; trial/observer ordering uses aware timestamps and terminal process/counter evidence.",
+      "RSS is the largest individual process peak including possible pre-exec memory, not simultaneous tree memory.",
+      "Existing workflow proof and current index hashes are checked; encrypted blobs and network proof are not re-audited here.",
+      "Harbor-reported costs are not provider billing evidence or enforcement of the total matrix budget."
+    ],
+    "metric_comparison": {
+      "max_rss_kib": {
+        "off": 219132,
+        "on": 143300,
+        "on_divided_by_off": 0.6539437416716865,
+        "on_minus_off": -75832
+      },
+      "system_cpu_seconds": {
+        "off": 0.255567,
+        "on": 6.617555,
+        "on_divided_by_off": 25.893620850892333,
+        "on_minus_off": 6.361988
+      },
+      "user_cpu_seconds": {
+        "off": 0.7148669999999999,
+        "on": 1.873418,
+        "on_divided_by_off": 2.6206525129849334,
+        "on_minus_off": 1.158551
+      },
+      "wall_seconds": {
+        "off": 33.94134374521673,
+        "on": 46.35892787389457,
+        "on_divided_by_off": 1.3658542284563446,
+        "on_minus_off": 12.417584128677845
+      }
+    },
+    "network_dependency_impact": "not_determined_from_summary",
+    "paired_metrics_compared": true,
+    "report_sha256": "b1e69c41737d4f859fd07bf4e71e44985147032219765378eb021a22f2cbed76",
+    "scope": "consistent_completed_workflow_observations_not_crypto_reaudit_or_causal_overhead"
+  },
+  "post_trial_fixes": [
+    "Hermes isolated-home export no longer uses the ended-session source filter; native CLI model-free reproduction passed, no new paid rerun.",
+    "Pair summary uses the pre-bound full Harbor task name.",
+    "Naive job timestamps are not silently treated as UTC; terminal job counters and waited exit supplement aware trial ordering."
+  ],
+  "privacy": "No credentials, prompts, responses, pcap, TLS keys, approval files or private budget amounts published.",
+  "qualification_passed": false,
+  "recorder_worker_identity": {
+    "new_recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+    "worker_image": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c"
+  },
+  "remaining_release_gates": [
+    "Resolve or explicitly qualify Hermes cancellation and missing decoded-wire evidence.",
+    "Native Hermes session export and hook/proxy correlation remain separate from proven transport capture.",
+    "New recorder/worker require their own five-hour qualification; older b54 evidence is not inherited."
+  ],
+  "report_kind": "m3_full_experiment_observations_not_release_qualification",
+  "retained_history": [
+    "2026-09-19-m3-real-provider-progress-linux-x86_64.json",
+    "2026-09-19-hermes-authorized-replacement-linux-x86_64.json"
+  ],
+  "runtime_controller_snapshot": "All ten controller/profile files preserved privately and SHA-256 matched to each actual trial; post-trial fixes do not rewrite trial provenance.",
+  "schema_version": 1,
+  "scope": {
+    "additional_pair_target": 2,
+    "agents": [
+      "codex",
+      "hermes"
+    ],
+    "excluded_agents": [
+      "claude"
+    ],
+    "matrix_target": 8
+  },
+  "status": {
+    "automatic_retries": 0,
+    "experiment_execution_complete": true,
+    "matrix_benchmark_reward_one": 5,
+    "matrix_capture_qualified": 6,
+    "real_model_trials_including_retained_hermes_failure": 11,
+    "retained_setup_only_failures": 1,
+    "terminal_cases": 10,
+    "unstarted_or_unfinished_cases": 0
+  },
+  "trials": [
+    {
+      "baseline_completed": false,
+      "benchmark": {
+        "agent": "codex",
+        "artifact_sha256": "573ced7275f0a5b81ea5d073a62eac450454b92b57dc03da83883317684ed5ea",
+        "framework": "harbor",
+        "model": "openai/gpt-5.6-sol",
+        "reward": 1.0,
+        "status": "completed",
+        "task": "terminal-bench/cancel-async-tasks",
+        "trial": "cancel-async-tasks__bkBcnq5"
+      },
+      "capture_qualified": true,
+      "case_id": "codex-cancel-async-tasks-r1",
+      "failed_stages": [],
+      "fresh_inputs_sha256": "db87117e6bf1083966c44cb9ea125293802253da011d8ef18e8dfd8cfa2a3cb0",
+      "integrity": {
+        "checks": 6,
+        "passed": true,
+        "profile": "integrity"
+      },
+      "measurement": {
+        "declared_network_mode": "recorder_task_netns_transparent_proxy",
+        "exit_code": 0,
+        "invocation_id": "a00d38db196b4e7e815423ff53c1f6d9",
+        "max_rss_kib": 140860,
+        "measurement_status": "completed",
+        "observer_python_version": "3.11.2",
+        "observer_signal_count": 0,
+        "observer_signals": [],
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "recording_mode": "on",
+        "resource_scope": "linux_wait4_waited_child_and_accounted_descendants_not_tree_total",
+        "result_sha256": "d8ab20caf85547059d4d77103a204aaa5cc663bcfb22c9c1dfab37cbf7dd3ab4",
+        "schema_version": 1,
+        "started_at": "2026-09-19T05:22:22.869995+00:00",
+        "started_sha256": "5bc6d247680f26f74a319f29d0c7b22f411b5c4fea25cb7df5a1e6730d22d40f",
+        "system_cpu_seconds": 5.625331,
+        "terminating_signal": null,
+        "user_cpu_seconds": 1.77873,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "wall_seconds": 46.933754860423505
+      },
+      "plaintext_staging_cleaned": true,
+      "platform": {
+        "active_jobs": 0,
+        "coverage_claim": "unknown",
+        "failed_jobs": 0,
+        "recording_url": "http://127.0.0.1:8088/recordings/run-01a0b81d-9a1b-7790-8697-52475ab98981%230000",
+        "transport_proof_status": "verified",
+        "transport_proof_verified": true
+      },
+      "proxy_model_calls": 6,
+      "proxy_terminal_states": {
+        "completed": 5,
+        "unknown": 1
+      },
+      "recorder_sha256": "b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "reported_cost_known": true,
+      "run_id": "run-01a0b81d-9a1b-7790-8697-52475ab98981",
+      "transport_audit": {
+        "complete": true,
+        "completeness_boundary": "target-network-namespace-ip-transport",
+        "decoder_sha256": "sha256:261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074",
+        "extra_on_wire": 0,
+        "gaps_count": 0,
+        "manifest_capture_drops": 0,
+        "matched_attempts": 2,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "schema_version": 4,
+        "websocket_rows": 916
+      },
+      "usage_records": 5,
+      "verifier_failure_tests": [],
+      "workflow_report_sha256": "8b4d344248787f90d6a50a5aa5acf87fa8fc86da45c96ed36fbb4d83e019a009",
+      "workflow_status": "completed"
+    },
+    {
+      "baseline_completed": false,
+      "benchmark": {
+        "agent": "codex",
+        "artifact_sha256": "9ea09ba860d891de242d54c171500e40879e3589592492866225f702e2892561",
+        "framework": "harbor",
+        "model": "openai/gpt-5.6-sol",
+        "reward": 1.0,
+        "status": "completed",
+        "task": "terminal-bench/multi-source-data-merger",
+        "trial": "multi-source-data-merger__ehbM5jA"
+      },
+      "capture_qualified": true,
+      "case_id": "codex-multi-source-data-merger-r1",
+      "failed_stages": [],
+      "fresh_inputs_sha256": "06524d676051f353069b1fbece62947911fd65e3441936594222e1945bd1a133",
+      "integrity": {
+        "checks": 6,
+        "passed": true,
+        "profile": "integrity"
+      },
+      "measurement": {
+        "declared_network_mode": "recorder_task_netns_transparent_proxy",
+        "exit_code": 0,
+        "invocation_id": "71a9ada110c545eaa138130ba8d11b37",
+        "max_rss_kib": 140988,
+        "measurement_status": "completed",
+        "observer_python_version": "3.13.5",
+        "observer_signal_count": 0,
+        "observer_signals": [],
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "recording_mode": "on",
+        "resource_scope": "linux_wait4_waited_child_and_accounted_descendants_not_tree_total",
+        "result_sha256": "33e4a6505352e2e5399f5a9201f63ee2dd41d886e93f52087955668ec14488ba",
+        "schema_version": 1,
+        "started_at": "2026-09-19T05:24:44.314629+00:00",
+        "started_sha256": "2489561948090b05a56ac1bb897088e768a7e3912e769c9c61263272e4c4051a",
+        "system_cpu_seconds": 7.695832,
+        "terminating_signal": null,
+        "user_cpu_seconds": 3.110936,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "wall_seconds": 54.333931809291244
+      },
+      "plaintext_staging_cleaned": true,
+      "platform": {
+        "active_jobs": 0,
+        "coverage_claim": "unknown",
+        "failed_jobs": 0,
+        "recording_url": "http://127.0.0.1:8088/recordings/run-01a0b81f-c29f-7252-a52e-b86a29912fb7%230000",
+        "transport_proof_status": "verified",
+        "transport_proof_verified": true
+      },
+      "proxy_model_calls": 6,
+      "proxy_terminal_states": {
+        "completed": 6
+      },
+      "recorder_sha256": "b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "reported_cost_known": true,
+      "run_id": "run-01a0b81f-c29f-7252-a52e-b86a29912fb7",
+      "transport_audit": {
+        "complete": true,
+        "completeness_boundary": "target-network-namespace-ip-transport",
+        "decoder_sha256": "sha256:261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074",
+        "extra_on_wire": 0,
+        "gaps_count": 0,
+        "manifest_capture_drops": 0,
+        "matched_attempts": 1,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "schema_version": 4,
+        "websocket_rows": 2258
+      },
+      "usage_records": 6,
+      "verifier_failure_tests": [],
+      "workflow_report_sha256": "7e89375c8ec05e71ee928fc51e9468a78ec0f030ed980f4c1494b4705739e4bd",
+      "workflow_status": "completed"
+    },
+    {
+      "baseline_completed": false,
+      "benchmark": {
+        "agent": "hermes",
+        "artifact_sha256": "38b51067679944eb6584a7920940c5829d29bf0e22f8fb70b25886291bf52c38",
+        "framework": "harbor",
+        "model": "openai/accounts/fireworks/models/deepseek-v4-pro-0813",
+        "reward": 0.0,
+        "status": "completed",
+        "task": "terminal-bench/cancel-async-tasks",
+        "trial": "cancel-async-tasks__jLF39nt"
+      },
+      "capture_qualified": false,
+      "case_id": "hermes-cancel-async-tasks-r1",
+      "failed_stages": [
+        {
+          "error": "command_exit_3",
+          "stage": "transport_audit"
+        }
+      ],
+      "fresh_inputs_sha256": "b749c07e87c56c3d590152dc3127653174d78891b55399c7f18fd9e98fb6e0e5",
+      "independent_audit": {
+        "complete": false,
+        "extra_on_wire": 0,
+        "gap_reasons": {
+          "proxy_attempt_ineligible_for_diff": 1,
+          "proxy_attempt_missing_from_wire": 1,
+          "proxy_response_payload_incomplete": 1,
+          "stream_status_missing": 1
+        },
+        "manifest_capture_drops": 0,
+        "matched_attempts": 10,
+        "missing_from_wire": 2,
+        "payload_diff_passed": false,
+        "proxy_attempts": 13,
+        "report_sha256": "082cd3181cbf9e6e2363a18856ac0a4941c1b8f0550f86969bac2dd56c2bba7b",
+        "websocket_rows": 0
+      },
+      "integrity": {
+        "checks": 6,
+        "passed": true,
+        "profile": "integrity"
+      },
+      "measurement": {
+        "declared_network_mode": "recorder_task_netns_transparent_proxy",
+        "exit_code": 0,
+        "invocation_id": "55d66bd4761144d8858303c732376cd3",
+        "max_rss_kib": 143980,
+        "measurement_status": "completed",
+        "observer_python_version": "3.11.2",
+        "observer_signal_count": 0,
+        "observer_signals": [],
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "recording_mode": "on",
+        "resource_scope": "linux_wait4_waited_child_and_accounted_descendants_not_tree_total",
+        "result_sha256": "e7681ea8bd7e200d6ddef5b686738b56e16e6775524733dd6b11a00dcc008f5f",
+        "schema_version": 1,
+        "started_at": "2026-09-19T07:57:27.947649+00:00",
+        "started_sha256": "284de42f24210a59dc5730cc54c6ca5720d86bba90f7bacd3af2e7a650b4f228",
+        "system_cpu_seconds": 8.445501,
+        "terminating_signal": null,
+        "user_cpu_seconds": 10.740413,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "wall_seconds": 104.74023033957928
+      },
+      "native_session_export_bytes": 0,
+      "plaintext_staging_cleaned": true,
+      "platform": {
+        "active_jobs": 0,
+        "coverage_claim": "unknown",
+        "failed_jobs": 0,
+        "recording_url": "http://127.0.0.1:8088/recordings/run-01a0b8ab-9610-71ff-be3e-7dd1f125cdee%230000",
+        "transport_proof_status": "incomplete",
+        "transport_proof_verified": false
+      },
+      "proxy_model_calls": 13,
+      "proxy_terminal_states": {
+        "cancelled": 1,
+        "completed": 12
+      },
+      "recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+      "reported_cost_known": false,
+      "run_id": "run-01a0b8ab-9610-71ff-be3e-7dd1f125cdee",
+      "transport_audit": null,
+      "usage_records": 12,
+      "verifier_failure_tests": [
+        "test_tasks_cancel_above_max_concurrent"
+      ],
+      "workflow_report_sha256": "085643e02f34b2b24a73bfa5ffde93c79da6eb6955efb39c6fbaa600cdab731e",
+      "workflow_status": "incomplete"
+    },
+    {
+      "baseline_completed": false,
+      "benchmark": {
+        "agent": "hermes",
+        "artifact_sha256": "ef6eb7b6cf4979f9db20aacc0c36de19cb4d74b2e8c5054d93246fd2bd3a6340",
+        "framework": "harbor",
+        "model": "openai/accounts/fireworks/models/deepseek-v4-pro-0813",
+        "reward": 1.0,
+        "status": "completed",
+        "task": "terminal-bench/multi-source-data-merger",
+        "trial": "multi-source-data-merger__ckmrQL5"
+      },
+      "capture_qualified": true,
+      "case_id": "hermes-multi-source-data-merger-r1",
+      "failed_stages": [],
+      "fresh_inputs_sha256": "4f47109d831b280a662cd18a5cdfb3f6229ef90a22a6d0b7ac0ecea97d503e32",
+      "independent_audit": {
+        "complete": true,
+        "extra_on_wire": 0,
+        "gap_reasons": {},
+        "manifest_capture_drops": 0,
+        "matched_attempts": 6,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "proxy_attempts": 6,
+        "report_sha256": "a3916a29c58b5a43a0129bdbc820c9aefff90b49359eaf93770547dc9e7bfbe6",
+        "websocket_rows": 0
+      },
+      "integrity": {
+        "checks": 6,
+        "passed": true,
+        "profile": "integrity"
+      },
+      "measurement": {
+        "declared_network_mode": "recorder_task_netns_transparent_proxy",
+        "exit_code": 0,
+        "invocation_id": "ef9e6c39020740928ff0969eadbb03f2",
+        "max_rss_kib": 147780,
+        "measurement_status": "completed",
+        "observer_python_version": "3.13.5",
+        "observer_signal_count": 0,
+        "observer_signals": [],
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "recording_mode": "on",
+        "resource_scope": "linux_wait4_waited_child_and_accounted_descendants_not_tree_total",
+        "result_sha256": "5d48b3608b5c296ce297e7fb4ee61cd2c3af890b89551b5adc240b230f05f4ac",
+        "schema_version": 1,
+        "started_at": "2026-09-19T08:14:00.782149+00:00",
+        "started_sha256": "7be02c59930393fa185342355abcf2821aa4d84207831534d5c496e7c28646a7",
+        "system_cpu_seconds": 4.815344,
+        "terminating_signal": null,
+        "user_cpu_seconds": 8.738734000000001,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "wall_seconds": 58.16604687832296
+      },
+      "native_session_export_bytes": 0,
+      "plaintext_staging_cleaned": true,
+      "platform": {
+        "active_jobs": 0,
+        "coverage_claim": "unknown",
+        "failed_jobs": 0,
+        "recording_url": "http://127.0.0.1:8088/recordings/run-01a0b8ba-bc52-73ff-b43a-cb29397b2163%230000",
+        "transport_proof_status": "verified",
+        "transport_proof_verified": true
+      },
+      "proxy_model_calls": 6,
+      "proxy_terminal_states": {
+        "completed": 6
+      },
+      "recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+      "reported_cost_known": false,
+      "run_id": "run-01a0b8ba-bc52-73ff-b43a-cb29397b2163",
+      "transport_audit": {
+        "complete": true,
+        "completeness_boundary": "target-network-namespace-ip-transport",
+        "decoder_sha256": "sha256:261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074",
+        "extra_on_wire": 0,
+        "gaps_count": 0,
+        "manifest_capture_drops": 0,
+        "matched_attempts": 6,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "schema_version": 4,
+        "websocket_rows": 0
+      },
+      "usage_records": 6,
+      "verifier_failure_tests": [],
+      "workflow_report_sha256": "9bb91964b46592e079b45f4d57d2fb4e12df9fab8479d03bfd04e617a3297cb8",
+      "workflow_status": "completed"
+    },
+    {
+      "baseline_completed": false,
+      "benchmark": {
+        "agent": "codex",
+        "artifact_sha256": "08753eb9894dd40c36e51943f956b88411d117572657acdbf1f3bb72b5d55b40",
+        "framework": "harbor",
+        "model": "openai/gpt-5.6-sol",
+        "reward": 0.0,
+        "status": "completed",
+        "task": "terminal-bench/cancel-async-tasks",
+        "trial": "cancel-async-tasks__2iUGAh5"
+      },
+      "capture_qualified": true,
+      "case_id": "codex-cancel-async-tasks-r2",
+      "failed_stages": [],
+      "fresh_inputs_sha256": "dba3133f0ddfff14f8881c2d31938a0dbfe6daf318be846295e62761bcbd6c47",
+      "independent_audit": {
+        "complete": true,
+        "extra_on_wire": 0,
+        "gap_reasons": {},
+        "manifest_capture_drops": 0,
+        "matched_attempts": 1,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "proxy_attempts": 1,
+        "report_sha256": "988365e3b500b7af13e1034950d690a32f8214496fc103a8007a312fed61ba83",
+        "websocket_rows": 1208
+      },
+      "integrity": {
+        "checks": 6,
+        "passed": true,
+        "profile": "integrity"
+      },
+      "measurement": {
+        "declared_network_mode": "recorder_task_netns_transparent_proxy",
+        "exit_code": 0,
+        "invocation_id": "1833dccfe8644a6fbc018c0eca84298c",
+        "max_rss_kib": 140456,
+        "measurement_status": "completed",
+        "observer_python_version": "3.11.2",
+        "observer_signal_count": 0,
+        "observer_signals": [],
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "recording_mode": "on",
+        "resource_scope": "linux_wait4_waited_child_and_accounted_descendants_not_tree_total",
+        "result_sha256": "ab40eaa0dcc07dbdeb79742dd0a64c9c22a1d3d0a5e3dccdd8eadf3b65a9afde",
+        "schema_version": 1,
+        "started_at": "2026-09-19T08:16:17.875242+00:00",
+        "started_sha256": "763499010e3c5a02b626bc817fa8a76f72d65d53aefd763836384e358fe2566e",
+        "system_cpu_seconds": 8.584194,
+        "terminating_signal": null,
+        "user_cpu_seconds": 1.8157299999999998,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "wall_seconds": 65.19649440422654
+      },
+      "plaintext_staging_cleaned": true,
+      "platform": {
+        "active_jobs": 0,
+        "coverage_claim": "unknown",
+        "failed_jobs": 0,
+        "recording_url": "http://127.0.0.1:8088/recordings/run-01a0b8bc-d3d7-75e6-872c-5562b699ebdb%230000",
+        "transport_proof_status": "verified",
+        "transport_proof_verified": true
+      },
+      "proxy_model_calls": 6,
+      "proxy_terminal_states": {
+        "completed": 6
+      },
+      "recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+      "reported_cost_known": true,
+      "run_id": "run-01a0b8bc-d3d7-75e6-872c-5562b699ebdb",
+      "transport_audit": {
+        "complete": true,
+        "completeness_boundary": "target-network-namespace-ip-transport",
+        "decoder_sha256": "sha256:261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074",
+        "extra_on_wire": 0,
+        "gaps_count": 0,
+        "manifest_capture_drops": 0,
+        "matched_attempts": 1,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "schema_version": 4,
+        "websocket_rows": 1208
+      },
+      "usage_records": 6,
+      "verifier_failure_tests": [
+        "test_tasks_cancel_above_max_concurrent"
+      ],
+      "workflow_report_sha256": "6dedb125c7aaf4331bf0806a7fa6d24b3a0d55d189e962ef5ffd2cc284db783b",
+      "workflow_status": "completed"
+    },
+    {
+      "baseline_completed": false,
+      "benchmark": {
+        "agent": "codex",
+        "artifact_sha256": "29444f5c56875253fdfd9c52d86f094d1b20b2622772ce404fd9c6e5f46756f1",
+        "framework": "harbor",
+        "model": "openai/gpt-5.6-sol",
+        "reward": 1.0,
+        "status": "completed",
+        "task": "terminal-bench/multi-source-data-merger",
+        "trial": "multi-source-data-merger__BbugyF4"
+      },
+      "capture_qualified": true,
+      "case_id": "codex-multi-source-data-merger-r2",
+      "failed_stages": [],
+      "fresh_inputs_sha256": "369510042598ec78d2e05059a3709f06a1cb613cbc2aa2aadffba65d4c358781",
+      "independent_audit": {
+        "complete": true,
+        "extra_on_wire": 0,
+        "gap_reasons": {},
+        "manifest_capture_drops": 0,
+        "matched_attempts": 1,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "proxy_attempts": 1,
+        "report_sha256": "8e7b2194d51a20643766ae34031d1d87792da831fb327478c04ba9b28b12ea91",
+        "websocket_rows": 2514
+      },
+      "integrity": {
+        "checks": 6,
+        "passed": true,
+        "profile": "integrity"
+      },
+      "measurement": {
+        "declared_network_mode": "recorder_task_netns_transparent_proxy",
+        "exit_code": 0,
+        "invocation_id": "f4720087e69844ab97fa1b35089cbcfe",
+        "max_rss_kib": 140760,
+        "measurement_status": "completed",
+        "observer_python_version": "3.13.5",
+        "observer_signal_count": 0,
+        "observer_signals": [],
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "recording_mode": "on",
+        "resource_scope": "linux_wait4_waited_child_and_accounted_descendants_not_tree_total",
+        "result_sha256": "18709256661f1b54311cfaa03936e834d42793d3c860145fbe65f935175abb6c",
+        "schema_version": 1,
+        "started_at": "2026-09-19T08:18:23.934581+00:00",
+        "started_sha256": "33d98dbb470d515dbcda0b45da8c0f0c0a99c5d7a48f6a18a0581ded2ee30eec",
+        "system_cpu_seconds": 10.467948,
+        "terminating_signal": null,
+        "user_cpu_seconds": 2.926602,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "wall_seconds": 72.94156185071915
+      },
+      "plaintext_staging_cleaned": true,
+      "platform": {
+        "active_jobs": 0,
+        "coverage_claim": "unknown",
+        "failed_jobs": 0,
+        "recording_url": "http://127.0.0.1:8088/recordings/run-01a0b8be-c043-7682-997b-95afc5caf2f2%230000",
+        "transport_proof_status": "verified",
+        "transport_proof_verified": true
+      },
+      "proxy_model_calls": 6,
+      "proxy_terminal_states": {
+        "completed": 6
+      },
+      "recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+      "reported_cost_known": true,
+      "run_id": "run-01a0b8be-c043-7682-997b-95afc5caf2f2",
+      "transport_audit": {
+        "complete": true,
+        "completeness_boundary": "target-network-namespace-ip-transport",
+        "decoder_sha256": "sha256:261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074",
+        "extra_on_wire": 0,
+        "gaps_count": 0,
+        "manifest_capture_drops": 0,
+        "matched_attempts": 1,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "schema_version": 4,
+        "websocket_rows": 2514
+      },
+      "usage_records": 6,
+      "verifier_failure_tests": [],
+      "workflow_report_sha256": "3d9d6c3f51066044567d5c97aee74a13141d230e9f30239f6826dd095ce6fd70",
+      "workflow_status": "completed"
+    },
+    {
+      "baseline_completed": false,
+      "benchmark": {
+        "agent": "hermes",
+        "artifact_sha256": "8b0c3a3f6feaa4ab40e5c7a60422e965c2405f2c01871df46602c20f73d383b7",
+        "framework": "harbor",
+        "model": "openai/accounts/fireworks/models/deepseek-v4-pro-0813",
+        "reward": 0.0,
+        "status": "completed",
+        "task": "terminal-bench/cancel-async-tasks",
+        "trial": "cancel-async-tasks__GEPbhu7"
+      },
+      "capture_qualified": true,
+      "case_id": "hermes-cancel-async-tasks-r2",
+      "failed_stages": [],
+      "fresh_inputs_sha256": "38d32eca701461df279a313ae9e6c81217eb0646a42ad8d0e1549fdb0e5efb97",
+      "independent_audit": {
+        "complete": true,
+        "extra_on_wire": 0,
+        "gap_reasons": {},
+        "manifest_capture_drops": 0,
+        "matched_attempts": 9,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "proxy_attempts": 9,
+        "report_sha256": "b31ec774237ae5c54cf4d7625c78cff50f87f840297b483ba371c6de560d714a",
+        "websocket_rows": 0
+      },
+      "integrity": {
+        "checks": 6,
+        "passed": true,
+        "profile": "integrity"
+      },
+      "measurement": {
+        "declared_network_mode": "recorder_task_netns_transparent_proxy",
+        "exit_code": 0,
+        "invocation_id": "a53e1b9a604a4f51ad05788ecf39b59f",
+        "max_rss_kib": 141828,
+        "measurement_status": "completed",
+        "observer_python_version": "3.11.2",
+        "observer_signal_count": 0,
+        "observer_signals": [],
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "recording_mode": "on",
+        "resource_scope": "linux_wait4_waited_child_and_accounted_descendants_not_tree_total",
+        "result_sha256": "cda5ce2e40ba4024e8e51f946a837352bd8fb5cae33dc474c444aaa76fd1190b",
+        "schema_version": 1,
+        "started_at": "2026-09-19T08:21:14.783945+00:00",
+        "started_sha256": "3692c0fd6bde35c69c4a12e8082b8b6e85eff16ade0b1563c312df7946aa7b5c",
+        "system_cpu_seconds": 10.3673,
+        "terminating_signal": null,
+        "user_cpu_seconds": 10.600536,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "wall_seconds": 113.20601580198854
+      },
+      "native_session_export_bytes": 0,
+      "plaintext_staging_cleaned": true,
+      "platform": {
+        "active_jobs": 0,
+        "coverage_claim": "unknown",
+        "failed_jobs": 0,
+        "recording_url": "http://127.0.0.1:8088/recordings/run-01a0b8c1-5ba4-710e-b0c3-891ecf02ae7d%230000",
+        "transport_proof_status": "verified",
+        "transport_proof_verified": true
+      },
+      "proxy_model_calls": 9,
+      "proxy_terminal_states": {
+        "completed": 9
+      },
+      "recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+      "reported_cost_known": false,
+      "run_id": "run-01a0b8c1-5ba4-710e-b0c3-891ecf02ae7d",
+      "transport_audit": {
+        "complete": true,
+        "completeness_boundary": "target-network-namespace-ip-transport",
+        "decoder_sha256": "sha256:261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074",
+        "extra_on_wire": 0,
+        "gaps_count": 0,
+        "manifest_capture_drops": 0,
+        "matched_attempts": 9,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "schema_version": 4,
+        "websocket_rows": 0
+      },
+      "usage_records": 9,
+      "verifier_failure_tests": [
+        "test_tasks_cancel_above_max_concurrent"
+      ],
+      "workflow_report_sha256": "47527af17523551ed6feec2be7646ba4f5284e489c9db4472f567df4759409d6",
+      "workflow_status": "completed"
+    },
+    {
+      "baseline_completed": false,
+      "benchmark": {
+        "agent": "hermes",
+        "artifact_sha256": "e08ad0cbb20e4e19e7f7bbd9cb21cbd9c4c1d5b5015abfe0914ae5bc8c866482",
+        "framework": "harbor",
+        "model": "openai/accounts/fireworks/models/deepseek-v4-pro-0813",
+        "reward": 1.0,
+        "status": "completed",
+        "task": "terminal-bench/multi-source-data-merger",
+        "trial": "multi-source-data-merger__cmsm5cz"
+      },
+      "capture_qualified": false,
+      "case_id": "hermes-multi-source-data-merger-r2",
+      "failed_stages": [
+        {
+          "error": "command_exit_3",
+          "stage": "transport_audit"
+        }
+      ],
+      "fresh_inputs_sha256": "4f47109d831b280a662cd18a5cdfb3f6229ef90a22a6d0b7ac0ecea97d503e32",
+      "independent_audit": {
+        "complete": false,
+        "extra_on_wire": 0,
+        "gap_reasons": {
+          "proxy_attempt_missing_from_wire": 1,
+          "stream_status_missing": 1
+        },
+        "manifest_capture_drops": 0,
+        "matched_attempts": 5,
+        "missing_from_wire": 1,
+        "payload_diff_passed": false,
+        "proxy_attempts": 6,
+        "report_sha256": "5069e1b070e3c7c24a0d93035162d559e4a1b1b8da2a80912d866c1f2aaac5b7",
+        "websocket_rows": 0
+      },
+      "integrity": {
+        "checks": 6,
+        "passed": true,
+        "profile": "integrity"
+      },
+      "measurement": {
+        "declared_network_mode": "recorder_task_netns_transparent_proxy",
+        "exit_code": 0,
+        "invocation_id": "f2b4a803772c420193ffc47e03466140",
+        "max_rss_kib": 145656,
+        "measurement_status": "completed",
+        "observer_python_version": "3.13.5",
+        "observer_signal_count": 0,
+        "observer_signals": [],
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "recording_mode": "on",
+        "resource_scope": "linux_wait4_waited_child_and_accounted_descendants_not_tree_total",
+        "result_sha256": "4b397924d88799eef73e404bcb3fd46c08c556dfacc0a48ea991d3ba50933384",
+        "schema_version": 1,
+        "started_at": "2026-09-19T08:25:37.239208+00:00",
+        "started_sha256": "2bac1e1042dccfc99b11bf48f972131a5fb264ad3bf0cdcc61501858c5501156",
+        "system_cpu_seconds": 5.696247,
+        "terminating_signal": null,
+        "user_cpu_seconds": 8.296798,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "wall_seconds": 68.6525616645813
+      },
+      "native_session_export_bytes": 0,
+      "plaintext_staging_cleaned": true,
+      "platform": {
+        "active_jobs": 0,
+        "coverage_claim": "unknown",
+        "failed_jobs": 0,
+        "recording_url": "http://127.0.0.1:8088/recordings/run-01a0b8c5-5cdb-77e6-a570-ca4329c8ac93%230000",
+        "transport_proof_status": "incomplete",
+        "transport_proof_verified": false
+      },
+      "proxy_model_calls": 6,
+      "proxy_terminal_states": {
+        "completed": 6
+      },
+      "recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+      "reported_cost_known": false,
+      "run_id": "run-01a0b8c5-5cdb-77e6-a570-ca4329c8ac93",
+      "transport_audit": null,
+      "usage_records": 6,
+      "verifier_failure_tests": [],
+      "workflow_report_sha256": "7b1764266f5137c848e8d144f8ae4a5733353b7b0fe8520c9f90c43de78eed49",
+      "workflow_status": "incomplete"
+    },
+    {
+      "baseline_completed": true,
+      "benchmark": {
+        "agent": "codex",
+        "artifact_sha256": "e8604fa9e7460b4499a9d79dd58d71295bfa309a831d237255794c8323b57bd8",
+        "framework": "harbor",
+        "model": "openai/gpt-5.6-sol",
+        "reward": 1.0,
+        "status": "completed",
+        "task": "terminal-bench/cancel-async-tasks",
+        "trial": "cancel-async-tasks__NtHLLqs"
+      },
+      "capture_qualified": false,
+      "case_id": "paired-off",
+      "failed_stages": [],
+      "fresh_inputs_sha256": "5c40beced7f60581e116ebc70871aa4b35b323df95d39e314c379f28772ba8e4",
+      "integrity": null,
+      "measurement": {
+        "declared_network_mode": "container_native",
+        "exit_code": 0,
+        "invocation_id": "fde446b29ab94338970769b2bf4c9125",
+        "max_rss_kib": 219132,
+        "measurement_status": "completed",
+        "observer_python_version": "3.11.2",
+        "observer_signal_count": 0,
+        "observer_signals": [],
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "recording_mode": "off",
+        "resource_scope": "linux_wait4_waited_child_and_accounted_descendants_not_tree_total",
+        "result_sha256": "c6c5f8ed349d5dc52dbb305be0e07eb285679e84406226167200ec55c8c97a10",
+        "schema_version": 1,
+        "started_at": "2026-09-19T08:27:31.105809+00:00",
+        "started_sha256": "81c5bdab99f9925baac4e56c556b0adfd506b1540d5f0b8b78b0c7ff99675562",
+        "system_cpu_seconds": 0.255567,
+        "terminating_signal": null,
+        "user_cpu_seconds": 0.7148669999999999,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "wall_seconds": 33.94134374521673
+      },
+      "plaintext_staging_cleaned": true,
+      "recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+      "reported_cost_known": true,
+      "run_id": null,
+      "transport_audit": null,
+      "verifier_failure_tests": [],
+      "workflow_report_sha256": "5b9c38696d9d8d4455b36c58a340cd7b9b948446e68d30d398471b524d625ab3",
+      "workflow_status": "baseline_completed"
+    },
+    {
+      "baseline_completed": false,
+      "benchmark": {
+        "agent": "codex",
+        "artifact_sha256": "917872b02ff1d9ae3dac3aa9cea2eba1c5f8caec69e2c1002b8c4baa292d8d57",
+        "framework": "harbor",
+        "model": "openai/gpt-5.6-sol",
+        "reward": 1.0,
+        "status": "completed",
+        "task": "terminal-bench/cancel-async-tasks",
+        "trial": "cancel-async-tasks__vycgWV6"
+      },
+      "capture_qualified": true,
+      "case_id": "paired-on",
+      "failed_stages": [],
+      "fresh_inputs_sha256": "dba3133f0ddfff14f8881c2d31938a0dbfe6daf318be846295e62761bcbd6c47",
+      "independent_audit": {
+        "complete": true,
+        "extra_on_wire": 0,
+        "gap_reasons": {},
+        "manifest_capture_drops": 0,
+        "matched_attempts": 1,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "proxy_attempts": 1,
+        "report_sha256": "d4c30221cc5f51ad7bd020917f5e5adaa706c04faccf1b293658711ce1316b0b",
+        "websocket_rows": 1678
+      },
+      "integrity": {
+        "checks": 6,
+        "passed": true,
+        "profile": "integrity"
+      },
+      "measurement": {
+        "declared_network_mode": "recorder_task_netns_transparent_proxy",
+        "exit_code": 0,
+        "invocation_id": "35df1acaa4414050ac2c83dae2c0701d",
+        "max_rss_kib": 143300,
+        "measurement_status": "completed",
+        "observer_python_version": "3.11.2",
+        "observer_signal_count": 0,
+        "observer_signals": [],
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "recording_mode": "on",
+        "resource_scope": "linux_wait4_waited_child_and_accounted_descendants_not_tree_total",
+        "result_sha256": "90ee21e88c2a85f90354a2b260428fbe9ae894921dbbe665678198976e372a57",
+        "schema_version": 1,
+        "started_at": "2026-09-19T08:28:50.302843+00:00",
+        "started_sha256": "155279e47d943f2f8076da22b3c7d0edb720fabab6cc520250c6173377e80e74",
+        "system_cpu_seconds": 6.617555,
+        "terminating_signal": null,
+        "user_cpu_seconds": 1.873418,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "wall_seconds": 46.35892787389457
+      },
+      "plaintext_staging_cleaned": true,
+      "platform": {
+        "active_jobs": 0,
+        "coverage_claim": "unknown",
+        "failed_jobs": 0,
+        "recording_url": "http://127.0.0.1:8088/recordings/run-01a0b8c8-4f04-773c-8a2e-0681b9589157%230000",
+        "transport_proof_status": "verified",
+        "transport_proof_verified": true
+      },
+      "proxy_model_calls": 6,
+      "proxy_terminal_states": {
+        "completed": 6
+      },
+      "recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+      "reported_cost_known": true,
+      "run_id": "run-01a0b8c8-4f04-773c-8a2e-0681b9589157",
+      "transport_audit": {
+        "complete": true,
+        "completeness_boundary": "target-network-namespace-ip-transport",
+        "decoder_sha256": "sha256:261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074",
+        "extra_on_wire": 0,
+        "gaps_count": 0,
+        "manifest_capture_drops": 0,
+        "matched_attempts": 1,
+        "missing_from_wire": 0,
+        "payload_diff_passed": true,
+        "schema_version": 4,
+        "websocket_rows": 1678
+      },
+      "usage_records": 6,
+      "verifier_failure_tests": [],
+      "workflow_report_sha256": "f76f206080ffa59d09eac6317da5cece69c7125a26eb4062966b098cc7b8327e",
+      "workflow_status": "completed"
+    }
+  ]
+}

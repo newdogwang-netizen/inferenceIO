@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-09-19",
+  "report_kind": "existing_encrypted_evidence_http1_framing_diagnostic",
+  "paid_model_calls": 0,
+  "scope": "Offline TLS-follow reconstruction and HTTP chunk parsing; not a replacement for the strict transport auditor.",
+  "method": {
+    "tshark_version": "4.4.18",
+    "tshark_sha256": "261988b660afc78134fb20e4d7cd9d185b26b5e82fbc10713c9af10de6bfa074",
+    "commands": [
+      "iorec pcap-export RUN --key-file PRIVATE_KEY --output PRIVATE_DIR/capture.pcap",
+      "iorec tls-keys-export RUN --key-file PRIVATE_KEY --output PRIVATE_DIR/tls.keys",
+      "iorec export RUN --format platform --key-file PRIVATE_KEY --output PRIVATE_DIR/evidence.tar",
+      "tshark -n -2 -r PRIVATE_DIR/capture.pcap -o tls.keylog_file:PRIVATE_DIR/tls.keys -q -z follow,tls,raw,TCP_STREAM"
+    ],
+    "analysis_script_sha256": "0061fd2d6baec40f4417cd35a2cbc1ce927738896bfd53be22fb57d4ff87c265",
+    "body_matching": "Exact byte equality against decrypted, SHA-256-verified proxy chunk blobs; model requests uniquely matched by full request body."
+  },
+  "recordings": [
+    {
+      "run_id": "run-01a0b8ab-9610-71ff-be3e-7dd1f125cdee",
+      "model_attempts": 13,
+      "strict_matched": 10,
+      "body_equal_in_diagnostic": 12,
+      "abnormal_streams": [
+        {
+          "tcp_stream": 12,
+          "decrypted_response_bytes": 90606,
+          "tcp_close": {
+            "lost_segment_indicators": 0,
+            "retransmissions": 0,
+            "first_fin_from_client": true
+          },
+          "attempt_id": "01a0b8ac-f541-70d2-88b6-fd42f9c53f23",
+          "request_matched": true,
+          "proxy_terminal": "complete",
+          "proxy_reason": null,
+          "proxy_body_bytes": 88777,
+          "body_matches_proxy": true,
+          "is_proxy_prefix": true,
+          "status": 200,
+          "chunked": true,
+          "decoded_body_bytes": 88777,
+          "decoded_body_sha256": "b33be60cbe1b892475c069d4433eb0edbe877432ae69903eabf9a6214220211e",
+          "chunked_end_observed": false,
+          "trailing_bytes": 0,
+          "boundary_reason": "missing_size_line",
+          "sse_done_count": 1,
+          "sse_event_count": 311
+        },
+        {
+          "tcp_stream": 13,
+          "decrypted_response_bytes": 140226,
+          "tcp_close": {
+            "lost_segment_indicators": 0,
+            "retransmissions": 0,
+            "first_fin_from_client": true
+          },
+          "attempt_id": "01a0b8ad-0ab8-70db-8b6a-e94ccdcae75e",
+          "request_matched": true,
+          "proxy_terminal": "complete",
+          "proxy_reason": null,
+          "proxy_body_bytes": 138033,
+          "body_matches_proxy": true,
+          "is_proxy_prefix": true,
+          "status": 200,
+          "chunked": true,
+          "decoded_body_bytes": 138033,
+          "decoded_body_sha256": "2de687245a1476dd29c93fb1506b0d8da6361db95ca4a68dfbab09bda01efdb6",
+          "chunked_end_observed": false,
+          "trailing_bytes": 0,
+          "boundary_reason": "missing_size_line",
+          "sse_done_count": 1,
+          "sse_event_count": 508
+        },
+        {
+          "tcp_stream": 14,
+          "decrypted_response_bytes": 9018,
+          "tcp_close": {
+            "lost_segment_indicators": 0,
+            "retransmissions": 0
+          },
+          "attempt_id": "01a0b8ad-2566-73e7-a7a4-c87c2fc60b79",
+          "request_matched": true,
+          "proxy_terminal": "cancelled",
+          "proxy_reason": "downstream_cancelled",
+          "proxy_body_bytes": 8496,
+          "body_matches_proxy": false,
+          "is_proxy_prefix": true,
+          "status": 200,
+          "chunked": true,
+          "decoded_body_bytes": 7931,
+          "decoded_body_sha256": "85925670806f2d7d4c4bbf1779fe6dbe2262b17adfc3b48cf0373847ae82260a",
+          "chunked_end_observed": false,
+          "trailing_bytes": 0,
+          "boundary_reason": "missing_size_line",
+          "sse_done_count": 0,
+          "sse_event_count": 28
+        }
+      ],
+      "summary_sha256": "a1f67be4bf7c5fc46a11cf945d53faf85b77b68007fb7d8f27278784905d41a3"
+    },
+    {
+      "run_id": "run-01a0b8c5-5cdb-77e6-a570-ca4329c8ac93",
+      "model_attempts": 6,
+      "strict_matched": 5,
+      "body_equal_in_diagnostic": 6,
+      "abnormal_streams": [
+        {
+          "tcp_stream": 4,
+          "decrypted_response_bytes": 903641,
+          "tcp_close": {
+            "lost_segment_indicators": 0,
+            "retransmissions": 0,
+            "first_fin_from_client": true
+          },
+          "attempt_id": "01a0b8c5-94a7-7054-b834-f4a8c39b193e",
+          "request_matched": true,
+          "proxy_terminal": "complete",
+          "proxy_reason": null,
+          "proxy_body_bytes": 894919,
+          "body_matches_proxy": true,
+          "is_proxy_prefix": true,
+          "status": 200,
+          "chunked": true,
+          "decoded_body_bytes": 894919,
+          "decoded_body_sha256": "1501a44e3c330724d786c6c9980801dabf9d400b6559ea980684999be0d0cc24",
+          "chunked_end_observed": false,
+          "trailing_bytes": 0,
+          "boundary_reason": "missing_size_line",
+          "sse_done_count": 1,
+          "sse_event_count": 3034
+        }
+      ],
+      "summary_sha256": "6b11d819f9b93a548684366a12a614d4fa8d4e45639dccd7943ca2b0e8755afc"
+    }
+  ],
+  "findings": [
+    "Three full SSE bodies match the recorded upstream bodies and contain [DONE], but the client initiates FIN before an HTTP chunked terminator appears on the captured leg. No observed TCP lost-segment or retransmission indicators in those streams. This is not evidence that the response body was empty.",
+    "One genuine downstream cancellation delivered a 7,931-byte prefix of the 8,496-byte proxy body; 565 bytes were not observed on the task-facing wire. No [DONE] is present. Preserve cancelled/incomplete rather than promote it to success.",
+    "The stock TShark HTTP reassembly does not emit these unfinished response messages. Strict stream_status_missing and missing_from_wire findings remain failures; complete=false is unchanged."
+  ],
+  "fix": {
+    "recorder_sha256": "e939da73e87f7379f87591d45e1296bd6bd60680a5e324b81302059395896adc",
+    "change": "HTTP/1 response_end_observed no longer defaults to true when the response was never decoded.",
+    "regression": "http1_missing_response_does_not_claim_observed_response_end",
+    "real_evidence_reaudit": {
+      "request_end_observed": true,
+      "response_end_observed": false,
+      "complete": false
+    }
+  },
+  "limits": [
+    "A client-first FIN is observed; the internal reason the agent closes its stream is not proven by packet capture.",
+    "Observed transport bytes do not prove application consumption or native session persistence.",
+    "Historical reports, failures and ledgers are retained unchanged.",
+    "No raw prompts, bodies, pcap or TLS keys are published."
+  ],
+  "m3_complete": false
+}

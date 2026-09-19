@@ -11,14 +11,27 @@ benchmark scores, worker heartbeats and local workflow tooling; its full
 fresh-trial path now passes for two new Codex tasks in the
 [partial real-provider report](benchmarks/2026-09-19-m3-real-provider-progress-linux-x86_64.json).
 The explicitly amended M3 scope excludes Claude: eight matrix trials and two
-additional paired runs are required. Two Codex captures qualify; both the original
-Hermes trial and its [one approved replacement](benchmarks/2026-09-19-hermes-authorized-replacement-linux-x86_64.json)
-fail capture/cost gates, and seven cases remain unstarted. The replacement matches
+additional paired runs are required. The
+[full experiment report](benchmarks/2026-09-19-m3-completed-experiments-linux-x86_64.json)
+now records terminal outcomes for all ten cases: six of eight matrix captures
+qualify (Codex 4/4, Hermes 2/4), with benchmark reward `1.0` on five cases. Both
+paired runs score `1.0`; 33.94/46.36-second wall observations do not prove causal
+overhead. The original Hermes failure and its
+[one approved replacement](benchmarks/2026-09-19-hermes-authorized-replacement-linux-x86_64.json)
+remain unchanged. The replacement matches
 10/13 model requests independently, retaining one nonempty cancellation and two
 incompletely decoded wire responses. The native session export is still empty.
+Hermes merger repetition two also remains unqualified: five of six responses
+match independently, with one incomplete decoded-wire match and zero manifest
+drops. All selected recordings, including failures, are imported. A model-free
+[native export reproduction](benchmarks/2026-09-19-hermes-native-export-filter-linux-x86_64.json)
+identified the ended-session filtering problem; a post-trial profile correction
+does not recover the old empty exports or qualify public-provider correlation.
 The newer recorder/worker do not inherit the old five-hour qualification. Semantic
 response completion does not erase incomplete HTTP transport, unknown cost or
-unresolved hook/proxy correlation. Paid execution is halted. Do not deploy a newer
+unresolved hook/proxy correlation. The authorized paid experiment list is exhausted,
+with no automatic retries; 184 Python tests pass. M3 release qualification remains
+incomplete. Do not deploy a newer
 worktree based solely on the historical “release-hardened” statement below.
 
 The [compatible-candidate five-hour gate](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)

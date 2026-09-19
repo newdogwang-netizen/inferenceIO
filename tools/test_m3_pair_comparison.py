@@ -147,6 +147,50 @@ class PairComparisonTests(unittest.TestCase):
         self.assertNotIn("fake-secret", json.dumps(r))
         self.assertEqual(r["network_dependency_impact"], "not_determined_from_summary")
 
+    def test_harbor_namespaced_task_uses_name_bound_before_launch(self):
+        name = "terminal-bench/" + self.plan["tasks"][0]["id"]
+        for mode, state in self.states.items():
+            state["config"]["fresh_inputs"]["task"]["harbor_name"] = name
+            state["config"]["experiment"]["expected_result"]["task"] = name
+            path = self.trials[mode] / "result.json"
+            result = pair.json_file(path); result["task_name"] = name
+            workflow.atomic_json(path, result)
+            benchmark, provenance = workflow.benchmark_from_trial(self.trials[mode])
+            state["source_identity"]["benchmark"] = benchmark
+            state["stages"]["record"]["result"]["benchmark"] = benchmark
+            state["trial_summary"] = {"benchmark": benchmark, **provenance}
+            self.save(mode)
+        self.assertTrue(self.compare()["paired_metrics_compared"])
+        self.states["on"]["config"]["experiment"]["expected_result"]["task"] = "wrong-task"
+        self.save("on")
+        with self.assertRaisesRegex(pair.ComparisonFailure, "launch_identity_differs"):
+            self.compare()
+
+    def test_native_naive_job_times_need_terminal_counters_and_waited_exit(self):
+        jobs = {}
+        for mode in self.roots:
+            minute = "00" if mode == "off" else "01"
+            job = {"started_at": "2026-09-18T14:" + minute + ":00",
+                   "finished_at": "2026-09-18T14:" + minute + ":51", "n_total_trials": 1,
+                   "stats": {"n_completed_trials": 1, "n_errored_trials": 0, "n_running_trials": 0,
+                             "n_pending_trials": 0, "n_cancelled_trials": 0, "n_retries": 0}}
+            jobs[mode] = job
+            workflow.atomic_json(self.trials[mode].parent / "result.json", job)
+            self.states[mode]["launch_intent"]["exit_code"] = 0
+            self.save(mode)
+        result = self.compare()
+        self.assertTrue(result["paired_metrics_compared"])
+        self.assertIn("not_cross_compared", result["cases"]["off"]["job_time_basis"])
+        for key in ("n_running_trials", "n_pending_trials", "n_retries"):
+            changed = copy.deepcopy(jobs["on"]); changed["stats"][key] = 1
+            workflow.atomic_json(self.trials["on"].parent / "result.json", changed)
+            with self.assertRaisesRegex(pair.ComparisonFailure, "terminal_process_and_counters"):
+                self.compare()
+        workflow.atomic_json(self.trials["on"].parent / "result.json", jobs["on"])
+        self.states["on"]["launch_intent"].pop("exit_code"); self.save("on")
+        with self.assertRaisesRegex(pair.ComparisonFailure, "terminal_process_and_counters"):
+            self.compare()
+
     def test_plan_missing_models_and_changed_model_task_artifact_timeout_refuse(self):
         original = copy.deepcopy(self.plan)
         for mutate in (lambda p: p["agents"]["codex"].update(model=None),

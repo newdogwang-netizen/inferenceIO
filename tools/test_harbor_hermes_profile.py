@@ -99,6 +99,15 @@ class HermesProfileTests(unittest.TestCase):
         self.assertEqual(config["model"]["base_url"], p.audit_upstream)
         self.assertEqual(config["model"]["api_key"], "${OPENAI_API_KEY}")
 
+    def test_export_includes_unended_sessions_only_from_job_isolated_home(self):
+        with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "fixture"}, clear=True):
+            p = self.profile(model_name="openai/fixture")
+            asyncio.run(p.run("synthetic", None, None))
+        export = p.commands[-1]
+        self.assertIn("hermes sessions export /logs/agent/hermes-session.jsonl", export["command"])
+        self.assertNotIn("--source", export["command"])
+        self.assertEqual(export["env"]["HERMES_HOME"], "/tmp/hermes")
+
     def test_runtime_digest_checked_before_extraction_and_version_bound(self):
         with mock.patch.dict(os.environ, {}, clear=True):
             p = self.profile()
