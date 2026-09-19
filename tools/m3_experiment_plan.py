@@ -58,10 +58,11 @@ def reference(value):
 
 def validate(plan, verify_local=False):
     require(isinstance(plan, dict), "unexpected_plan_fields")
-    amended = type(plan.get("schema_version")) is int and plan["schema_version"] == 2
+    recovery = type(plan.get("schema_version")) is int and plan["schema_version"] == 3
+    amended = type(plan.get("schema_version")) is int and plan["schema_version"] in (2, 3)
     fields(plan, "schema_version kind dataset recorder agents tasks repetitions paired limits budget"
-           + (" scope_amendment" if amended else ""))
-    require(type(plan["schema_version"]) is int and plan["schema_version"] in (1, 2)
+           + (" scope_amendment" if amended else "") + (" authorized_recovery" if recovery else ""))
+    require(type(plan["schema_version"]) is int and plan["schema_version"] in (1, 2, 3)
             and plan["kind"] == "iorec-m3-real-experiment-plan", "unsupported_plan_schema")
     if amended:
         fields(plan["scope_amendment"], "excluded_agents approval_reference")
@@ -154,13 +155,74 @@ def validate(plan, verify_local=False):
     cases = [{"id": f"{agent}-{task}-r{repeat}", "agent": agent, "task": task, "recording": "on"}
              for repeat in (1, 2) for agent in ("codex", "claude", "hermes") if agent in expected_agents for task in ids]
     cases += [{"id": "paired-" + mode, "agent": pair["agent"], "task": pair["task"], "recording": mode} for mode in pair["order"]]
+    if recovery:
+        repair = plan["authorized_recovery"]
+        fields(repair, "case_id approval prior_plan prior_ledger prior_report retained_liability_usd original_total_usd")
+        for name in ("approval", "prior_plan", "prior_ledger", "prior_report"):
+            artifact(repair[name])
+        selected = [case for case in cases if case["id"] == repair["case_id"]]
+        require(len(selected) == 1 and selected[0]["recording"] == "on", "one_declared_recorded_recovery_case_required")
+        require(budget["total_usd"] is not None
+                and money(budget["total_usd"]) + money(repair["retained_liability_usd"]) == money(repair["original_total_usd"]),
+                "recovery_must_retain_prior_liabilities")
+        if verify_local:
+            verify_recovery(plan)
+        # This is a one-shot execution authorization, NOT a reduced M3 target.
+        # A fresh ledger cannot admit any other case or restart this case.
+        cases = selected
     return {"declaration_complete": not missing, "missing": missing, "local_inputs_checked": verify_local,
             "real_matrix_trials": matrix_trials, "additional_paired_trials": 2, "cases": cases,
+            "single_case_recovery": recovery,
             "excluded_agents": ["claude"] if amended else [],
             "provider_cap_verification_waived": waiver is not None,
             "qualification_passed": False, "paid_launcher_available": False,
             "provider_billing_cap_verified": False,
             "scope": "declaration_and_optional_local_hash_checks_not_spending_authority_or_experiment_results"}
+
+
+def verify_recovery(plan):
+    repair = plan["authorized_recovery"]
+    evidence = {}
+    for name in ("approval", "prior_plan", "prior_ledger", "prior_report"):
+        item = repair[name]
+        require(file_identity(Path(item["path"]))["sha256"] == item["sha256"], "recovery_evidence_digest_changed")
+        with Path(item["path"]).open("rb") as src:
+            raw = src.read((1 << 20) + 1)
+        require(len(raw) <= 1 << 20 and hashlib.sha256(raw).hexdigest() == item["sha256"], "recovery_evidence_changed_while_reading")
+        evidence[name] = json.loads(raw)
+    previous = evidence["prior_ledger"]
+    require(previous.get("plan_sha256") == repair["prior_plan"]["sha256"], "recovery_prior_plan_ledger_mismatch")
+    matches = [entry for entry in previous.get("cases", []) if entry.get("case_id") == repair["case_id"]]
+    require(len(matches) == 1 and matches[0].get("status") == "halted"
+            and (matches[0].get("receipt") or {}).get("report_sha256") == repair["prior_report"]["sha256"],
+            "recovery_requires_preserved_failed_case")
+    approval = evidence["approval"]
+    require(approval.get("case_id") == repair["case_id"]
+            and type(approval.get("allowed_replacements")) is int and approval["allowed_replacements"] == 1
+            and approval.get("recorder_sha256") == plan["recorder"]["sha256"]
+            and approval.get("prior_ledger_sha256") == repair["prior_ledger"]["sha256"]
+            and approval.get("retained_liability_usd") == repair["retained_liability_usd"]
+            and approval.get("original_total_usd") == repair["original_total_usd"], "recovery_approval_not_bound")
+    reference(approval.get("user_reply"))
+    # Keep task/model/limit identity fixed. Recorder/profile repair is explicit,
+    # but this authorization must not silently change the experiment itself.
+    for name in ("dataset", "agents", "tasks", "repetitions", "paired", "limits", "scope_amendment"):
+        require(plan[name] == evidence["prior_plan"][name], "recovery_experiment_identity_changed")
+    require(plan["budget"]["per_trial_usd"] == evidence["prior_plan"]["budget"]["per_trial_usd"],
+            "recovery_per_trial_allowance_changed")
+    for name in ("currency", "provider_cap_evidence_sha256", "provider_cap_waiver"):
+        require(plan["budget"].get(name) == evidence["prior_plan"]["budget"].get(name), "recovery_budget_policy_changed")
+    liabilities = Decimal(0)
+    allowance = money(evidence["prior_plan"]["budget"]["per_trial_usd"])
+    for entry in previous["cases"]:
+        receipts = entry.get("history", []) + ([entry["receipt"]] if entry.get("receipt") else [])
+        amounts = [Decimal(str(r["reported_cost_usd"])) for r in receipts if r.get("reported_cost_usd") is not None]
+        require(all(a.is_finite() and a >= 0 for a in amounts), "recovery_invalid_prior_cost")
+        known = max(amounts) if amounts else None
+        require(entry.get("status") != "ready" or known is not None, "recovery_ready_cost_unknown")
+        liabilities += known if entry.get("status") == "ready" else max(allowance, known or Decimal(0))
+    require(money(plan["budget"]["total_usd"]) + liabilities <= money(evidence["prior_plan"]["budget"]["total_usd"]),
+            "recovery_cannot_release_prior_reservations_or_spend")
 
 
 def main():
@@ -195,6 +257,8 @@ def bind_case(args, fresh):
     require(hashlib.sha256(raw).hexdigest() == identity["sha256"], "experiment_plan_changed_while_reading")
     plan = json.loads(raw)
     declaration = validate(plan)
+    if plan["schema_version"] == 3:
+        verify_recovery(plan)
     require(declaration["declaration_complete"], "experiment_declaration_incomplete_no_launch")
     cases = [case for case in declaration["cases"] if case["id"] == case_id]
     require(len(cases) == 1, "experiment_case_not_in_plan")

@@ -1259,7 +1259,7 @@ async fn pump_incoming_body(
                     store.note_capture_drop();
                     capture_failed.store(true, Ordering::Release);
                 }
-                if sender.send(Ok(bytes)).await.is_err() {
+                if forward_body_data(&sender, bytes).await.is_err() {
                     terminal = TerminalState::Cancelled;
                     reason = Some("upstream_stopped_reading");
                     break;
@@ -1399,7 +1399,7 @@ async fn pump_upstream_body(
                     capture_failed.store(true, Ordering::Release);
                 }
 
-                if sender.send(Ok(bytes)).await.is_err() {
+                if forward_body_data(&sender, bytes).await.is_err() {
                     terminal = TerminalState::Cancelled;
                     reason = Some("downstream_cancelled");
                     break;
@@ -1454,6 +1454,21 @@ async fn pump_upstream_body(
         }),
     )
     .await;
+}
+
+async fn forward_body_data(
+    sender: &tokio::sync::mpsc::Sender<Result<Bytes, io::Error>>,
+    bytes: Bytes,
+) -> Result<(), tokio::sync::mpsc::error::SendError<Result<Bytes, io::Error>>> {
+    // Empty DATA frames carry no application bytes. Sending one after an SSE
+    // consumer closes on [DONE] can fail even though every byte was forwarded.
+    // Keep the captured chunk, but do not infer cancellation from an empty send.
+    // The pump must still observe actual upstream EOF; later data/error is not
+    // suppressed and still produces cancellation/error respectively.
+    if bytes.is_empty() {
+        return Ok(());
+    }
+    sender.send(Ok(bytes)).await
 }
 
 #[derive(Default)]
@@ -2649,5 +2664,70 @@ mod tests {
         assert_eq!(result.sse_events, 1);
         assert!(capture_failed.load(Ordering::Acquire));
         store.shutdown().await.unwrap();
+    }
+    #[tokio::test]
+    async fn empty_tail_after_sse_close_does_not_mask_later_data_or_upstream_error() {
+        for scenario in ["eof", "more_data", "upstream_error"] {
+            let temporary = tempfile::tempdir().unwrap();
+            let (store, _) =
+                RunStore::create(temporary.path(), "empty-tail", CapturePolicy::default()).unwrap();
+            let (upstream, input) = tokio::sync::mpsc::channel::<Result<Bytes, io::Error>>(4);
+            let response = reqwest::Response::from(http::Response::new(
+                reqwest::Body::wrap_stream(ReceiverStream::new(input)),
+            ));
+            let (sender, mut receiver) = tokio::sync::mpsc::channel(1);
+            let pump = tokio::spawn(pump_upstream_body(
+                response,
+                sender,
+                store.clone(),
+                EventIds::default(),
+                "/v1/chat/completions".into(),
+                Some("text/event-stream".into()),
+                true,
+                StatusCode::OK,
+            ));
+            upstream
+                .send(Ok(Bytes::from_static(b"data: [DONE]\n\n")))
+                .await
+                .unwrap();
+            assert_eq!(receiver.recv().await.unwrap().unwrap(), "data: [DONE]\n\n");
+            drop(receiver);
+            upstream.send(Ok(Bytes::new())).await.unwrap();
+            // A zero-byte frame is not proof of EOF. Leave the upstream open.
+            tokio::time::sleep(Duration::from_millis(10)).await;
+            assert!(!pump.is_finished(), "{scenario}");
+            match scenario {
+                "more_data" => upstream
+                    .send(Ok(Bytes::from_static(b"data: later\n\n")))
+                    .await
+                    .unwrap(),
+                "upstream_error" => upstream
+                    .send(Err(io::Error::other("fixture")))
+                    .await
+                    .unwrap(),
+                _ => {}
+            }
+            drop(upstream);
+            tokio::time::timeout(Duration::from_secs(2), pump)
+                .await
+                .unwrap()
+                .unwrap();
+            store.shutdown().await.unwrap();
+            let mut terminals = Vec::new();
+            for_each_event(&temporary.path().join("events.jsonl"), |event| {
+                if event.event == "transport_attempt_finished" {
+                    terminals.push(event);
+                }
+                Ok(())
+            })
+            .unwrap();
+            assert_eq!(terminals.len(), 1);
+            let expected = match scenario {
+                "eof" => TerminalState::Complete,
+                "more_data" => TerminalState::Cancelled,
+                _ => TerminalState::Error,
+            };
+            assert_eq!(terminals[0].terminal_state, Some(expected), "{scenario}");
+        }
     }
 }

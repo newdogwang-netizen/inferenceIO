@@ -11,6 +11,18 @@ schema 2 必须记录 `scope_amendment` 的排除项和审批引用；预算中�
 同一共享账本。`provider_billing_cap_verified` 始终为 false；本地账本不能保证
 正在执行的调用不超支。两题、重复次数、录制完整性和对照要求均不变。
 
+单独批准的失败补跑使用 schema 3：保留 schema 2 的完整矩阵目标，但执行列表只
+允许 `authorized_recovery.case_id` 一项。新私有计划绑定原计划、停止账本、失败
+报告和本次批准文件的摘要；沿用任务、模型、停止规则和单项额度，扣留既有已知
+费用与未知费用预留，不清除旧失败。新 recorder 摘要也必须与批准记录一致。
+独立的新账本只允许这一项一次启动，不能启动其他项或自动重试。声明只代表
+操作员提供了审批记录，不是供应商账单/硬上限证明或整个矩阵的完成证明。
+
+Hermes 补跑前的离线修复还包括：捕获零字节 HTTP DATA 帧但不向下游发送空块，
+仍等待真实上游 EOF；若后面有非空数据或上游错误，继续标为取消/错误。Rust 与
+平台 Go 审计器都只接受明确 `observed_size=0` 且 `captured_size=0` 的无 blob 帧。
+原失败证据不重写，模型语义结束也不替代独立的 HTTP 传输完整性证明。
+
 Hermes 0.19 的受控 profile 使用显式 custom 配置、canonical model ID 和环境变量
 引用密钥，不依赖旧 Harbor 的 provider auto / `OPENAI_BASE_URL` 路由。
 费用优先读取带来源的单 CLI session 原生估算；多 session、压缩、未知来源不猜测。

@@ -1144,6 +1144,13 @@ func (d *Deps) appendProxyChunk(ctx context.Context, projectID uuid.UUID, attemp
 		attempt.gaps["proxy_body_sequence_gap"] = struct{}{}
 	}
 	*expected++
+	// The recorder stores explicit empty HTTP DATA chunks without a blob.
+	// Missing/nonempty metadata, truncation and sequence gaps still fail closed.
+	observed, observedOK := jsonIntegerValue(metadata["observed_size"])
+	captured, capturedOK := jsonIntegerValue(metadata["captured_size"])
+	if len(digest) == 0 && size == nil && !truncated && observedOK && observed == 0 && capturedOK && captured == 0 {
+		return nil
+	}
 	if len(digest) != sha256.Size || size == nil || *size < 0 || *size > maxAuditBlobBytes || truncated {
 		attempt.gaps["proxy_body_chunk_not_captured"] = struct{}{}
 		return nil

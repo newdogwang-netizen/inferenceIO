@@ -139,6 +139,88 @@ class PlanTests(unittest.TestCase):
                 plans.validate(self.plan, verify_local=True)
 
 
+class RecoveryPlanTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        fixture = PlanTests(); fixture.setUp()
+        self.previous = fixture.amended_fixture()
+        self.previous["budget"]["total_usd"] = "20.00"
+        self.case = "hermes-cancel-async-tasks-r1"
+        self.report = self.artifact("report", {"workflow_status": "incomplete", "qualification_passed": False})
+        self.prior_plan = self.artifact("plan", self.previous)
+        self.book = {"plan_sha256": self.prior_plan["sha256"], "cases": [
+            {"case_id": "codex-cancel-async-tasks-r1", "status": "ready", "receipt": {"reported_cost_usd": "0.5"}},
+            {"case_id": self.case, "status": "halted", "receipt": {
+                "reported_cost_usd": None, "report_sha256": self.report["sha256"]}}]}
+        self.prior_ledger = self.artifact("ledger", self.book)
+        self.approval = {"case_id": self.case, "allowed_replacements": 1, "user_reply": "synthetic approval fixture",
+                         "prior_ledger_sha256": self.prior_ledger["sha256"], "retained_liability_usd": "1.50",
+                         "original_total_usd": "20.00", "recorder_sha256": self.previous["recorder"]["sha256"]}
+        self.plan = copy.deepcopy(self.previous)
+        self.plan["schema_version"] = 3
+        self.plan["budget"]["total_usd"] = "18.50"
+        self.plan["authorized_recovery"] = {"case_id": self.case, "prior_plan": self.prior_plan,
+            "prior_ledger": self.prior_ledger, "prior_report": self.report,
+            "approval": self.artifact("approval", self.approval),
+            "retained_liability_usd": "1.50", "original_total_usd": "20.00"}
+
+    def artifact(self, name, value):
+        path = self.root / (name + ".json")
+        workflow.atomic_json(path, value)
+        return {"path": str(path), "sha256": workflow.digest(path)}
+
+    def test_single_replacement_does_not_reduce_matrix_or_admit_other_cases(self):
+        result = plans.validate(self.plan)
+        plans.verify_recovery(self.plan)
+        self.assertEqual(result["real_matrix_trials"], 8)
+        self.assertEqual(result["additional_paired_trials"], 2)
+        self.assertEqual([x["id"] for x in result["cases"]], [self.case])
+        self.assertTrue(result["single_case_recovery"])
+        import m3_trial_ledger
+        plan_path = Path(self.artifact("recovery", self.plan)["path"])
+        work = self.root / "work"; work.mkdir(mode=0o700)
+        with m3_trial_ledger.Ledger(self.root / "new-ledger", plan_path, workflow.digest(plan_path)) as book:
+            book.reserve(self.case, work, "a" * 64)
+            book.mark_launch()
+            with self.assertRaisesRegex(m3_trial_ledger.LedgerFailure, "case_not_in_ledger_plan"):
+                book.reserve("hermes-multi-source-data-merger-r1", work, "a" * 64)
+            with self.assertRaisesRegex(m3_trial_ledger.LedgerFailure, "no_restart"):
+                book.reserve(self.case, work, "a" * 64)
+
+    def test_recovery_cannot_change_model_case_recorder_approval_or_retry_count(self):
+        for field, value in (("case_id", "other"), ("allowed_replacements", 2),
+                             ("allowed_replacements", True), ("recorder_sha256", "0" * 64)):
+            p = copy.deepcopy(self.plan); approval = {**self.approval, field: value}
+            p["authorized_recovery"]["approval"] = self.artifact("changed-approval", approval)
+            with self.assertRaisesRegex(plans.PlanFailure, "approval_not_bound"):
+                plans.verify_recovery(p)
+        p = copy.deepcopy(self.plan); p["agents"]["hermes"]["model"] = "openai/other"
+        with self.assertRaisesRegex(plans.PlanFailure, "identity_changed"):
+            plans.verify_recovery(p)
+        p = copy.deepcopy(self.plan); p["authorized_recovery"]["case_id"] = "not-in-plan"
+        with self.assertRaisesRegex(plans.PlanFailure, "recovery_case_required"):
+            plans.validate(p)
+
+    def test_recovery_preserves_prior_failure_hash_and_reservations(self):
+        p = copy.deepcopy(self.plan)
+        p["authorized_recovery"]["prior_report"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(plans.PlanFailure, "digest_changed"):
+            plans.verify_recovery(p)
+        p = copy.deepcopy(self.plan); p["budget"]["total_usd"] = "19.00"
+        p["authorized_recovery"]["retained_liability_usd"] = "1.00"
+        p["authorized_recovery"]["approval"] = self.artifact("changed-approval", {**self.approval, "retained_liability_usd": "1.00"})
+        plans.validate(p)
+        with self.assertRaisesRegex(plans.PlanFailure, "cannot_release_prior"):
+            plans.verify_recovery(p)
+        self.book["cases"][-1]["status"] = "ready"
+        p = copy.deepcopy(self.plan)
+        p["authorized_recovery"]["prior_ledger"] = self.artifact("changed-ledger", self.book)
+        with self.assertRaisesRegex(plans.PlanFailure, "preserved_failed_case"):
+            plans.verify_recovery(p)
+
+
 class CaseBindingTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

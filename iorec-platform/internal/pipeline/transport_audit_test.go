@@ -25,6 +25,45 @@ func tsharkTestRow(columns [tsharkColumnCount]string) string {
 	return strings.Join(columns[:], "\t")
 }
 
+func TestExplicitEmptyHTTPChunkNeedsNoBlobButDoesNotHideMissingData(t *testing.T) {
+	for _, request := range []bool{false, true} {
+		for _, tc := range []struct {
+			name                    string
+			observed, captured      any
+			sequence                int
+			truncated, missing, gap bool
+		}{
+			{"empty", 0, 0, 1, false, false, false},
+			{"sequence-gap", 0, 0, 2, false, false, true},
+			{"nonempty", 1, 0, 1, false, true, false},
+			{"size-mismatch", 0, 1, 1, false, true, false},
+			{"missing-observed", nil, 0, 1, false, true, false},
+			{"missing-captured", 0, nil, 1, false, true, false},
+			{"truncated", 0, 0, 1, true, true, false},
+		} {
+			t.Run(fmt.Sprintf("request=%t/%s", request, tc.name), func(t *testing.T) {
+				attempt := &proxyAttempt{nextRequestChunk: 1, nextResponseChunk: 1, gaps: map[string]struct{}{}}
+				metadata := map[string]any{"observed_size": tc.observed, "captured_size": tc.captured, "chunk_sequence": tc.sequence}
+				if err := (&Deps{}).appendProxyChunk(context.Background(), uuid.Nil, attempt, request, metadata, nil, nil, tc.truncated); err != nil {
+					t.Fatal(err)
+				}
+				_, missing := attempt.gaps["proxy_body_chunk_not_captured"]
+				_, gap := attempt.gaps["proxy_body_sequence_gap"]
+				if missing != tc.missing || gap != tc.gap {
+					t.Fatalf("unexpected gaps: %v", attempt.gaps)
+				}
+				expected := attempt.nextResponseChunk
+				if request {
+					expected = attempt.nextRequestChunk
+				}
+				if expected != 2 {
+					t.Fatalf("sequence did not advance: %d", expected)
+				}
+			})
+		}
+	}
+}
+
 func digestForTest(value string) string {
 	digest := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(digest[:])
