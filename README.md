@@ -31,7 +31,7 @@ The [native Hermes export reproduction](benchmarks/2026-09-19-hermes-native-expo
 found that `--source cli` filters out persisted one-shot sessions whose `ended_at`
 is null. The isolated-job export is now fixed and model-free tested; old empty
 exports/costs are not rewritten and the fix has not had another paid trial.
-All 184 Python tests pass. **Experiment execution is complete; M3 release
+All 186 Python tests pass. **Experiment execution is complete; M3 release
 qualification is not.** The [final-candidate pre-soak audit](benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json)
 now enumerates all 64 model calls and 66 unresolved cross-source correlations,
 rechecks raw integrity, repeats one newly recorded trial's import twice without
@@ -40,8 +40,17 @@ agreement with the final recorder against a local fixture. Its single-call
 temporal match does not resolve historical multi-call ambiguities. The
 [Hermes wire diagnosis](docs/hermes-http-framing-diagnostic.md) preserves the
 failed strict verdicts while distinguishing full SSE bodies without HTTP
-terminators from a genuine cancelled prefix. The final frozen recorder/worker
-five-hour gate is running, not passed. The
+terminators from a genuine cancelled prefix. The latest frozen recorder/worker
+five-hour attempt stopped after about one hour during live inspection and is
+retained as failed. A concurrent temporary-blob rename race has been reproduced;
+the correction passed 327 Rust and 186 Python tests, 473 concurrent inspections,
+all 64 historical-call integrity checks and a 1,200-call current-image calibration.
+Recorder `59a10e9f…a8f8eaee` and the unchanged final platform images started a
+fresh five-hour run at 12:46 UTC; earliest workload completion is 17:46 UTC, then
+reconciliation. This is running, not passed. See the
+[retained failure and replacement audit](benchmarks/2026-09-19-m3-live-inspection-race-linux-x86_64.json).
+The earlier native/replay audit above remains bound to its own recorder; the
+replacement audit rechecks both against the new binary. The
 [compatible-candidate five-hour soak](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
 passed with 20 collectors, 6,000 successful calls, interruption recovery and final
 reconciliation. This qualifies only its frozen artifacts, not every newer worktree

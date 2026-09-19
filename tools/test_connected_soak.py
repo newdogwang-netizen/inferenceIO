@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import subprocess
 import unittest
 import urllib.error
 from unittest import mock
@@ -12,6 +13,28 @@ import connected_soak
 
 
 class ConnectedSoakTests(unittest.TestCase):
+    def test_subprocess_failure_diagnostics_do_not_publish_arguments_or_stderr(self) -> None:
+        error = subprocess.CalledProcessError(
+            1, ["/private/binary", "inspect", "sensitive-run", "--key-file", "secret"],
+            stderr="iorec: storage I/O failed: No such file or directory (os error 2): PRIVATE",
+        )
+        result = connected_soak.failure_diagnostics(error)
+        self.assertEqual(result["category"], "storage_entry_not_found")
+        self.assertEqual(result["iorec_subcommand"], "inspect")
+        self.assertEqual(result["exit_code"], 1)
+        self.assertEqual(len(result["stderr_sha256"]), 64)
+        encoded = json.dumps(result)
+        for secret in ("PRIVATE", "secret", "sensitive-run", "/private"):
+            self.assertNotIn(secret, encoded)
+
+    def test_unknown_failure_diagnostics_fail_closed_without_guessing(self) -> None:
+        result = connected_soak.failure_diagnostics(
+            subprocess.CalledProcessError(7, ["binary", "private-command"], stderr=b"secret"))
+        self.assertEqual(result["category"], "unclassified")
+        self.assertNotIn("iorec_subcommand", result)
+        self.assertEqual(connected_soak.failure_diagnostics(ValueError("secret")),
+                         {"kind": "ValueError"})
+
     def test_compose_and_provider_secrets_do_not_reach_workload_children(self) -> None:
         with mock.patch.dict("os.environ", {"IOREC_USER_TOKENS": "private", "POSTGRES_PASSWORD": "private",
                                            "OPENAI_API_KEY": "private", "PATH": "/usr/bin"}, clear=True):

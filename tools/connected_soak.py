@@ -805,6 +805,32 @@ def event_snapshot(
         return dict(pool.map(inspect, range(len(collector_dirs))))
 
 
+def failure_diagnostics(error: Exception) -> dict[str, Any]:
+    """Keep bounded failure identity without emitting command arguments or stderr."""
+    if not isinstance(error, subprocess.CalledProcessError):
+        return {"kind": type(error).__name__}
+    stderr = error.stderr or b""
+    if isinstance(stderr, str):
+        stderr = stderr.encode("utf-8", errors="replace")
+    result: dict[str, Any] = {
+        "kind": "subprocess_failure",
+        "exit_code": error.returncode,
+        "stderr_bytes": len(stderr),
+        "stderr_sha256": hashlib.sha256(stderr).hexdigest(),
+    }
+    if isinstance(error.cmd, (list, tuple)) and len(error.cmd) > 1:
+        subcommand = error.cmd[1]
+        if subcommand in {"inspect", "verify", "collector", "run"}:
+            result["iorec_subcommand"] = subcommand
+    if b"storage I/O failed: No such file or directory (os error 2)" in stderr:
+        result["category"] = "storage_entry_not_found"
+    elif b"event log changed while it was being read" in stderr:
+        result["category"] = "event_log_changed_during_read"
+    else:
+        result["category"] = "unclassified"
+    return result
+
+
 def parse_client_result(log_path: pathlib.Path) -> dict[str, Any]:
     if log_path.stat().st_size > 16 * 1024 * 1024:
         raise RuntimeError(f"recorder log unexpectedly exceeds 16 MiB: {log_path}")
@@ -1388,6 +1414,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "schema_version": SCHEMA_VERSION, "format": "iorec-connected-soak-report-v1",
                 "created_at": utc_now(), "passed": False, "qualified": False,
                 "failure_type": type(error).__name__, "work_dir": str(work_dir),
+                "failure_diagnostics": failure_diagnostics(error),
                 "faults": vars(faults), "artifact_digests": {"start": artifact_start},
                 "configuration": {"collectors": args.collectors, "workload": args.workload,
                                   "duration_seconds": args.duration_seconds},

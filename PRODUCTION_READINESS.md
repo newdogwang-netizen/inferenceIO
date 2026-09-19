@@ -30,17 +30,25 @@ does not recover the old empty exports or qualify public-provider correlation.
 The newer recorder/worker do not inherit the old five-hour qualification. Semantic
 response completion does not erase incomplete HTTP transport, unknown cost or
 unresolved hook/proxy correlation. The authorized paid experiment list is exhausted,
-with no automatic retries; 184 Python tests pass. M3 release qualification remains
+with no automatic retries; 186 Python tests pass. M3 release qualification remains
 incomplete. The [final-candidate pre-soak audit](benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json)
 rechecks all 64 calls, lists all 66 unresolved cross-source associations,
 confirms exact raw integrity and idempotent replay of a fresh trial, and verifies
 the final recorder's native Hermes export against a local fixture. The
 [framing diagnosis](docs/hermes-http-framing-diagnostic.md) classifies the
 remaining Hermes failures without upgrading their verdicts. Current browser
-evidence checks pass using a credential-free temporary profile; 325 Rust tests,
+evidence checks pass using a credential-free temporary profile; 327 Rust tests,
 Clippy, and Go full/race/vet checks pass. Recorder `e939da73…95896adc` and worker
-`ad510437…79515c` have their own 20-collector five-hour job running; its result
-must be checked before final qualification. Do not deploy a newer
+`ad510437…79515c` were frozen for a 20-collector five-hour attempt, which failed
+during live inspection at about one hour and remains failed. Concurrent inspection
+reproduced disappearing temporary-blob names during atomic publication; the fix
+passed regression and current-image calibration after correction, but still needs
+its own five-hour gate. The [replacement audit](benchmarks/2026-09-19-m3-live-inspection-race-linux-x86_64.json)
+binds recorder `59a10e9f…a8f8eaee`, 327 Rust / 186 Python tests, 473 successful
+concurrent inspections, 1,200 successful calibrated calls, and repeated native
+export / real-case / import checks. Its new 20-collector five-hour run started
+12:46 UTC; earliest workload completion is 17:46 UTC, before final reconciliation.
+The original failed hour is not accumulated. Do not deploy a newer
 worktree based solely on the historical “release-hardened” statement below.
 
 The [compatible-candidate five-hour gate](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)

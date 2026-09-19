@@ -1240,6 +1240,34 @@ struct BlobInventory {
     unverified_pending: BTreeSet<String>,
 }
 
+fn blob_entry_metadata(entry: &fs::DirEntry) -> io::Result<Option<fs::Metadata>> {
+    match entry.metadata() {
+        Ok(metadata) => Ok(Some(metadata)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            // persist_blob publishes a fully synced staging file by rename.
+            // read_dir may have already yielded its old name. Only that exact
+            // private staging namespace may disappear during live inspection;
+            // disappearing committed blobs and other entries remain errors.
+            let name = entry.file_name();
+            let staging = name.to_str().and_then(|name| {
+                let (pid, id) = name
+                    .strip_prefix(".blob-")?
+                    .strip_suffix(".tmp")?
+                    .split_once('-')?;
+                let pid = pid.parse::<u32>().ok()?;
+                let uuid = uuid::Uuid::parse_str(id).ok()?;
+                (pid > 0 && uuid.get_version_num() == 4 && uuid.to_string() == id).then_some(())
+            });
+            if staging.is_some() {
+                Ok(None)
+            } else {
+                Err(error)
+            }
+        }
+        Err(error) => Err(error),
+    }
+}
+
 fn blob_inventory(
     run_dir: &Path,
     expect_encrypted: bool,
@@ -1271,14 +1299,17 @@ fn blob_inventory(
                 limit: MAX_BLOB_DIRECTORY_ENTRIES,
             });
         }
-        if !entry.file_type()?.is_file() {
+        let Some(metadata) = blob_entry_metadata(&entry)? else {
+            continue;
+        };
+        if !metadata.file_type().is_file() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "blob directory contains a non-regular entry",
             )
             .into());
         }
-        let storage_bytes = entry.metadata()?.len();
+        let storage_bytes = metadata.len();
         inventory.storage_bytes = inventory
             .storage_bytes
             .checked_add(storage_bytes)
@@ -1396,6 +1427,56 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn live_blob_inventory_tolerates_only_disappearing_writer_staging_files() {
+        let temporary = tempfile::tempdir().unwrap();
+        for (name, allowed) in [
+            (format!(".blob-123-{}.tmp", uuid::Uuid::new_v4()), true),
+            (format!("body-sha256-{}", "a".repeat(64)), false),
+            (".orphan".to_owned(), false),
+            (".blob-123-not-a-uuid.tmp".to_owned(), false),
+            (format!(".blob-0-{}.tmp", uuid::Uuid::new_v4()), false),
+        ] {
+            let path = temporary.path().join(&name);
+            fs::write(&path, b"staging").unwrap();
+            let entry = fs::read_dir(temporary.path())
+                .unwrap()
+                .next()
+                .unwrap()
+                .unwrap();
+            assert_eq!(blob_entry_metadata(&entry).unwrap().unwrap().len(), 7);
+            fs::remove_file(path).unwrap();
+            let result = blob_entry_metadata(&entry);
+            if allowed {
+                assert!(result.unwrap().is_none());
+            } else {
+                assert_eq!(result.unwrap_err().kind(), io::ErrorKind::NotFound);
+            }
+        }
+    }
+
+    #[test]
+    fn live_blob_inventory_still_rejects_staging_named_symlinks() {
+        let temporary = tempfile::tempdir().unwrap();
+        let blobs = temporary.path().join("blobs");
+        fs::create_dir(&blobs).unwrap();
+        std::os::unix::fs::symlink(
+            "/does-not-exist",
+            blobs.join(format!(".blob-123-{}.tmp", uuid::Uuid::new_v4())),
+        )
+        .unwrap();
+        let result = blob_inventory(
+            temporary.path(),
+            false,
+            None,
+            true,
+            &BTreeSet::new(),
+            &BTreeSet::new(),
+        );
+        assert!(matches!(result, Err(StorageError::Io(error))
+            if error.kind() == io::ErrorKind::InvalidData));
+    }
 
     #[test]
     fn oversized_blob_is_corrupt_without_being_read_into_memory() {

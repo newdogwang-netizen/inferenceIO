@@ -1,0 +1,413 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-09-19T12:46:18.706739+00:00",
+  "report_kind": "m3_live_inspection_race_fix_and_frozen_replacement",
+  "m3_complete": false,
+  "candidate": {
+    "recorder_sha256": "59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+    "images": {
+      "IOREC_IMAGE_API": "sha256:ea7556877c74697f3049c549431b4cdadda4139a32f83216072a3799ecb981f3",
+      "IOREC_IMAGE_WEB": "sha256:9884e3ada730c6126a98e2c5dc1739988063610654ea7ccc999be08e678981d5",
+      "IOREC_IMAGE_WORKER": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c"
+    },
+    "source_sha256": {
+      "Cargo.lock": "163f8e38bf184ff0360d769f3aafb04f5f6a09d0347a822ae5c4bddd030e79fb",
+      "iorec-platform/deploy/compose.qualify.yaml": "6f1ef74aa35a7e248ba737a2de8f1151ec53a7d2f87518ccb5bc634a185328e3",
+      "iorec-platform/deploy/compose.yaml": "72feec835387240808445121ed36c2bded41df566daf3e4b84b2f6a8c16e2691",
+      "src/proxy.rs": "a7b7319191a48c4b2160fcc1c35b87e3d3f422a183d69db33875f3fc73b4038b",
+      "src/transport_audit.rs": "19a449a29f0e7ee6a04115be03fe5e78180c7fff5019e4eaef44fced82ac9394",
+      "tools/connected_soak.py": "145b1f374bdf4a5a09804cc418a14fe3d901e3be8c326661e3adff9d845acc66",
+      "tools/qualification_platform.py": "3d89c883c072b0bcc8f0dc7e3134136f8c24542d7ee3bfc96668e5c048e3795d",
+      "tools/websocket_soak_client.mjs": "984748c03ea1de078c5941d61351ffeb64a2adb2f0254f8f7d9fb19c6e20904d",
+      "tools/websocket_soak_validation.py": "48e06622db67badacaaf16de33415a395280e1379225455668b1d648ad776903",
+      "src/inspect.rs": "cca026cc7f703a61639b62280a7f369277ee2988431e31cbb5ad9d1d83d34940",
+      "tools/perf_harness.py": "2629a866ef5154b082a05183d2623290399cb5e1d5abd99e1333151d77ed230a",
+      "tools/websocket_fixture.py": "9a6040db7ae9643207876bfac8e5e3740f311cf83b8bbfb89a6b7485ceab2ae7"
+    },
+    "predecessor_attempt": {
+      "recorder_sha256": "e939da73e87f7379f87591d45e1296bd6bd60680a5e324b81302059395896adc",
+      "qualified": false,
+      "reason": "One-hour live-inspection failure retained; staged-file race reproduced and corrected."
+    }
+  },
+  "retained_failed_attempt": {
+    "started_at": "2026-09-19T11:28:33.993256+00:00",
+    "completion": {
+      "finished_at": "2026-09-19T12:29:35.937296+00:00",
+      "exit_code": 1,
+      "passed": false,
+      "qualified": false,
+      "report_sha256": "d5811c4959a40e42b9c3de73c4880cdd138764e82f87a35dc41df159ca307340",
+      "recorder_sha256": "e939da73e87f7379f87591d45e1296bd6bd60680a5e324b81302059395896adc",
+      "candidate_inputs_unchanged": true
+    },
+    "failure_type": "CalledProcessError",
+    "failure_stage": "Pre-outage active event snapshot; API outage was not started.",
+    "original_stderr_retained": false,
+    "cause_limit": "Subsequent ENOENT reproduction and deterministic metadata-race test support the correction; original stderr is unavailable, so exact original lower-level cause cannot be proven.",
+    "runtime_retired": true,
+    "database_and_object_volumes_retained": true,
+    "raw_recordings_and_reports_retained": true
+  },
+  "fix": {
+    "scope": "Only disappearing canonical .blob-PID-UUIDv4.tmp staging entries may be skipped during directory metadata lookup.",
+    "committed_blob_disappearance_remains_error": true,
+    "malformed_staging_names_remain_errors": true,
+    "nonregular_entries_and_symlinks_remain_errors": true,
+    "stable_orphan_storage_still_counted": true,
+    "failure_reports_now_include_bounded_classification_and_stderr_hash_not_raw_stderr": true
+  },
+  "reproductions": [
+    {
+      "scope": "synthetic local fixture, no paid calls",
+      "binary_sha256": "sha256:e939da73e87f7379f87591d45e1296bd6bd60680a5e324b81302059395896adc",
+      "recorder_exit": 0,
+      "inspection_exit_counts": {
+        "0": 469,
+        "1": 49
+      },
+      "final_inspection_exit": 0,
+      "final_log": {
+        "valid_events": 23914,
+        "last_sequence": 23914,
+        "valid_bytes": 21085611,
+        "discarded_tail_bytes": 0
+      },
+      "final_missing_blobs": 0,
+      "final_corrupt_blobs": 0,
+      "label": "before",
+      "report_sha256": "53a52fd77cb34bbfefc0c91c2b1e3610cba197d96b3025e6b664c77d36f74fff"
+    },
+    {
+      "scope": "synthetic local fixture, no paid calls",
+      "binary_sha256": "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+      "recorder_exit": 0,
+      "inspection_exit_counts": {
+        "0": 473
+      },
+      "final_inspection_exit": 0,
+      "final_log": {
+        "valid_events": 23479,
+        "last_sequence": 23479,
+        "valid_bytes": 20593281,
+        "discarded_tail_bytes": 0
+      },
+      "final_missing_blobs": 0,
+      "final_corrupt_blobs": 0,
+      "label": "after",
+      "report_sha256": "3ef1b538e6cb7d738801183f16683d66066e8543552e025408d2fe5d355bcb37"
+    }
+  ],
+  "tests": {
+    "rust_all_targets": 327,
+    "rust_clippy_warnings_denied": true,
+    "python": 186,
+    "python_skipped": 0,
+    "rust_format_check": true
+  },
+  "calibration": {
+    "report_sha256": "0496df02fa0a415991946a91569a177a7a6407f45235b6264f923856ce452102",
+    "passed": true,
+    "qualified": false,
+    "configuration": {
+      "collector_restart_at_seconds": 90,
+      "collectors": 20,
+      "drain_seconds": 600,
+      "duration_seconds": 180,
+      "outage_at_seconds": 36,
+      "outage_seconds": 9,
+      "request_interval_seconds": 3,
+      "segment_seconds": 10,
+      "worker_restart_at_seconds": 125.99999999999999,
+      "workload": "mixed-websocket"
+    },
+    "measurement": {
+      "client_errors": 0,
+      "client_requests": 1200,
+      "client_successes": 1200,
+      "local_attempts": 660,
+      "local_events": 22715,
+      "minimum_recorder_seconds": 180.00115919020027,
+      "orchestrator_seconds": 180.67660361249,
+      "recording_segments": 189
+    },
+    "checks": {
+      "all_clients_pass": true,
+      "all_local_integrity_pass": true,
+      "all_platform_sequence_chains_pass": true,
+      "all_server_recordings_pass": true,
+      "all_spool_chains_pass": true,
+      "artifacts_unchanged": true,
+      "attempt_counts_match": true,
+      "deletion_propagation": true,
+      "platform_drained": true,
+      "platform_runtime_provenance": true,
+      "websocket_cross_segment_connections": true,
+      "websocket_projection": true
+    },
+    "faults": {
+      "collector_identity_stable": {
+        "0": true,
+        "1": true,
+        "2": true,
+        "3": true,
+        "4": true,
+        "5": true,
+        "6": true,
+        "7": true,
+        "8": true,
+        "9": true,
+        "10": true,
+        "11": true,
+        "12": true,
+        "13": true,
+        "14": true,
+        "15": true,
+        "16": true,
+        "17": true,
+        "18": true,
+        "19": true
+      },
+      "collector_ids_after": {
+        "0": "a51a9f26-7d30-4606-9219-49b8dd03815d",
+        "1": "0b08039b-7051-4afb-8301-e2d62c387d42",
+        "2": "91604aa8-8eb8-4374-a833-31c74e8b5e4f",
+        "3": "ee5460c1-ba7e-4c34-a103-5ce641f29836",
+        "4": "5f9b3def-7ffc-405f-bbce-d5a135da605d",
+        "5": "1e23fbd9-aefb-40ed-a0a5-af6d42cfdd88",
+        "6": "9cd5abd6-62a2-4922-bd3b-f23fae78aef4",
+        "7": "53e25db7-58e3-4b6e-80e4-56b07f989313",
+        "8": "859681a7-efd1-492d-aac2-15736963f8f7",
+        "9": "dd738935-eefa-4940-9130-1c46e2ba78a7",
+        "10": "957b454e-a251-4318-9af3-99b0af41526f",
+        "11": "285d36c1-1aa9-4094-849b-b72cdbc322cc",
+        "12": "bdc65cd8-27fc-44d5-81de-9fcff5d9e775",
+        "13": "4b2d25cc-bb59-4d9d-8a1a-40e02b97cfde",
+        "14": "e8f17bd2-10cd-429a-9160-257abe0e5be6",
+        "15": "3297159b-0097-400b-a007-4824b31c443a",
+        "16": "99af7c2a-2aff-4b40-afb6-66d903921daa",
+        "17": "4d0afd98-daf2-46f6-8885-35ef9f171c59",
+        "18": "7a6b8943-a362-47d0-b4a4-1bead3f08f64",
+        "19": "5039133b-27cc-438e-a3d5-1b93bcd88df3"
+      },
+      "collector_ids_before": {
+        "0": "a51a9f26-7d30-4606-9219-49b8dd03815d",
+        "1": "0b08039b-7051-4afb-8301-e2d62c387d42",
+        "2": "91604aa8-8eb8-4374-a833-31c74e8b5e4f",
+        "3": "ee5460c1-ba7e-4c34-a103-5ce641f29836",
+        "4": "5f9b3def-7ffc-405f-bbce-d5a135da605d",
+        "5": "1e23fbd9-aefb-40ed-a0a5-af6d42cfdd88",
+        "6": "9cd5abd6-62a2-4922-bd3b-f23fae78aef4",
+        "7": "53e25db7-58e3-4b6e-80e4-56b07f989313",
+        "8": "859681a7-efd1-492d-aac2-15736963f8f7",
+        "9": "dd738935-eefa-4940-9130-1c46e2ba78a7",
+        "10": "957b454e-a251-4318-9af3-99b0af41526f",
+        "11": "285d36c1-1aa9-4094-849b-b72cdbc322cc",
+        "12": "bdc65cd8-27fc-44d5-81de-9fcff5d9e775",
+        "13": "4b2d25cc-bb59-4d9d-8a1a-40e02b97cfde",
+        "14": "e8f17bd2-10cd-429a-9160-257abe0e5be6",
+        "15": "3297159b-0097-400b-a007-4824b31c443a",
+        "16": "99af7c2a-2aff-4b40-afb6-66d903921daa",
+        "17": "4d0afd98-daf2-46f6-8885-35ef9f171c59",
+        "18": "7a6b8943-a362-47d0-b4a4-1bead3f08f64",
+        "19": "5039133b-27cc-438e-a3d5-1b93bcd88df3"
+      },
+      "collector_restart_at": "2026-09-19T12:43:17.365370+00:00",
+      "local_recording_advanced": {
+        "0": true,
+        "1": true,
+        "2": true,
+        "3": true,
+        "4": true,
+        "5": true,
+        "6": true,
+        "7": true,
+        "8": true,
+        "9": true,
+        "10": true,
+        "11": true,
+        "12": true,
+        "13": true,
+        "14": true,
+        "15": true,
+        "16": true,
+        "17": true,
+        "18": true,
+        "19": true
+      },
+      "outage_post_events": {
+        "0": 429,
+        "1": 132,
+        "2": 429,
+        "3": 132,
+        "4": 429,
+        "5": 131,
+        "6": 429,
+        "7": 131,
+        "8": 429,
+        "9": 132,
+        "10": 429,
+        "11": 132,
+        "12": 429,
+        "13": 132,
+        "14": 429,
+        "15": 132,
+        "16": 429,
+        "17": 132,
+        "18": 429,
+        "19": 132
+      },
+      "outage_pre_events": {
+        "0": 345,
+        "1": 96,
+        "2": 345,
+        "3": 96,
+        "4": 345,
+        "5": 95,
+        "6": 345,
+        "7": 95,
+        "8": 345,
+        "9": 96,
+        "10": 345,
+        "11": 96,
+        "12": 345,
+        "13": 96,
+        "14": 356,
+        "15": 96,
+        "16": 345,
+        "17": 96,
+        "18": 345,
+        "19": 96
+      },
+      "platform_outage_started": "2026-09-19T12:42:23.864701+00:00",
+      "platform_restored_at": "2026-09-19T12:42:33.619707+00:00",
+      "platform_unavailable_observed": true,
+      "worker_restart_at": "2026-09-19T12:43:53.943079+00:00",
+      "worker_restart_passed": true
+    },
+    "runtime_images": {
+      "pipeline-worker": [
+        "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c"
+      ],
+      "platform-api": [
+        "sha256:ea7556877c74697f3049c549431b4cdadda4139a32f83216072a3799ecb981f3"
+      ],
+      "postgres": [
+        "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73"
+      ],
+      "web-console": [
+        "sha256:9884e3ada730c6126a98e2c5dc1739988063610654ea7ccc999be08e678981d5"
+      ]
+    },
+    "deletion_propagation": {
+      "capture_run_id": "run-01a0b9af-e3ed-7364-b34e-1f0bdbbfb8c5",
+      "checks": {
+        "collector_request_recorded": true,
+        "derived_attempts_removed": true,
+        "local_directory_removed": true,
+        "raw_batches_removed": true,
+        "recording_tombstone": true,
+        "remote_deleted_at_recorded": true,
+        "request_completed": true,
+        "sensitive_run_metadata_scrubbed": true
+      },
+      "deletion_request_id": "f088f940-9859-4d79-b456-47ef8a7a7379",
+      "passed": true,
+      "recording_id": "run-01a0b9af-e3ed-7364-b34e-1f0bdbbfb8c5#0012",
+      "status": {
+        "attempts": 1,
+        "capture_run_id": "run-01a0b9af-e3ed-7364-b34e-1f0bdbbfb8c5",
+        "collector_request_id": "fc787909-f5d7-45b9-bde3-035d9b87294f",
+        "collector_status": "done",
+        "completed_at": "2026-09-19T12:45:56.295356Z",
+        "id": "f088f940-9859-4d79-b456-47ef8a7a7379",
+        "mode": "full",
+        "object_total": 13,
+        "objects_deleted": 13,
+        "reason": "connected_soak_end_to_end_gate",
+        "recording_id": "run-01a0b9af-e3ed-7364-b34e-1f0bdbbfb8c5#0000",
+        "remote_deleted_at": "2026-09-19T12:45:55.201748Z",
+        "requested_at": "2026-09-19T12:45:53.114796Z",
+        "requested_by": "qualification",
+        "requested_entity_id": "run-01a0b9af-e3ed-7364-b34e-1f0bdbbfb8c5",
+        "requested_entity_type": "capture_run",
+        "state": "done"
+      }
+    },
+    "earlier_short_calibration_used_previous_worker_image": true,
+    "earlier_short_report_sha256": "fde70401114c08b80ffe643e350e11c203400eaed73e13c74efd21077872d555",
+    "earlier_short_deleted_synthetic_run": "run-01a0b9a9-9ab9-718a-b270-ace64f74b88d",
+    "earlier_short_is_not_current_image_qualification": true
+  },
+  "real_case_recheck": {
+    "report_sha256": "dcc032fb224147a97603cd46b18cdd162ed2a6071b0825c83f4ab1e8d7aadce0",
+    "cases": 10,
+    "model_calls": 64,
+    "unresolved_enumerated": 66,
+    "case_inventory_identical_to_previous_audit": true,
+    "all_original_integrity_verified": true,
+    "no_historical_capture_verdict_upgrades": true
+  },
+  "native_local_fixture": {
+    "assistant_text_matches_proxy": true,
+    "audit_sha256": "1a0684a61c84eea98856dfc14a757751334757b6ecc5582dd2d5be69170bd6e7",
+    "capture_drops": 0,
+    "integrity_passed": true,
+    "limits": [
+      "Single-call local fixture does not resolve ambiguous multi-call native anchors in historical trials.",
+      "A bounded temporal match is not an exact provider-native request identifier.",
+      "This validates the final recorder with the installed native CLI, not another paid Harbor trial."
+    ],
+    "local_synthetic_provider_only": true,
+    "message_roles": [
+      "user",
+      "assistant"
+    ],
+    "model_calls": 1,
+    "native_cli_exit_code": 0,
+    "native_correlation_confidence": 0.9,
+    "native_correlation_method": "unique_temporal_candidate",
+    "native_export_bytes": 11792,
+    "native_export_sha256": "fd1b1d320d968c89744fe9c5167d4d0d7add1ab4359b728238e76ba86780e060",
+    "native_session_id_matches_hook": true,
+    "native_sessions": 1,
+    "paid_model_calls": 0,
+    "personal_home_and_credentials_used": false,
+    "recorder_sha256": "59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+    "run_id": "run-01a0b9aa-93ee-7216-874d-7531edcee228",
+    "schema_version": 1,
+    "temporary_plaintext_bundle_removed": true,
+    "transport_complete": true,
+    "unresolved_correlations": 0,
+    "wire_matched": 1
+  },
+  "fresh_trial_replay": {
+    "report_sha256": "498e9301ee73131b9a6388f2f085912e7296b469d87417ce4dc7c8b8c0391dc8",
+    "paid_model_calls": 0,
+    "actual_trial_recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+    "analysis_recorder_sha256": "59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+    "replays": 2,
+    "calls": 6,
+    "projection_sha256": "20cf15a3bbd74d730d410448558ae81d2ebac2ba74178b9eab9dc92873f424d3",
+    "raw_evidence_unchanged": true,
+    "derived_projection_unchanged": true,
+    "plaintext_staging_cleaned": true
+  },
+  "five_hour": {
+    "state": "running",
+    "started_at": "2026-09-19T12:46:12.491590+00:00",
+    "earliest_workload_completion": "2026-09-19T17:46:12.491590+00:00",
+    "collectors": 20,
+    "duration_seconds": 18000,
+    "paid_model_calls": 0,
+    "prior_elapsed_time_reused": false,
+    "qualified": false,
+    "scope": "Dedicated synthetic instance, not the user browsing platform."
+  },
+  "limits": [
+    "Five-hour completion and final reconciliation remain unproven.",
+    "The authorized real-agent matrix remains six of eight capture-qualified and five of eight reward=1; failures are retained.",
+    "The local native fixture is a single-call bounded temporal association, not a repair of historical multi-call ambiguity.",
+    "GitHub publication is separate from local test evidence."
+  ]
+}
