@@ -1,0 +1,1023 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-19T17:52:17.424397+00:00",
+  "subject": "Final M3 five-hour mixed HTTP/SSE/WebSocket connected qualification",
+  "source_baseline": "d3dcb8bb7e154febe5f2b39fe29ec09f6bb43603",
+  "soak_qualified": true,
+  "m3_technical_acceptance": true,
+  "delivery_status": "local_acceptance_complete_publication_pending",
+  "scope": "Linux x86-64, frozen recorder and platform images; synthetic 20-collector durability/recovery gate, separate from the amended real-agent matrix.",
+  "candidate": {
+    "recorder_sha256": "59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+    "images": {
+      "IOREC_IMAGE_API": "sha256:ea7556877c74697f3049c549431b4cdadda4139a32f83216072a3799ecb981f3",
+      "IOREC_IMAGE_WEB": "sha256:9884e3ada730c6126a98e2c5dc1739988063610654ea7ccc999be08e678981d5",
+      "IOREC_IMAGE_WORKER": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c"
+    },
+    "source_sha256": {
+      "Cargo.lock": "163f8e38bf184ff0360d769f3aafb04f5f6a09d0347a822ae5c4bddd030e79fb",
+      "iorec-platform/deploy/compose.qualify.yaml": "6f1ef74aa35a7e248ba737a2de8f1151ec53a7d2f87518ccb5bc634a185328e3",
+      "iorec-platform/deploy/compose.yaml": "72feec835387240808445121ed36c2bded41df566daf3e4b84b2f6a8c16e2691",
+      "src/proxy.rs": "a7b7319191a48c4b2160fcc1c35b87e3d3f422a183d69db33875f3fc73b4038b",
+      "src/transport_audit.rs": "19a449a29f0e7ee6a04115be03fe5e78180c7fff5019e4eaef44fced82ac9394",
+      "tools/connected_soak.py": "145b1f374bdf4a5a09804cc418a14fe3d901e3be8c326661e3adff9d845acc66",
+      "tools/qualification_platform.py": "3d89c883c072b0bcc8f0dc7e3134136f8c24542d7ee3bfc96668e5c048e3795d",
+      "tools/websocket_soak_client.mjs": "984748c03ea1de078c5941d61351ffeb64a2adb2f0254f8f7d9fb19c6e20904d",
+      "tools/websocket_soak_validation.py": "48e06622db67badacaaf16de33415a395280e1379225455668b1d648ad776903",
+      "src/inspect.rs": "cca026cc7f703a61639b62280a7f369277ee2988431e31cbb5ad9d1d83d34940",
+      "tools/perf_harness.py": "2629a866ef5154b082a05183d2623290399cb5e1d5abd99e1333151d77ed230a",
+      "tools/websocket_fixture.py": "9a6040db7ae9643207876bfac8e5e3740f311cf83b8bbfb89a6b7485ceab2ae7"
+    },
+    "predecessor_attempt": {
+      "recorder_sha256": "e939da73e87f7379f87591d45e1296bd6bd60680a5e324b81302059395896adc",
+      "qualified": false,
+      "reason": "One-hour live-inspection failure retained; staged-file race reproduced and corrected."
+    }
+  },
+  "full_report": {
+    "path_on_qualification_host": "/var/tmp/iorec-m3-r2-20260919/five-hour.json",
+    "sha256": "28f2d1cb367fd2877a35c5f6e4ded217911dca48dc991475236858788cb44f78",
+    "harness_exit_code": 0
+  },
+  "completion": {
+    "finished_at": "2026-09-19T17:52:06.271890+00:00",
+    "exit_code": 0,
+    "passed": true,
+    "qualified": true,
+    "report_sha256": "28f2d1cb367fd2877a35c5f6e4ded217911dca48dc991475236858788cb44f78",
+    "recorder_sha256": "59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+    "candidate_inputs_unchanged": true
+  },
+  "evidence": {
+    "created_at": "2026-09-19T17:51:35.647456+00:00",
+    "iorec": {
+      "path": "/var/tmp/iorec-m3-r2-20260919/iorec-candidate",
+      "sha256": "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+      "version": "iorec 0.1.0"
+    },
+    "configuration": {
+      "collector_restart_at_seconds": 9000,
+      "collectors": 20,
+      "drain_seconds": 900,
+      "duration_seconds": 18000,
+      "outage_at_seconds": 3600,
+      "outage_seconds": 900,
+      "request_interval_seconds": 60,
+      "segment_seconds": 300,
+      "worker_restart_at_seconds": 12600,
+      "workload": "mixed-websocket"
+    },
+    "measurement": {
+      "client_errors": 0,
+      "client_requests": 6000,
+      "client_successes": 6000,
+      "local_attempts": 3280,
+      "local_events": 112647,
+      "minimum_recorder_seconds": 18000.001155418344,
+      "orchestrator_seconds": 18002.25226395484,
+      "recording_segments": 1140
+    },
+    "checks": {
+      "all_clients_pass": true,
+      "all_local_integrity_pass": true,
+      "all_platform_sequence_chains_pass": true,
+      "all_server_recordings_pass": true,
+      "all_spool_chains_pass": true,
+      "artifacts_unchanged": true,
+      "attempt_counts_match": true,
+      "deletion_propagation": true,
+      "platform_drained": true,
+      "platform_runtime_provenance": true,
+      "websocket_cross_segment_connections": true,
+      "websocket_projection": true
+    },
+    "faults": {
+      "collector_identity_stable": {
+        "0": true,
+        "1": true,
+        "2": true,
+        "3": true,
+        "4": true,
+        "5": true,
+        "6": true,
+        "7": true,
+        "8": true,
+        "9": true,
+        "10": true,
+        "11": true,
+        "12": true,
+        "13": true,
+        "14": true,
+        "15": true,
+        "16": true,
+        "17": true,
+        "18": true,
+        "19": true
+      },
+      "collector_ids_after": {
+        "0": "ba1dd773-2225-451c-9980-bacf7abdcfc5",
+        "1": "cb3bd9d5-7f3f-4521-b6c4-5dadfd657e7e",
+        "2": "937a15e7-cacb-4163-a6bb-dbdb0f0a9d76",
+        "3": "4d450fff-6ed6-4574-80b0-d2c42a63a57e",
+        "4": "24d6e280-a321-454a-baa0-d6403be6f466",
+        "5": "8a8adbf0-9018-4af1-b9dd-a4dcbe7a1e30",
+        "6": "549a6c81-d895-4011-a223-d043b58a922e",
+        "7": "a940b45d-b624-437b-8601-3a5090ad371c",
+        "8": "9750570c-4fc6-456c-838d-312ed788a459",
+        "9": "f1b46d3a-6179-489d-bd04-cb71ec74d8b7",
+        "10": "898875a2-f530-4358-a3b3-4c5d8535b79e",
+        "11": "0ba0147f-74fa-429b-b2ff-dceb9e3d850f",
+        "12": "089432eb-09e4-46ab-8f38-75da157aab6f",
+        "13": "c21b6b16-f14a-4777-9391-36baddf66b07",
+        "14": "b623659f-4e3e-406a-8ab3-7581db0c8bb3",
+        "15": "0eaaab09-bcac-4a6b-8a17-2a9e16bda85b",
+        "16": "6b726c81-95e9-49c0-a54a-de2cdea42e24",
+        "17": "337d9b80-7252-4780-a76f-56c723d9f922",
+        "18": "99dd4eb8-5933-43b6-9b02-b3556361d2c1",
+        "19": "2fb208f5-85db-4b0e-916d-17b205776023"
+      },
+      "collector_ids_before": {
+        "0": "ba1dd773-2225-451c-9980-bacf7abdcfc5",
+        "1": "cb3bd9d5-7f3f-4521-b6c4-5dadfd657e7e",
+        "2": "937a15e7-cacb-4163-a6bb-dbdb0f0a9d76",
+        "3": "4d450fff-6ed6-4574-80b0-d2c42a63a57e",
+        "4": "24d6e280-a321-454a-baa0-d6403be6f466",
+        "5": "8a8adbf0-9018-4af1-b9dd-a4dcbe7a1e30",
+        "6": "549a6c81-d895-4011-a223-d043b58a922e",
+        "7": "a940b45d-b624-437b-8601-3a5090ad371c",
+        "8": "9750570c-4fc6-456c-838d-312ed788a459",
+        "9": "f1b46d3a-6179-489d-bd04-cb71ec74d8b7",
+        "10": "898875a2-f530-4358-a3b3-4c5d8535b79e",
+        "11": "0ba0147f-74fa-429b-b2ff-dceb9e3d850f",
+        "12": "089432eb-09e4-46ab-8f38-75da157aab6f",
+        "13": "c21b6b16-f14a-4777-9391-36baddf66b07",
+        "14": "b623659f-4e3e-406a-8ab3-7581db0c8bb3",
+        "15": "0eaaab09-bcac-4a6b-8a17-2a9e16bda85b",
+        "16": "6b726c81-95e9-49c0-a54a-de2cdea42e24",
+        "17": "337d9b80-7252-4780-a76f-56c723d9f922",
+        "18": "99dd4eb8-5933-43b6-9b02-b3556361d2c1",
+        "19": "2fb208f5-85db-4b0e-916d-17b205776023"
+      },
+      "collector_restart_at": "2026-09-19T15:16:13.636167+00:00",
+      "local_recording_advanced": {
+        "0": true,
+        "1": true,
+        "2": true,
+        "3": true,
+        "4": true,
+        "5": true,
+        "6": true,
+        "7": true,
+        "8": true,
+        "9": true,
+        "10": true,
+        "11": true,
+        "12": true,
+        "13": true,
+        "14": true,
+        "15": true,
+        "16": true,
+        "17": true,
+        "18": true,
+        "19": true
+      },
+      "outage_post_events": {
+        "0": 2137,
+        "1": 624,
+        "2": 2137,
+        "3": 624,
+        "4": 2137,
+        "5": 624,
+        "6": 2137,
+        "7": 626,
+        "8": 2137,
+        "9": 625,
+        "10": 2137,
+        "11": 625,
+        "12": 2137,
+        "13": 623,
+        "14": 2137,
+        "15": 624,
+        "16": 2137,
+        "17": 623,
+        "18": 2137,
+        "19": 625
+      },
+      "outage_pre_events": {
+        "0": 1717,
+        "1": 502,
+        "2": 1717,
+        "3": 502,
+        "4": 1717,
+        "5": 502,
+        "6": 1717,
+        "7": 504,
+        "8": 1717,
+        "9": 503,
+        "10": 1717,
+        "11": 503,
+        "12": 1717,
+        "13": 501,
+        "14": 1717,
+        "15": 502,
+        "16": 1717,
+        "17": 501,
+        "18": 1717,
+        "19": 503
+      },
+      "platform_outage_started": "2026-09-19T13:46:14.329523+00:00",
+      "platform_restored_at": "2026-09-19T14:01:15.120046+00:00",
+      "platform_unavailable_observed": true,
+      "worker_restart_at": "2026-09-19T16:16:13.988026+00:00",
+      "worker_restart_passed": true
+    },
+    "final_overview_before_deletion": {
+      "checks": {
+        "capture_run_delta": true,
+        "collector_delta": true,
+        "no_active_jobs": true,
+        "no_new_dead_jobs": true,
+        "no_open_recordings": true,
+        "no_parse_lag": true,
+        "recording_delta": true
+      },
+      "values": {
+        "active_jobs": 0,
+        "attempts": 6280,
+        "capture_runs": 20,
+        "dead_jobs": 0,
+        "inferences": 6000,
+        "online_collectors": 20,
+        "open_findings": 30,
+        "open_recordings": 0,
+        "parse_lag_events": 0,
+        "recordings": 1140
+      }
+    },
+    "runtime_provenance": {
+      "checks": {
+        "all_containers_running_at_end": true,
+        "all_containers_running_at_start": true,
+        "application_hardening_at_end": true,
+        "application_hardening_at_start": true,
+        "compose_configuration_unchanged": true,
+        "compose_files_unchanged": true,
+        "expected_service_counts_at_end": true,
+        "expected_service_counts_at_start": true,
+        "image_ids_unchanged": true,
+        "published_ports_loopback_at_end": true,
+        "published_ports_loopback_at_start": true,
+        "web_healthy_at_end": true,
+        "web_healthy_at_start": true
+      },
+      "end": {
+        "captured_at": "2026-09-19T17:51:35.541106+00:00",
+        "compose_config_sha256": "sha256:c15387dace93deafe4097343c4d8c6d66295efd04a7074901ae8d90b86720b29",
+        "compose_files": [
+          {
+            "path": "/home/Admin/inferenceIO/iorec-platform/deploy/compose.yaml",
+            "sha256": "sha256:72feec835387240808445121ed36c2bded41df566daf3e4b84b2f6a8c16e2691"
+          },
+          {
+            "path": "/home/Admin/inferenceIO/iorec-platform/deploy/compose.qualify.yaml",
+            "sha256": "sha256:6f1ef74aa35a7e248ba737a2de8f1151ec53a7d2f87518ccb5bc634a185328e3"
+          }
+        ],
+        "containers": [
+          {
+            "cap_drop": [
+              "ALL"
+            ],
+            "container_id": "0666b2adb7af47688850c32c37bc5e273dc91ccceb7950c0a5f28f3cf5fa536c",
+            "health": null,
+            "image_id": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c",
+            "image_reference": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c",
+            "logging": {
+              "driver": "json-file",
+              "max_file": "5",
+              "max_size": "20m"
+            },
+            "name": "iorec-qual-m3-r2-20260919-pipeline-worker-1",
+            "port_bindings": [],
+            "read_only_rootfs": true,
+            "security_opt": [
+              "no-new-privileges:true"
+            ],
+            "service": "pipeline-worker",
+            "state": "running",
+            "user": "65532:65532"
+          },
+          {
+            "cap_drop": [
+              "ALL"
+            ],
+            "container_id": "55bb7dcc38462253dfae26a61e71722812718795e57f3736f59f1eef96f8e1b4",
+            "health": null,
+            "image_id": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c",
+            "image_reference": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c",
+            "logging": {
+              "driver": "json-file",
+              "max_file": "5",
+              "max_size": "20m"
+            },
+            "name": "iorec-qual-m3-r2-20260919-pipeline-worker-2",
+            "port_bindings": [],
+            "read_only_rootfs": true,
+            "security_opt": [
+              "no-new-privileges:true"
+            ],
+            "service": "pipeline-worker",
+            "state": "running",
+            "user": "65532:65532"
+          },
+          {
+            "cap_drop": [
+              "ALL"
+            ],
+            "container_id": "d72bbc310c0e1fe4d9e7bf0168f8f633edeaa4f51369482416a445a899f64716",
+            "health": null,
+            "image_id": "sha256:ea7556877c74697f3049c549431b4cdadda4139a32f83216072a3799ecb981f3",
+            "image_reference": "sha256:ea7556877c74697f3049c549431b4cdadda4139a32f83216072a3799ecb981f3",
+            "logging": {
+              "driver": "json-file",
+              "max_file": "5",
+              "max_size": "20m"
+            },
+            "name": "iorec-qual-m3-r2-20260919-platform-api-1",
+            "port_bindings": [
+              {
+                "container_port": "8080/tcp",
+                "host_ips": [
+                  "127.0.0.1"
+                ]
+              }
+            ],
+            "read_only_rootfs": true,
+            "security_opt": [
+              "no-new-privileges:true"
+            ],
+            "service": "platform-api",
+            "state": "running",
+            "user": "nonroot"
+          },
+          {
+            "cap_drop": [],
+            "container_id": "a0f49310182db31dad9a298ba6b4d5ac241e4f82c6136829a2d9c544f7169b17",
+            "health": "healthy",
+            "image_id": "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+            "image_reference": "postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+            "logging": {
+              "driver": "json-file",
+              "max_file": "5",
+              "max_size": "20m"
+            },
+            "name": "iorec-qual-m3-r2-20260919-postgres-1",
+            "port_bindings": [],
+            "read_only_rootfs": false,
+            "security_opt": [],
+            "service": "postgres",
+            "state": "running",
+            "user": ""
+          },
+          {
+            "cap_drop": [
+              "ALL"
+            ],
+            "container_id": "1b18578c049912e328d03c2a1aff3940e846155d128c9f99ecb0ed2e4e67702e",
+            "health": "healthy",
+            "image_id": "sha256:9884e3ada730c6126a98e2c5dc1739988063610654ea7ccc999be08e678981d5",
+            "image_reference": "sha256:9884e3ada730c6126a98e2c5dc1739988063610654ea7ccc999be08e678981d5",
+            "logging": {
+              "driver": "json-file",
+              "max_file": "5",
+              "max_size": "20m"
+            },
+            "name": "iorec-qual-m3-r2-20260919-web-console-1",
+            "port_bindings": [
+              {
+                "container_port": "8080/tcp",
+                "host_ips": [
+                  "127.0.0.1"
+                ]
+              }
+            ],
+            "read_only_rootfs": true,
+            "security_opt": [
+              "no-new-privileges:true"
+            ],
+            "service": "web-console",
+            "state": "running",
+            "user": "65532:65532"
+          }
+        ]
+      },
+      "image_ids": {
+        "pipeline-worker": [
+          "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c"
+        ],
+        "platform-api": [
+          "sha256:ea7556877c74697f3049c549431b4cdadda4139a32f83216072a3799ecb981f3"
+        ],
+        "postgres": [
+          "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73"
+        ],
+        "web-console": [
+          "sha256:9884e3ada730c6126a98e2c5dc1739988063610654ea7ccc999be08e678981d5"
+        ]
+      },
+      "passed": true,
+      "start": {
+        "captured_at": "2026-09-19T12:46:12.862035+00:00",
+        "compose_config_sha256": "sha256:c15387dace93deafe4097343c4d8c6d66295efd04a7074901ae8d90b86720b29",
+        "compose_files": [
+          {
+            "path": "/home/Admin/inferenceIO/iorec-platform/deploy/compose.yaml",
+            "sha256": "sha256:72feec835387240808445121ed36c2bded41df566daf3e4b84b2f6a8c16e2691"
+          },
+          {
+            "path": "/home/Admin/inferenceIO/iorec-platform/deploy/compose.qualify.yaml",
+            "sha256": "sha256:6f1ef74aa35a7e248ba737a2de8f1151ec53a7d2f87518ccb5bc634a185328e3"
+          }
+        ],
+        "containers": [
+          {
+            "cap_drop": [
+              "ALL"
+            ],
+            "container_id": "0666b2adb7af47688850c32c37bc5e273dc91ccceb7950c0a5f28f3cf5fa536c",
+            "health": null,
+            "image_id": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c",
+            "image_reference": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c",
+            "logging": {
+              "driver": "json-file",
+              "max_file": "5",
+              "max_size": "20m"
+            },
+            "name": "iorec-qual-m3-r2-20260919-pipeline-worker-1",
+            "port_bindings": [],
+            "read_only_rootfs": true,
+            "security_opt": [
+              "no-new-privileges:true"
+            ],
+            "service": "pipeline-worker",
+            "state": "running",
+            "user": "65532:65532"
+          },
+          {
+            "cap_drop": [
+              "ALL"
+            ],
+            "container_id": "55bb7dcc38462253dfae26a61e71722812718795e57f3736f59f1eef96f8e1b4",
+            "health": null,
+            "image_id": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c",
+            "image_reference": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c",
+            "logging": {
+              "driver": "json-file",
+              "max_file": "5",
+              "max_size": "20m"
+            },
+            "name": "iorec-qual-m3-r2-20260919-pipeline-worker-2",
+            "port_bindings": [],
+            "read_only_rootfs": true,
+            "security_opt": [
+              "no-new-privileges:true"
+            ],
+            "service": "pipeline-worker",
+            "state": "running",
+            "user": "65532:65532"
+          },
+          {
+            "cap_drop": [
+              "ALL"
+            ],
+            "container_id": "d72bbc310c0e1fe4d9e7bf0168f8f633edeaa4f51369482416a445a899f64716",
+            "health": null,
+            "image_id": "sha256:ea7556877c74697f3049c549431b4cdadda4139a32f83216072a3799ecb981f3",
+            "image_reference": "sha256:ea7556877c74697f3049c549431b4cdadda4139a32f83216072a3799ecb981f3",
+            "logging": {
+              "driver": "json-file",
+              "max_file": "5",
+              "max_size": "20m"
+            },
+            "name": "iorec-qual-m3-r2-20260919-platform-api-1",
+            "port_bindings": [
+              {
+                "container_port": "8080/tcp",
+                "host_ips": [
+                  "127.0.0.1"
+                ]
+              }
+            ],
+            "read_only_rootfs": true,
+            "security_opt": [
+              "no-new-privileges:true"
+            ],
+            "service": "platform-api",
+            "state": "running",
+            "user": "nonroot"
+          },
+          {
+            "cap_drop": [],
+            "container_id": "a0f49310182db31dad9a298ba6b4d5ac241e4f82c6136829a2d9c544f7169b17",
+            "health": "healthy",
+            "image_id": "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+            "image_reference": "postgres:17.11-alpine@sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73",
+            "logging": {
+              "driver": "json-file",
+              "max_file": "5",
+              "max_size": "20m"
+            },
+            "name": "iorec-qual-m3-r2-20260919-postgres-1",
+            "port_bindings": [],
+            "read_only_rootfs": false,
+            "security_opt": [],
+            "service": "postgres",
+            "state": "running",
+            "user": ""
+          },
+          {
+            "cap_drop": [
+              "ALL"
+            ],
+            "container_id": "1b18578c049912e328d03c2a1aff3940e846155d128c9f99ecb0ed2e4e67702e",
+            "health": "healthy",
+            "image_id": "sha256:9884e3ada730c6126a98e2c5dc1739988063610654ea7ccc999be08e678981d5",
+            "image_reference": "sha256:9884e3ada730c6126a98e2c5dc1739988063610654ea7ccc999be08e678981d5",
+            "logging": {
+              "driver": "json-file",
+              "max_file": "5",
+              "max_size": "20m"
+            },
+            "name": "iorec-qual-m3-r2-20260919-web-console-1",
+            "port_bindings": [
+              {
+                "container_port": "8080/tcp",
+                "host_ips": [
+                  "127.0.0.1"
+                ]
+              }
+            ],
+            "read_only_rootfs": true,
+            "security_opt": [
+              "no-new-privileges:true"
+            ],
+            "service": "web-console",
+            "state": "running",
+            "user": "65532:65532"
+          }
+        ]
+      }
+    },
+    "artifact_digests": {
+      "end": {
+        "/home/Admin/inferenceIO/tools/connected_soak.py": "sha256:145b1f374bdf4a5a09804cc418a14fe3d901e3be8c326661e3adff9d845acc66",
+        "/home/Admin/inferenceIO/tools/perf_harness.py": "sha256:2629a866ef5154b082a05183d2623290399cb5e1d5abd99e1333151d77ed230a",
+        "/home/Admin/inferenceIO/tools/websocket_fixture.py": "sha256:9a6040db7ae9643207876bfac8e5e3740f311cf83b8bbfb89a6b7485ceab2ae7",
+        "/home/Admin/inferenceIO/tools/websocket_soak_client.mjs": "sha256:984748c03ea1de078c5941d61351ffeb64a2adb2f0254f8f7d9fb19c6e20904d",
+        "/home/Admin/inferenceIO/tools/websocket_soak_validation.py": "sha256:48e06622db67badacaaf16de33415a395280e1379225455668b1d648ad776903",
+        "/usr/bin/node": "sha256:e6ec2c188d83d813f81f2de8aea084d74dce603ac1abedd0a30ad941b10087b2",
+        "/var/tmp/iorec-m3-r2-20260919/iorec-candidate": "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee"
+      },
+      "running_recorders": [
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+        "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee"
+      ],
+      "start": {
+        "/home/Admin/inferenceIO/tools/connected_soak.py": "sha256:145b1f374bdf4a5a09804cc418a14fe3d901e3be8c326661e3adff9d845acc66",
+        "/home/Admin/inferenceIO/tools/perf_harness.py": "sha256:2629a866ef5154b082a05183d2623290399cb5e1d5abd99e1333151d77ed230a",
+        "/home/Admin/inferenceIO/tools/websocket_fixture.py": "sha256:9a6040db7ae9643207876bfac8e5e3740f311cf83b8bbfb89a6b7485ceab2ae7",
+        "/home/Admin/inferenceIO/tools/websocket_soak_client.mjs": "sha256:984748c03ea1de078c5941d61351ffeb64a2adb2f0254f8f7d9fb19c6e20904d",
+        "/home/Admin/inferenceIO/tools/websocket_soak_validation.py": "sha256:48e06622db67badacaaf16de33415a395280e1379225455668b1d648ad776903",
+        "/usr/bin/node": "sha256:e6ec2c188d83d813f81f2de8aea084d74dce603ac1abedd0a30ad941b10087b2",
+        "/var/tmp/iorec-m3-r2-20260919/iorec-candidate": "sha256:59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee"
+      }
+    },
+    "local_runs": [
+      {
+        "attempts": 300,
+        "events": 8717,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f393-7748-bbc6-986bcf1f506e"
+      },
+      {
+        "attempts": 28,
+        "events": 2547,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f393-76a8-b8e6-abaf135e7585"
+      },
+      {
+        "attempts": 300,
+        "events": 8717,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f393-7400-a7a3-616660a12f70"
+      },
+      {
+        "attempts": 28,
+        "events": 2548,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f393-7090-979b-05d5667a6f00"
+      },
+      {
+        "attempts": 300,
+        "events": 8717,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f394-73ba-8dc2-5c3e7f3926af"
+      },
+      {
+        "attempts": 28,
+        "events": 2549,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f394-7340-a578-c9bbddb2c3af"
+      },
+      {
+        "attempts": 300,
+        "events": 8717,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f395-72c4-8a55-078fbe38c69e"
+      },
+      {
+        "attempts": 28,
+        "events": 2550,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f396-73a0-81ab-9360f40d6733"
+      },
+      {
+        "attempts": 300,
+        "events": 8717,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f395-728e-8c8a-22ab011fcd1a"
+      },
+      {
+        "attempts": 28,
+        "events": 2549,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f396-777d-b098-291cfdd7cbd0"
+      },
+      {
+        "attempts": 300,
+        "events": 8717,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f399-75e9-8c96-eba47c34e60d"
+      },
+      {
+        "attempts": 28,
+        "events": 2550,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f396-703c-b4c6-1b74e88c1772"
+      },
+      {
+        "attempts": 300,
+        "events": 8717,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f396-73b8-b580-93624d8bd516"
+      },
+      {
+        "attempts": 28,
+        "events": 2544,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f399-766d-bb99-3c78a7cbf384"
+      },
+      {
+        "attempts": 300,
+        "events": 8717,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f3a5-77eb-85fb-3c2f3b2cab95"
+      },
+      {
+        "attempts": 28,
+        "events": 2546,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f3a2-725a-9332-bf8890c77ae1"
+      },
+      {
+        "attempts": 300,
+        "events": 8717,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f3a3-7687-9ff3-1afda8d46595"
+      },
+      {
+        "attempts": 28,
+        "events": 2548,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f3a5-72d7-9b51-071b76985e57"
+      },
+      {
+        "attempts": 300,
+        "events": 8717,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f3a4-722e-a098-e50c509c7ac1"
+      },
+      {
+        "attempts": 28,
+        "events": 2546,
+        "passed": true,
+        "run_id": "run-01a0b9b3-f3a5-76d0-9f9d-a6c5111adf42"
+      }
+    ],
+    "websocket_projections": [
+      {
+        "calls": 300,
+        "capture_run_id": "run-01a0b9b3-f393-76a8-b8e6-abaf135e7585",
+        "close_handshakes": 28,
+        "connections": 28,
+        "connections_crossing_segments": 27,
+        "control_messages": 647,
+        "errors": [],
+        "input_tokens": 74850,
+        "messages": 2365,
+        "output_tokens": 3897,
+        "passed": true,
+        "scope": "synthetic_websocket_application_projection_not_independent_wire_proof_or_real_agent_matrix",
+        "tool_calls": 150,
+        "tool_results": 150
+      },
+      {
+        "calls": 300,
+        "capture_run_id": "run-01a0b9b3-f393-7090-979b-05d5667a6f00",
+        "close_handshakes": 28,
+        "connections": 28,
+        "connections_crossing_segments": 27,
+        "control_messages": 648,
+        "errors": [],
+        "input_tokens": 74850,
+        "messages": 2366,
+        "output_tokens": 3897,
+        "passed": true,
+        "scope": "synthetic_websocket_application_projection_not_independent_wire_proof_or_real_agent_matrix",
+        "tool_calls": 150,
+        "tool_results": 150
+      },
+      {
+        "calls": 300,
+        "capture_run_id": "run-01a0b9b3-f394-7340-a578-c9bbddb2c3af",
+        "close_handshakes": 28,
+        "connections": 28,
+        "connections_crossing_segments": 27,
+        "control_messages": 649,
+        "errors": [],
+        "input_tokens": 74850,
+        "messages": 2367,
+        "output_tokens": 3897,
+        "passed": true,
+        "scope": "synthetic_websocket_application_projection_not_independent_wire_proof_or_real_agent_matrix",
+        "tool_calls": 150,
+        "tool_results": 150
+      },
+      {
+        "calls": 300,
+        "capture_run_id": "run-01a0b9b3-f396-73a0-81ab-9360f40d6733",
+        "close_handshakes": 28,
+        "connections": 28,
+        "connections_crossing_segments": 27,
+        "control_messages": 650,
+        "errors": [],
+        "input_tokens": 74850,
+        "messages": 2368,
+        "output_tokens": 3897,
+        "passed": true,
+        "scope": "synthetic_websocket_application_projection_not_independent_wire_proof_or_real_agent_matrix",
+        "tool_calls": 150,
+        "tool_results": 150
+      },
+      {
+        "calls": 300,
+        "capture_run_id": "run-01a0b9b3-f396-777d-b098-291cfdd7cbd0",
+        "close_handshakes": 28,
+        "connections": 28,
+        "connections_crossing_segments": 27,
+        "control_messages": 649,
+        "errors": [],
+        "input_tokens": 74850,
+        "messages": 2367,
+        "output_tokens": 3897,
+        "passed": true,
+        "scope": "synthetic_websocket_application_projection_not_independent_wire_proof_or_real_agent_matrix",
+        "tool_calls": 150,
+        "tool_results": 150
+      },
+      {
+        "calls": 300,
+        "capture_run_id": "run-01a0b9b3-f396-703c-b4c6-1b74e88c1772",
+        "close_handshakes": 28,
+        "connections": 28,
+        "connections_crossing_segments": 27,
+        "control_messages": 650,
+        "errors": [],
+        "input_tokens": 74850,
+        "messages": 2368,
+        "output_tokens": 3897,
+        "passed": true,
+        "scope": "synthetic_websocket_application_projection_not_independent_wire_proof_or_real_agent_matrix",
+        "tool_calls": 150,
+        "tool_results": 150
+      },
+      {
+        "calls": 300,
+        "capture_run_id": "run-01a0b9b3-f399-766d-bb99-3c78a7cbf384",
+        "close_handshakes": 28,
+        "connections": 28,
+        "connections_crossing_segments": 27,
+        "control_messages": 644,
+        "errors": [],
+        "input_tokens": 74850,
+        "messages": 2362,
+        "output_tokens": 3897,
+        "passed": true,
+        "scope": "synthetic_websocket_application_projection_not_independent_wire_proof_or_real_agent_matrix",
+        "tool_calls": 150,
+        "tool_results": 150
+      },
+      {
+        "calls": 300,
+        "capture_run_id": "run-01a0b9b3-f3a2-725a-9332-bf8890c77ae1",
+        "close_handshakes": 28,
+        "connections": 28,
+        "connections_crossing_segments": 27,
+        "control_messages": 646,
+        "errors": [],
+        "input_tokens": 74850,
+        "messages": 2364,
+        "output_tokens": 3897,
+        "passed": true,
+        "scope": "synthetic_websocket_application_projection_not_independent_wire_proof_or_real_agent_matrix",
+        "tool_calls": 150,
+        "tool_results": 150
+      },
+      {
+        "calls": 300,
+        "capture_run_id": "run-01a0b9b3-f3a5-72d7-9b51-071b76985e57",
+        "close_handshakes": 28,
+        "connections": 28,
+        "connections_crossing_segments": 27,
+        "control_messages": 648,
+        "errors": [],
+        "input_tokens": 74850,
+        "messages": 2366,
+        "output_tokens": 3897,
+        "passed": true,
+        "scope": "synthetic_websocket_application_projection_not_independent_wire_proof_or_real_agent_matrix",
+        "tool_calls": 150,
+        "tool_results": 150
+      },
+      {
+        "calls": 300,
+        "capture_run_id": "run-01a0b9b3-f3a5-76d0-9f9d-a6c5111adf42",
+        "close_handshakes": 28,
+        "connections": 28,
+        "connections_crossing_segments": 27,
+        "control_messages": 646,
+        "errors": [],
+        "input_tokens": 74850,
+        "messages": 2364,
+        "output_tokens": 3897,
+        "passed": true,
+        "scope": "synthetic_websocket_application_projection_not_independent_wire_proof_or_real_agent_matrix",
+        "tool_calls": 150,
+        "tool_results": 150
+      }
+    ],
+    "websocket_totals": {
+      "calls": 3000,
+      "connections": 280,
+      "messages": 23657,
+      "control_messages": 6477,
+      "tool_calls": 1500,
+      "tool_results": 1500,
+      "connections_crossing_segments": 270,
+      "close_handshakes": 280,
+      "input_tokens": 748500,
+      "output_tokens": 38970
+    },
+    "per_recording_checks": {
+      "recordings": 1140,
+      "passed": 1140,
+      "spool_chains": 20,
+      "platform_sequence_chains": 20,
+      "all_checks_verified_individually": true
+    },
+    "deletion_propagation": {
+      "capture_run_id": "run-01a0b9b3-f393-7748-bbc6-986bcf1f506e",
+      "checks": {
+        "collector_request_recorded": true,
+        "derived_attempts_removed": true,
+        "local_directory_removed": true,
+        "raw_batches_removed": true,
+        "recording_tombstone": true,
+        "remote_deleted_at_recorded": true,
+        "request_completed": true,
+        "sensitive_run_metadata_scrubbed": true
+      },
+      "deletion_request_id": "e5569493-77a1-4666-a358-0895053d591a",
+      "passed": true,
+      "recording_id": "run-01a0b9b3-f393-7748-bbc6-986bcf1f506e#0056",
+      "status": {
+        "attempts": 1,
+        "capture_run_id": "run-01a0b9b3-f393-7748-bbc6-986bcf1f506e",
+        "collector_request_id": "40999cc4-df8a-4462-9a3f-8c7ff2550015",
+        "collector_status": "done",
+        "completed_at": "2026-09-19T17:51:34.787099Z",
+        "id": "e5569493-77a1-4666-a358-0895053d591a",
+        "mode": "full",
+        "object_total": 57,
+        "objects_deleted": 57,
+        "reason": "connected_soak_end_to_end_gate",
+        "recording_id": "run-01a0b9b3-f393-7748-bbc6-986bcf1f506e#0000",
+        "remote_deleted_at": "2026-09-19T17:51:19.031016Z",
+        "requested_at": "2026-09-19T17:51:17.296333Z",
+        "requested_by": "qualification",
+        "requested_entity_id": "run-01a0b9b3-f393-7748-bbc6-986bcf1f506e",
+        "requested_entity_type": "capture_run",
+        "state": "done"
+      }
+    }
+  },
+  "read_only_recheck": {
+    "status": "verified",
+    "qualified": true,
+    "report_sha256": "28f2d1cb367fd2877a35c5f6e4ded217911dca48dc991475236858788cb44f78",
+    "recorder_sha256": "59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee",
+    "measurement": {
+      "client_errors": 0,
+      "client_requests": 6000,
+      "client_successes": 6000,
+      "local_attempts": 3280,
+      "local_events": 112647,
+      "minimum_recorder_seconds": 18000.001155418344,
+      "orchestrator_seconds": 18002.25226395484,
+      "recording_segments": 1140
+    },
+    "deleted_synthetic_run": "run-01a0b9b3-f393-7748-bbc6-986bcf1f506e",
+    "open_findings": 30,
+    "scope": "final synthetic five-hour gate; not blanket real-agent qualification"
+  },
+  "m1_m2_m3_requirements": {
+    "M1": {
+      "calls": 19,
+      "messages": 13780,
+      "unresolved_message_ownership": 0,
+      "tool_calls": 17,
+      "tool_results": 17,
+      "call_transport_capture_benchmark_states_separated": true,
+      "historical_raw_error_and_unknown_details_preserved": true
+    },
+    "M2": {
+      "fresh_trials_executed": true,
+      "current_browser_evidence_views_passed": true,
+      "repeat_imports_preserve_six_calls_and_original_evidence": true,
+      "temporary_plaintext_cleaned": true,
+      "stable_host_web": "http://127.0.0.1:8088",
+      "stable_host_api": "http://127.0.0.1:18080"
+    },
+    "M3": {
+      "amended_matrix_cases_terminal": 8,
+      "additional_off_on_cases_terminal": 2,
+      "claude_excluded_not_qualified": true,
+      "matrix_captures_qualified": 6,
+      "matrix_reward_one": 5,
+      "selected_recordings": 9,
+      "traceable_real_model_calls": 64,
+      "unresolved_cross_source_associations_enumerated": 66,
+      "historical_capture_failures_preserved": true,
+      "extra_paid_model_calls_during_finalization": 0,
+      "current_native_single_call_local_fixture_passed": true,
+      "exact_candidate_five_hour_gate_passed": true
+    }
+  },
+  "supporting_reports": {
+    "benchmarks/2026-09-18-websocket-call-projection-linux-x86_64.json": "8da9f00f71a4f4ffbc29725a1af0a256c989aef313dc1461d9d3ffdebbf3f964",
+    "benchmarks/2026-09-18-m2-evidence-workflow-linux-x86_64.json": "522949f9938a5e6d59076a5c060aa9843b8201c352bdc909ea5340a8e36e0315",
+    "benchmarks/2026-09-19-m3-completed-experiments-linux-x86_64.json": "f61347c828ca92bbcd245dab99f4db33520a3537c64cc7dc49f6913c421a00c1",
+    "benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json": "c722a8004a2eaf7825647d9417e301319dd41d2d079314a9c88b582bd427d2ec",
+    "benchmarks/2026-09-19-m3-live-inspection-race-linux-x86_64.json": "a50686531fbf5665529453ebf21b6181e79ddd1ce6a27c54ecbaad7524446062",
+    "benchmarks/2026-09-19-hermes-http-framing-diagnostic-linux-x86_64.json": "4bacc7a894669483a8327d40da76a99fd69e9a8c34421a09db0a0a2a85dc5168"
+  },
+  "deletion_scope": "One newly generated synthetic HTTP/SSE run was intentionally erased locally and remotely by the declared deletion test; irreversible. Historical real-agent runs were not selected.",
+  "limits": [
+    "This qualifies only the exact frozen recorder/images/harness for this bounded workload, not universal production readiness or every provider/OS.",
+    "Physical transport attempts, model calls, control messages and projected attempts are different counting units.",
+    "Open coverage findings remain visible; the duration gate does not resolve all unknown coverage.",
+    "Synthetic five-hour reconciliation is not independent pcap/TLS proof for real provider traffic.",
+    "Two matrix captures remain strict failures; full SSE bodies without HTTP terminators are not upgraded to complete transport.",
+    "The local Hermes native fixture validates one bounded temporal association, not historical multi-call ambiguity.",
+    "The off/on pair is observational, not a causal overhead estimate; cost is approximate, not billing-verified.",
+    "Local acceptance does not claim GitHub publication or remote CI completion."
+  ]
+}

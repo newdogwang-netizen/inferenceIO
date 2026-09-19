@@ -39,22 +39,26 @@ proof remains incomplete. Both off/on tasks score `1.0`, with measured wall time
 33.94/46.36 seconds, not a causal overhead claim. No cases remain unstarted.
 The [native export filter](benchmarks/2026-09-19-hermes-native-export-filter-linux-x86_64.json)
 has a model-free reproduction and post-trial correction, not a new paid-provider
-qualification. M3 still needs the new candidate's five-hour gate and resolution
-or explicit qualification of the remaining evidence boundaries. The
+qualification. M1–M3 local technical acceptance is now complete within the
+[declared evidence boundaries](docs/m3-acceptance.md); remote publication is
+pending write access. The
 [current candidate audit](benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json)
 now lists every historical unresolved cross-source association and confirms
 64 calls remain traceable. Three missing decoded responses had byte-matching
 SSE bodies but lacked HTTP chunked terminators; a separate cancellation left
 a 565-byte upstream suffix absent from the captured downstream bytes. These remain strict failures. A final-recorder
 local Hermes fixture verifies native export and a unique temporal hook/proxy
-match, not all historical multi-call native associations. The latest five-hour run
+match, not all historical multi-call native associations. The preceding five-hour run
 failed during live inspection after about one hour; a reproduced temporary-blob
 rename race has been corrected and does not waive the new five-hour gate. The
 [replacement audit](benchmarks/2026-09-19-m3-live-inspection-race-linux-x86_64.json)
 records the exact new binary, passing current-image calibration, native export,
 idempotent import and unchanged 64-call/66-unresolved inventory. Its fresh
-five-hour run started at 12:46 UTC and is not passed yet. Historical gates
-remain bound to their artifacts; no broad provider cell is upgraded here.
+five-hour run [passed on the final frozen artifacts](benchmarks/2026-09-19-m3-final-connected-5h-linux-x86_64.json):
+20 collectors each exceeded five hours, all 6,000 calls succeeded, and all
+recovery, integrity, sequence and drain checks passed. The 30 open coverage
+findings remain; historical gates stay bound to their artifacts and no broad
+provider cell is upgraded here.
 The pinned [native Harbor installation checks](benchmarks/2026-09-18-native-harbor-install-linux-x86_64.json)
 and [Hermes installed-runtime check](benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)
 cover container setup/version compatibility only; they do not upgrade any real

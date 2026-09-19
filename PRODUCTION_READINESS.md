@@ -30,8 +30,11 @@ does not recover the old empty exports or qualify public-provider correlation.
 The newer recorder/worker do not inherit the old five-hour qualification. Semantic
 response completion does not erase incomplete HTTP transport, unknown cost or
 unresolved hook/proxy correlation. The authorized paid experiment list is exhausted,
-with no automatic retries; 186 Python tests pass. M3 release qualification remains
-incomplete. The [final-candidate pre-soak audit](benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json)
+with no automatic retries; 186 Python tests pass. **M1–M3 local technical acceptance
+is complete for the amended scope; publication remains pending repository write
+access.** The [acceptance record](docs/m3-acceptance.md) defines the qualified
+boundary, not universal production certification. The
+[final-candidate pre-soak audit](benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json)
 rechecks all 64 calls, lists all 66 unresolved cross-source associations,
 confirms exact raw integrity and idempotent replay of a fresh trial, and verifies
 the final recorder's native Hermes export against a local fixture. The
@@ -42,13 +45,18 @@ Clippy, and Go full/race/vet checks pass. Recorder `e939da73…95896adc` and wor
 `ad510437…79515c` were frozen for a 20-collector five-hour attempt, which failed
 during live inspection at about one hour and remains failed. Concurrent inspection
 reproduced disappearing temporary-blob names during atomic publication; the fix
-passed regression and current-image calibration after correction, but still needs
-its own five-hour gate. The [replacement audit](benchmarks/2026-09-19-m3-live-inspection-race-linux-x86_64.json)
+passed regression and current-image calibration after correction. The
+[replacement audit](benchmarks/2026-09-19-m3-live-inspection-race-linux-x86_64.json)
 binds recorder `59a10e9f…a8f8eaee`, 327 Rust / 186 Python tests, 473 successful
 concurrent inspections, 1,200 successful calibrated calls, and repeated native
-export / real-case / import checks. Its new 20-collector five-hour run started
-12:46 UTC; earliest workload completion is 17:46 UTC, before final reconciliation.
-The original failed hour is not accumulated. Do not deploy a newer
+export / real-case / import checks. Its own
+[20-collector five-hour gate](benchmarks/2026-09-19-m3-final-connected-5h-linux-x86_64.json)
+completed at 17:52 UTC with exit code zero and independent final verification:
+6,000/6,000 calls, 112,647 events and 1,140 recording segments; all recovery,
+integrity, sequence, projection, deletion and drain checks passed. Recorder,
+platform images and frozen source hashes remained unchanged. The report retains
+30 open coverage findings and does not upgrade the real-provider failures above.
+The original failed hour was not accumulated. Do not deploy a newer
 worktree based solely on the historical “release-hardened” statement below.
 
 The [compatible-candidate five-hour gate](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
@@ -56,7 +64,8 @@ has now passed for recorder `b54b88d6…e9c05da7` and its exact pinned platform 
 20 collectors each exceeded 18,000 seconds, 6,000/6,000 client calls succeeded,
 3,000 WebSocket calls reconciled, interruption recovery passed and the queue
 drained. The gate preserves its 30 open findings and does not assert universal
-coverage or real-provider/pcap qualification. M3 is still incomplete.
+coverage or real-provider/pcap qualification. This older gate alone did not
+complete M3; the final candidate's separate acceptance above supersedes that status.
 
 The [Hermes/runtime and compatible-recorder calibration](benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)
 adds a pinned installed Python/dependency bundle, a no-provider Harbor install
