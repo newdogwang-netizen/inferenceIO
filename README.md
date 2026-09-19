@@ -6,19 +6,23 @@
 
 The current release deliberately reports `claim: "best-effort"`. A successful run means the recorder completed cleanly; it does not mean every model call on the host was observed.
 
-## Current development qualification (2026-09-18)
+## Current development qualification (2026-09-19)
 
 The real Harbor WebSocket capture now has 19 separately traceable calls on one
 connection; see the [M1 qualification](benchmarks/2026-09-18-websocket-call-projection-linux-x86_64.json).
 M2 adds paginated evidence views, explicit proof boundaries, external benchmark
 annotations, worker liveness, and a resumable controlled audit command; see its
 [scoped qualification](benchmarks/2026-09-18-m2-evidence-workflow-linux-x86_64.json). M2's
-fresh-trial gate and the M3 real-agent matrix/final-candidate five-hour soak are
-not yet qualified. Historical release and soak reports qualify their own exact
-artifacts, not every newer worktree.
+fresh-trial gate and the M3 real-agent matrix are not yet qualified. The
+[compatible-candidate five-hour soak](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
+passed with 20 collectors, 6,000 successful calls, interruption recovery and final
+reconciliation. This qualifies only its frozen artifacts, not every newer worktree
+or the pending real-provider experiments.
 The [M3 experiment declaration](docs/m3-experiment-plan.md) pins an explicit
 Terminal-Bench 2 snapshot, two task packages and immutable image references;
-its 12 real trials plus two on/off runs remain unapproved and unexecuted.
+its 12 real trials plus two on/off runs remain unexecuted. Operator-specific
+approvals, credentials and spend-control checks belong in a private plan; the
+repository example deliberately remains incomplete.
 The [shared on/off observer checks](benchmarks/2026-09-18-harbor-measured-modes-linux-x86_64.json)
 verify CLI argument/signal handling, bounded resource reports and no-provider
 container installation. An off run is only a baseline, never capture-qualified;

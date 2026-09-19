@@ -2,20 +2,27 @@
 
 Assessment date: 2026-09-16
 
-Current-worktree qualification note (2026-09-18): the assessment and “final”
+Current-worktree qualification note (2026-09-19): the assessment and “final”
 artifact hashes below describe the frozen September 16 release, not the newer
 WebSocket/M1/M2 changes. [M1](benchmarks/2026-09-18-websocket-call-projection-linux-x86_64.json)
 qualifies per-call reconstruction against one real Harbor capture and its
 regression fixtures. M2 adds bounded event navigation, externally reported
 benchmark scores, worker heartbeats and local workflow tooling; its full
-fresh-trial acceptance is still pending. M3's 12 real experiments and a new
-five-hour soak on the final candidate remain required. Do not deploy a newer
+fresh-trial acceptance is still pending. M3's 12 real experiments and two
+additional paired runs remain required. Do not deploy a newer
 worktree based solely on the historical “release-hardened” statement below.
+
+The [compatible-candidate five-hour gate](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
+has now passed for recorder `b54b88d6…e9c05da7` and its exact pinned platform images:
+20 collectors each exceeded 18,000 seconds, 6,000/6,000 client calls succeeded,
+3,000 WebSocket calls reconciled, interruption recovery passed and the queue
+drained. The gate preserves its 30 open findings and does not assert universal
+coverage or real-provider/pcap qualification. M3 is still incomplete.
 
 The [Hermes/runtime and compatible-recorder calibration](benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)
 adds a pinned installed Python/dependency bundle, a no-provider Harbor install
 check, and a passing 180-second/20-collector mixed-protocol calibration. It does
-not close the fresh-provider, 12-run, paired-overhead or five-hour gates above.
+not by itself close the fresh-provider, 12-run, paired-overhead or five-hour gates.
 
 The [on/off measurement checks](benchmarks/2026-09-18-harbor-measured-modes-linux-x86_64.json)
 add a shared observer and a non-importing baseline workflow. CPU/RSS have explicit
@@ -30,7 +37,8 @@ Bound M3 workflows now use a private shared admission ledger with durable
 reservation/nonces, inherited locks, conservative cost accounting and explicit
 stop/recovery behavior. This controls subsequent launches through the same ledger
 directory only, not provider billing or bypassing callers. Real paid qualification
-is still pending approval; synthetic ledger tests do not count as matrix trials.
+is still pending completed private provider preflight; synthetic ledger tests do
+not count as matrix trials.
 The [ledger regression report](benchmarks/2026-09-18-m3-admission-ledger-linux-x86_64.json)
 records 159 passing Python tests and an actual refusal of the incomplete plan.
 Prior report hashes and shared workspace locks prevent stale successful receipts

@@ -14,14 +14,17 @@ do not upgrade any real-agent/provider/version support cell.
 
 The authoritative machine-readable companion is [`support-matrix.v1.json`](support-matrix.v1.json), also embedded in `iorec support --json`. It is fail-closed: unlisted combinations default to `unknown`, verified cells cannot use wildcard Agent/runtime/TLS dimensions, and their source/artifact evidence is checked automatically (artifacts are SHA-256 pinned). This prose table gives the broader operator-facing surface summary without upgrading any exact matrix cell.
 
-September 18 development scope: the [M1 real-capture report](benchmarks/2026-09-18-websocket-call-projection-linux-x86_64.json)
+September 19 development scope: the [M1 real-capture report](benchmarks/2026-09-18-websocket-call-projection-linux-x86_64.json)
 verifies 19 individual Responses WebSocket calls, exact message ownership and
 repeatable reprocessing for its named Codex recording. M2's evidence/workflow
 changes do not broaden the agent/provider/version cells below. Worker heartbeats
 indicate process/database liveness, not successful job processing. A Harbor
 score attached by an operator is labeled `operator_reported_not_recomputed`,
-not promoted to platform-owned transport proof. Historical five-hour gates do
-not qualify current candidate binaries or images; M3 will need a new gate.
+not promoted to platform-owned transport proof. The
+[new compatible-candidate five-hour gate](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
+passes only for its exact binary/images and synthetic mixed workload. It does not
+upgrade any real-agent/provider cell or complete M3's twelve real trials and
+two additional paired runs. Historical gates remain bound to their own artifacts.
 The pinned [native Harbor installation checks](benchmarks/2026-09-18-native-harbor-install-linux-x86_64.json)
 and [Hermes installed-runtime check](benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)
 cover container setup/version compatibility only; they do not upgrade any real

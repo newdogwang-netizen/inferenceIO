@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-19T03:32:37Z",
+  "subject": "Frozen compatible-recorder five-hour mixed HTTP/SSE/WebSocket connected qualification",
+  "source_baseline": "019b25d65f20f4c6707590ceff577260ab416ff0",
+  "soak_qualified": true,
+  "m3_complete": false,
+  "real_provider_matrix_trials_run": 0,
+  "real_paired_runs_completed": 0,
+  "scope": "Synthetic loopback traffic through 20 real recorder/collector processes and an isolated token-authenticated durable platform. Not a real-provider or independent pcap/TLS qualification.",
+  "full_report": {
+    "path_on_qualification_host": "/var/tmp/iorec-m3-portable-candidate-20260918/five-hour.json",
+    "sha256": "3cbe338a691292043cada3d475d19df33136a6805660d5a8aaf3099173cdcf5c",
+    "harness_exit_code": 0
+  },
+  "evidence": {
+    "created_at": "2026-09-19T00:31:05.321608+00:00",
+    "iorec": {
+      "path": "/var/tmp/iorec-m3-portable-candidate-20260918/iorec-candidate",
+      "sha256": "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "version": "iorec 0.1.0"
+    },
+    "configuration": {
+      "collector_restart_at_seconds": 9000,
+      "collectors": 20,
+      "drain_seconds": 900,
+      "duration_seconds": 18000,
+      "outage_at_seconds": 3600,
+      "outage_seconds": 900,
+      "request_interval_seconds": 60,
+      "segment_seconds": 300,
+      "worker_restart_at_seconds": 12600,
+      "workload": "mixed-websocket"
+    },
+    "measurement": {
+      "client_errors": 0,
+      "client_requests": 6000,
+      "client_successes": 6000,
+      "local_attempts": 3280,
+      "local_events": 112660,
+      "minimum_recorder_seconds": 18000.001395513304,
+      "orchestrator_seconds": 18002.06984000746,
+      "recording_segments": 1140
+    },
+    "checks": {
+      "all_clients_pass": true,
+      "all_local_integrity_pass": true,
+      "all_platform_sequence_chains_pass": true,
+      "all_server_recordings_pass": true,
+      "all_spool_chains_pass": true,
+      "artifacts_unchanged": true,
+      "attempt_counts_match": true,
+      "deletion_propagation": true,
+      "platform_drained": true,
+      "platform_runtime_provenance": true,
+      "websocket_cross_segment_connections": true,
+      "websocket_projection": true
+    },
+    "final_overview": {
+      "checks": {
+        "capture_run_delta": true,
+        "collector_delta": true,
+        "no_active_jobs": true,
+        "no_new_dead_jobs": true,
+        "no_open_recordings": true,
+        "no_parse_lag": true,
+        "recording_delta": true
+      },
+      "values": {
+        "active_jobs": 0,
+        "attempts": 6280,
+        "capture_runs": 20,
+        "dead_jobs": 0,
+        "inferences": 6000,
+        "online_collectors": 20,
+        "open_findings": 30,
+        "open_recordings": 0,
+        "parse_lag_events": 0,
+        "recordings": 1140
+      }
+    },
+    "runtime_image_ids": {
+      "pipeline-worker": [
+        "sha256:69c961c1be1bc4db371881286a2bb5db5caa593a286f0d4937b448773e452d4a"
+      ],
+      "platform-api": [
+        "sha256:ea7556877c74697f3049c549431b4cdadda4139a32f83216072a3799ecb981f3"
+      ],
+      "postgres": [
+        "sha256:18cfe3ef5e6815560c98237d6216d1e5119702fb0f3894c8785dd58b8bbe5d73"
+      ],
+      "web-console": [
+        "sha256:9884e3ada730c6126a98e2c5dc1739988063610654ea7ccc999be08e678981d5"
+      ]
+    },
+    "artifact_digests": {
+      "/home/Admin/inferenceIO/tools/connected_soak.py": "sha256:551384f1bf3db2d553d3a919a250555d3335d4b117e1925fcb1a30acabb29f53",
+      "/home/Admin/inferenceIO/tools/perf_harness.py": "sha256:2629a866ef5154b082a05183d2623290399cb5e1d5abd99e1333151d77ed230a",
+      "/home/Admin/inferenceIO/tools/websocket_fixture.py": "sha256:9a6040db7ae9643207876bfac8e5e3740f311cf83b8bbfb89a6b7485ceab2ae7",
+      "/home/Admin/inferenceIO/tools/websocket_soak_client.mjs": "sha256:984748c03ea1de078c5941d61351ffeb64a2adb2f0254f8f7d9fb19c6e20904d",
+      "/home/Admin/inferenceIO/tools/websocket_soak_validation.py": "sha256:48e06622db67badacaaf16de33415a395280e1379225455668b1d648ad776903",
+      "/usr/bin/node": "sha256:e6ec2c188d83d813f81f2de8aea084d74dce603ac1abedd0a30ad941b10087b2",
+      "/var/tmp/iorec-m3-portable-candidate-20260918/iorec-candidate": "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7"
+    },
+    "running_recorder_digests": [
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7",
+      "sha256:b54b88d6cfc1c7fdb4f88bfcbff9f4c04d400a4828cb06c2a1f171e4e9c05da7"
+    ],
+    "faults": {
+      "platform_outage_started": "2026-09-18T20:25:35.552477+00:00",
+      "platform_restored_at": "2026-09-18T20:40:36.831691+00:00",
+      "collector_restart_at": "2026-09-18T21:55:34.793168+00:00",
+      "worker_restart_at": "2026-09-18T22:55:35.369670+00:00"
+    },
+    "deletion": {
+      "capture_run_id": "run-01a0b5fb-354f-76bd-b12a-56a9b6612de9",
+      "passed": true
+    },
+    "websocket_totals": {
+      "calls": 3000,
+      "connections": 280,
+      "messages": 23666,
+      "control_messages": 6486,
+      "tool_calls": 1500,
+      "tool_results": 1500,
+      "cross_segment_connections": 270
+    }
+  },
+  "read_only_recheck": {
+    "checked_at": "2026-09-19T03:32:37Z",
+    "frozen_artifact_hashes_match": true,
+    "all_report_checks_true": true,
+    "twenty_clients_and_local_runs_checked": true,
+    "ten_websocket_projections_each_have_300_calls_and_no_errors": true,
+    "all_twenty_collectors_advanced_during_outage_and_kept_identity": true,
+    "current_qualification_instance_has_no_pending_or_dead_jobs": true,
+    "original_report_not_modified": true
+  },
+  "deletion_scope": "One newly generated synthetic HTTP/SSE recording was intentionally erased locally and remotely by the predeclared deletion gate; irreversible. Historical real-agent recordings were not selected.",
+  "historical_nonportable_run": {
+    "full_report_sha256": "24b79f805ee9cb21fdcff223c72464165d6477f1a1139f0ff093b7f1eb4d4dd6",
+    "recorder_sha256": "03e805ee36a1bf20cf7f60d17f94ae02447c35bf98acb2132d804c94d2766da7",
+    "passed_for_own_artifacts": true,
+    "qualifies_portable_candidate": false,
+    "deleted_synthetic_run": "run-01a0b5dc-6d6b-749d-9e53-91d35003f921"
+  },
+  "limits": [
+    "This closes only the exact frozen binary/image/harness five-hour gate; subsequent relevant changes require their own qualification.",
+    "Physical transport attempts, projected model calls and control messages use different counting units.",
+    "The final overview retains 30 open findings; the duration/reconciliation gate is not an assertion that all coverage findings are resolved.",
+    "Synthetic reconciliation is not independent pcap/TLS evidence for real provider traffic.",
+    "M2 fresh real-trial acceptance, the twelve real-agent matrix cases and two extra paired runs remain incomplete."
+  ]
+}
