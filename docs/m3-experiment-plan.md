@@ -1,5 +1,16 @@
 # M3 真实实验清单与启动前检查
 
+2026-09-19 范围修订：用户明确要求跳过 Claude，且不再以 OpenAI 管理接口不可用
+阻塞启动。本轮使用 schema 2 私有计划：Codex、Hermes 各两题、各重复两次，
+共 **8 次矩阵 + 2 次 Codex off/on 对照**。Claude 明确记为未验收，不能称原三代理
+矩阵完成。以下 schema 1 的 12 + 2 基线仍保留，仓库示例不是本轮付费授权。
+
+schema 2 必须记录 `scope_amendment` 的排除项和审批引用；预算中的
+`provider_cap_waiver` 使用独立的审批引用与原因，不能伪装为 cap 证据摘要。
+该豁免只取消管理侧核验前置条件，仍保留串行、无自动重试、未知/超限费用停止和
+同一共享账本。`provider_billing_cap_verified` 始终为 false；本地账本不能保证
+正在执行的调用不超支。两题、重复次数、录制完整性和对照要求均不变。
+
 状态：**尚无本轮真实实验结果**。仓库机器清单示例位于
 [`examples/m3-experiment-plan.json`](../examples/m3-experiment-plan.json)。模型和预算
 故意保留 `null`；操作员实际授权、模型选择、凭据来源及费用限制检查保留在本机

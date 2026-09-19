@@ -86,6 +86,24 @@ class LedgerTests(unittest.TestCase):
             with self.assertRaisesRegex(ledger.LedgerFailure, "not_settled"):
                 self.reserve(book, 1)
 
+    def test_authorized_two_agent_plan_uses_same_ledger_for_all_ten_cases(self):
+        self.plan["schema_version"] = 2
+        del self.plan["agents"]["claude"]
+        self.plan["scope_amendment"] = {"excluded_agents": ["claude"], "approval_reference": "synthetic-exclusion"}
+        self.plan["budget"].update(total_usd="10", provider_cap_evidence_sha256=None,
+            provider_cap_waiver={"approval_reference": "synthetic-waiver", "reason": "no management access"})
+        workflow.atomic_json(self.plan_path, self.plan)
+        self.plan_hash = workflow.digest(self.plan_path)
+        self.cases = validate(self.plan)["cases"]
+        with self.open() as book:
+            for i, case in enumerate(self.cases):
+                self.reserve(book, i)
+                book.mark_launch()
+                state = self.state(book, 0.1, workflow_status="baseline_completed" if case["recording"] == "off" else "completed")
+                self.assertFalse(book.settle(state, self.report(book, state))["stop_further_paid_trials"])
+            self.assertEqual(len(book.state["cases"]), 10)
+            self.assertEqual(book.liabilities(), Decimal("1.0"))
+
     def test_excess_cost_halts_and_cannot_disappear_on_revalidation(self):
         with self.open() as book:
             self.reserve(book)

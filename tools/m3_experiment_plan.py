@@ -50,10 +50,23 @@ def money(value):
     return result
 
 
+def reference(value):
+    require(isinstance(value, str) and 1 <= len(value) <= 256
+            and value.strip() == value and not any(c in value for c in "\r\n\x00"),
+            "approval_reference_required")
+
+
 def validate(plan, verify_local=False):
-    fields(plan, "schema_version kind dataset recorder agents tasks repetitions paired limits budget")
-    require(type(plan["schema_version"]) is int and plan["schema_version"] == 1
+    require(isinstance(plan, dict), "unexpected_plan_fields")
+    amended = type(plan.get("schema_version")) is int and plan["schema_version"] == 2
+    fields(plan, "schema_version kind dataset recorder agents tasks repetitions paired limits budget"
+           + (" scope_amendment" if amended else ""))
+    require(type(plan["schema_version"]) is int and plan["schema_version"] in (1, 2)
             and plan["kind"] == "iorec-m3-real-experiment-plan", "unsupported_plan_schema")
+    if amended:
+        fields(plan["scope_amendment"], "excluded_agents approval_reference")
+        require(plan["scope_amendment"]["excluded_agents"] == ["claude"], "explicit_claude_exclusion_required")
+        reference(plan["scope_amendment"]["approval_reference"])
     fields(plan["dataset"], "name content_sha256 task_count registry_checked_on")
     require(plan["dataset"]["name"] == "terminal-bench/terminal-bench-2"
             and plan["dataset"]["task_count"] == 89, "plan_requires_explicit_terminal_bench_2_snapshot")
@@ -62,7 +75,9 @@ def validate(plan, verify_local=False):
             and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", plan["dataset"]["registry_checked_on"]), "registry_check_date_required")
     artifact(plan["recorder"])
     definitions = audit_definitions()
-    require(isinstance(plan["agents"], dict) and set(plan["agents"]) == {"codex", "claude", "hermes"}, "all_three_agents_required")
+    expected_agents = {"codex", "hermes"} if amended else {"codex", "claude", "hermes"}
+    require(isinstance(plan["agents"], dict) and set(plan["agents"]) == expected_agents,
+            "amended_plan_requires_codex_and_hermes" if amended else "all_three_agents_required")
     missing = []
     for name, agent in plan["agents"].items():
         fields(agent, "version model upstream artifact")
@@ -105,22 +120,31 @@ def validate(plan, verify_local=False):
             "serial_execution_without_automatic_retries_required")
     require(all(limits[name] is True for name in ("stop_on_recording_gap", "stop_on_unclassified_failure",
             "stop_on_unknown_or_exceeded_cost", "preserve_failed_trials")), "fail_closed_stop_policy_required")
-    fields(plan["budget"], "currency total_usd per_trial_usd approval_reference provider_cap_evidence_sha256")
+    fields(plan["budget"], "currency total_usd per_trial_usd approval_reference provider_cap_evidence_sha256"
+           + (" provider_cap_waiver" if amended else ""))
     budget = plan["budget"]
+    waiver = budget.get("provider_cap_waiver")
+    if waiver is not None:
+        fields(waiver, "approval_reference reason")
+        reference(waiver["approval_reference"])
+        reference(waiver["reason"])
+        require(budget["provider_cap_evidence_sha256"] is None, "waiver_is_not_provider_cap_evidence")
     require(budget["currency"] == "USD", "budget_currency_must_be_explicit_usd")
     for name in ("total_usd", "per_trial_usd", "approval_reference", "provider_cap_evidence_sha256"):
         if budget[name] is None:
-            missing.append("budget:" + name)
+            if name != "provider_cap_evidence_sha256" or waiver is None:
+                missing.append("budget:" + name)
         elif name.endswith("usd"):
             money(budget[name])
         elif name.endswith("sha256"):
             sha(budget[name])
         else:
-            require(isinstance(budget[name], str) and 1 <= len(budget[name]) <= 256
-                    and budget[name].strip() == budget[name] and bool(budget[name].strip())
-                    and not any(c in budget[name] for c in "\r\n\x00"), "approval_reference_required")
+            reference(budget[name])
+    matrix_trials = len(expected_agents) * len(tasks) * plan["repetitions"]
     if budget["total_usd"] is not None and budget["per_trial_usd"] is not None:
-        require(money(budget["total_usd"]) >= 14 * money(budget["per_trial_usd"]), "budget_must_cover_twelve_trials_plus_two_paired_runs")
+        require(money(budget["total_usd"]) >= (matrix_trials + 2) * money(budget["per_trial_usd"]),
+                "budget_must_cover_eight_trials_plus_two_paired_runs" if amended
+                else "budget_must_cover_twelve_trials_plus_two_paired_runs")
     if verify_local:
         for value in [plan["recorder"], *[a["artifact"] for a in plan["agents"].values()]]:
             require(file_identity(Path(value["path"]))["sha256"] == value["sha256"], "local_runtime_digest_changed")
@@ -128,10 +152,12 @@ def validate(plan, verify_local=False):
             require(tree_identity(Path(task["path"]), ignored_names=(".git",))["sha256"] == task["source_tree_sha256"], "local_task_tree_changed")
             task_image_input(Path(task["path"]), task["image"])
     cases = [{"id": f"{agent}-{task}-r{repeat}", "agent": agent, "task": task, "recording": "on"}
-             for repeat in (1, 2) for agent in ("codex", "claude", "hermes") for task in ids]
+             for repeat in (1, 2) for agent in ("codex", "claude", "hermes") if agent in expected_agents for task in ids]
     cases += [{"id": "paired-" + mode, "agent": pair["agent"], "task": pair["task"], "recording": mode} for mode in pair["order"]]
     return {"declaration_complete": not missing, "missing": missing, "local_inputs_checked": verify_local,
-            "real_matrix_trials": 12, "additional_paired_trials": 2, "cases": cases,
+            "real_matrix_trials": matrix_trials, "additional_paired_trials": 2, "cases": cases,
+            "excluded_agents": ["claude"] if amended else [],
+            "provider_cap_verification_waived": waiver is not None,
             "qualification_passed": False, "paid_launcher_available": False,
             "provider_billing_cap_verified": False,
             "scope": "declaration_and_optional_local_hash_checks_not_spending_authority_or_experiment_results"}

@@ -37,6 +37,56 @@ class PlanTests(unittest.TestCase):
         self.assertFalse(result["provider_billing_cap_verified"])
         self.assertFalse(result["qualification_passed"])
 
+    def amended_fixture(self):
+        p = self.approved_fixture()
+        p["schema_version"] = 2
+        del p["agents"]["claude"]
+        p["scope_amendment"] = {"excluded_agents": ["claude"], "approval_reference": "test-user-exclusion"}
+        p["budget"].update(total_usd="10.00", provider_cap_evidence_sha256=None,
+            provider_cap_waiver={"approval_reference": "test-user-waiver", "reason": "management API unavailable"})
+        return p
+
+    def test_explicit_amendment_has_eight_cases_plus_pair_not_full_scope_or_cap_proof(self):
+        result = plans.validate(self.amended_fixture())
+        self.assertTrue(result["declaration_complete"])
+        self.assertEqual(result["real_matrix_trials"], 8)
+        self.assertEqual(result["excluded_agents"], ["claude"])
+        self.assertEqual(len(result["cases"]), 10)
+        self.assertEqual({c["agent"] for c in result["cases"]}, {"codex", "hermes"})
+        self.assertTrue(result["provider_cap_verification_waived"])
+        self.assertFalse(result["provider_billing_cap_verified"])
+        self.assertFalse(result["qualification_passed"])
+
+    def test_amendment_needs_explicit_scope_and_waiver_approval(self):
+        for field in ("scope_amendment", "provider_cap_waiver"):
+            p = self.amended_fixture()
+            (p if field == "scope_amendment" else p["budget"])[field]["approval_reference"] = " "
+            with self.assertRaises(plans.PlanFailure):
+                plans.validate(p)
+        p = self.amended_fixture()
+        p["budget"]["provider_cap_waiver"] = None
+        self.assertEqual(plans.validate(p)["missing"], ["budget:provider_cap_evidence_sha256"])
+        p = self.amended_fixture()
+        p["budget"]["provider_cap_evidence_sha256"] = "0" * 64
+        with self.assertRaisesRegex(plans.PlanFailure, "waiver_is_not_provider_cap_evidence"):
+            plans.validate(p)
+        for excluded in ([], ["hermes"], ["claude", "hermes"]):
+            p = self.amended_fixture(); p["scope_amendment"]["excluded_agents"] = excluded
+            with self.assertRaises(plans.PlanFailure):
+                plans.validate(p)
+
+    def test_amendment_preserves_limits_and_requires_all_ten_reservations(self):
+        p = self.amended_fixture(); p["budget"]["total_usd"] = "9.999999"
+        with self.assertRaisesRegex(plans.PlanFailure, "eight_trials_plus_two"):
+            plans.validate(p)
+        for name, value in (("automatic_retries", 1), ("stop_on_unknown_or_exceeded_cost", False)):
+            p = self.amended_fixture(); p["limits"][name] = value
+            with self.assertRaises(plans.PlanFailure):
+                plans.validate(p)
+        p = self.amended_fixture(); del p["agents"]["hermes"]
+        with self.assertRaises(plans.PlanFailure):
+            plans.validate(p)
+
     def test_budget_includes_both_extra_paired_runs(self):
         p = self.approved_fixture()
         p["budget"]["total_usd"] = "13.999999"
