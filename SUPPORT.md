@@ -40,7 +40,15 @@ proof remains incomplete. Both off/on tasks score `1.0`, with measured wall time
 The [native export filter](benchmarks/2026-09-19-hermes-native-export-filter-linux-x86_64.json)
 has a model-free reproduction and post-trial correction, not a new paid-provider
 qualification. M3 still needs the new candidate's five-hour gate and resolution
-or explicit qualification of the remaining evidence boundaries. Historical gates
+or explicit qualification of the remaining evidence boundaries. The
+[current candidate audit](benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json)
+now lists every historical unresolved cross-source association and confirms
+64 calls remain traceable. Three missing decoded responses had byte-matching
+SSE bodies but lacked HTTP chunked terminators; a separate cancellation left
+a 565-byte upstream suffix absent from the captured downstream bytes. These remain strict failures. A final-recorder
+local Hermes fixture verifies native export and a unique temporal hook/proxy
+match, not all historical multi-call native associations. The new five-hour run
+is in progress and is not a passing gate yet. Historical gates
 remain bound to their artifacts; no broad provider cell is upgraded here.
 The pinned [native Harbor installation checks](benchmarks/2026-09-18-native-harbor-install-linux-x86_64.json)
 and [Hermes installed-runtime check](benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)

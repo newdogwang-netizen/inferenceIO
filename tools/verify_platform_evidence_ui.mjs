@@ -13,6 +13,9 @@ assert(parent, 'pass a qualified parent connection ID');
 const profile = await mkdtemp(join(tmpdir(), 'iorec-evidence-ui-'));
 const browser = spawn(process.env.IOREC_CHROME_BIN ?? '/opt/google/chrome/chrome', [
   '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-background-networking', '--disable-component-update',
+  // This throwaway, credential-free profile must not wait for an interactive
+  // desktop secret-service/keyring before network requests can proceed.
+  '--password-store=basic',
   '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank',
 ], { stdio: ['ignore', 'ignore', 'pipe'] });
 const exited = new Promise(resolve => browser.once('exit', resolve));
@@ -107,7 +110,7 @@ try {
   await Promise.race([exited, delay(3000)]);
   if (browser.exitCode === null && browser.signalCode === null) { browser.kill('SIGKILL'); await exited; }
   // Exact directory created above; contains a private browser cache of evidence.
-  await rm(profile, { recursive: true, force: true });
+  await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   report.private_browser_profile_removed = true;
   report.runtime_errors = runtimeErrors;
   process.stdout.write(JSON.stringify(report, null, 2) + '\n');

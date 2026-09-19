@@ -32,8 +32,16 @@ found that `--source cli` filters out persisted one-shot sessions whose `ended_a
 is null. The isolated-job export is now fixed and model-free tested; old empty
 exports/costs are not rewritten and the fix has not had another paid trial.
 All 184 Python tests pass. **Experiment execution is complete; M3 release
-qualification is not.** Remaining boundaries include incomplete Hermes wire
-evidence, native correlation and a five-hour gate for the new recorder/worker. The
+qualification is not.** The [final-candidate pre-soak audit](benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json)
+now enumerates all 64 model calls and 66 unresolved cross-source correlations,
+rechecks raw integrity, repeats one newly recorded trial's import twice without
+changing its six-call projection, and verifies native Hermes export/hook/text
+agreement with the final recorder against a local fixture. Its single-call
+temporal match does not resolve historical multi-call ambiguities. The
+[Hermes wire diagnosis](docs/hermes-http-framing-diagnostic.md) preserves the
+failed strict verdicts while distinguishing full SSE bodies without HTTP
+terminators from a genuine cancelled prefix. The final frozen recorder/worker
+five-hour gate is running, not passed. The
 [compatible-candidate five-hour soak](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
 passed with 20 collectors, 6,000 successful calls, interruption recovery and final
 reconciliation. This qualifies only its frozen artifacts, not every newer worktree

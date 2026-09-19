@@ -9,7 +9,7 @@
     <meta name="description" content="How iorec records, verifies, and audits AI agent inference traffic without overstating coverage.">
     <meta property="og:type" content="article">
     <meta property="og:title" content="iorec: an evidence layer for agent inference">
-    <meta property="og:description" content="A production-qualified, local flight recorder for AI agent inference I/O.">
+    <meta property="og:description" content="A local flight recorder for AI agent inference I/O, with artifact-bound qualification and explicit evidence gaps.">
     <meta property="og:url" content="https://newdogwang-netizen.github.io/inferenceIO/">
     <meta name="twitter:card" content="summary">
     <link rel="canonical" href="https://newdogwang-netizen.github.io/inferenceIO/">
@@ -72,7 +72,7 @@
         </figure>
       </section>
 
-      <dl class="metric-band" aria-label="Release qualification metrics">
+      <dl class="metric-band" aria-label="September 16 frozen release qualification metrics">
         <div><dt>Core soak</dt><dd>18,000 s</dd></div>
         <div><dt>Recorded attempts</dt><dd>18,000</dd></div>
         <div><dt>Evidence events</dt><dd>522,023</dd></div>
@@ -85,6 +85,14 @@
           <h2>The capture problem is a boundary problem.</h2>
           <p>Agent observability often starts with application logs and ends with an assumption: if the log looks complete, the traffic must be complete. That assumption fails when agents retry, fork subprocesses, switch protocols, or bypass the expected client.</p>
         </header>
+
+        <section id="experiments" class="integrity-section" aria-labelledby="experiments-title">
+          <h2 id="experiments-title">September 19: real experiments, separate verdicts.</h2>
+          <p>All eight Codex/Hermes matrix cases and both recorder-off/on cases have terminal results. Six matrix captures pass independent verification; five tasks score 1.0. Task correctness and evidence completeness are different measurements. Claude was excluded from this stage.</p>
+          <p>The audit traces 64 model calls and enumerates 66 unresolved cross-source associations. Hermes failures remain failures: three byte-matching SSE responses lack HTTP chunked terminators, and one cancellation delivered only a prefix. A local native-CLI fixture verifies the export correction without another paid experiment.</p>
+          <p><strong>M3 is still in progress.</strong> The final recorder and worker are running a new five-hour, 20-collector qualification. The older metrics on this page belong to the frozen September 16 release and do not qualify newer artifacts.</p>
+          <p><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-19-m3-completed-experiments-linux-x86_64.json">Experiment results</a> · <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json">Current acceptance evidence</a> · <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/hermes-http-framing-diagnostic.md">Why a response can exist while transport verification fails</a></p>
+        </section>
 
         <section id="architecture" class="architecture-section" aria-labelledby="architecture-title">
           <div class="section-copy">
@@ -110,7 +118,7 @@
         <section id="evidence" class="evidence-section" aria-labelledby="evidence-title">
           <div class="evidence-primary">
             <h2 id="evidence-title">Five hours without a silent gap.</h2>
-            <p>The frozen Linux x86-64 release completed every request and integrity check in its final steady-state qualification.</p>
+            <p>The September 16 frozen Linux x86-64 release completed every request and integrity check in its final steady-state qualification. This is historical evidence, not the pending M3 candidate result.</p>
             <dl>
               <div><dt>Encrypted blobs</dt><dd>216,000</dd></div>
               <div><dt>Incomplete attempts</dt><dd>0</dd></div>
