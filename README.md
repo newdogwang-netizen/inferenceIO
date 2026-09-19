@@ -13,14 +13,22 @@ connection; see the [M1 qualification](benchmarks/2026-09-18-websocket-call-proj
 M2 adds paginated evidence views, explicit proof boundaries, external benchmark
 annotations, worker liveness, and a resumable controlled audit command; see its
 [scoped qualification](benchmarks/2026-09-18-m2-evidence-workflow-linux-x86_64.json). M2's
-fresh-trial gate and the M3 real-agent matrix are not yet qualified. The
+fresh-trial path has now passed for two new Codex tasks; the M3 matrix remains
+incomplete. The [partial real-provider report](benchmarks/2026-09-19-m3-real-provider-progress-linux-x86_64.json)
+retains both passing captures (Harbor reward `1.0` each), one failed Hermes
+capture gate (reward `0.0`), and the original setup-only failure. Hermes has eight
+semantic response endings but four incomplete HTTP transports and an empty
+native session export; diagnostic import is not qualification. Paid execution
+is halted, with seven declared cases unstarted. The
 [compatible-candidate five-hour soak](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
 passed with 20 collectors, 6,000 successful calls, interruption recovery and final
 reconciliation. This qualifies only its frozen artifacts, not every newer worktree
 or the pending real-provider experiments.
 The [M3 experiment declaration](docs/m3-experiment-plan.md) pins an explicit
 Terminal-Bench 2 snapshot, two task packages and immutable image references;
-its 12 real trials plus two on/off runs remain unexecuted. Operator-specific
+the approved scope now excludes Claude and requires eight matrix trials plus
+two additional off/on runs. Three matrix trials have run, two capture-qualified;
+the original three-agent scope is not claimed complete. Operator-specific
 approvals, credentials and spend-control checks belong in a private plan; the
 repository example deliberately remains incomplete.
 The [shared on/off observer checks](benchmarks/2026-09-18-harbor-measured-modes-linux-x86_64.json)

@@ -8,8 +8,13 @@ WebSocket/M1/M2 changes. [M1](benchmarks/2026-09-18-websocket-call-projection-li
 qualifies per-call reconstruction against one real Harbor capture and its
 regression fixtures. M2 adds bounded event navigation, externally reported
 benchmark scores, worker heartbeats and local workflow tooling; its full
-fresh-trial acceptance is still pending. M3's 12 real experiments and two
-additional paired runs remain required. Do not deploy a newer
+fresh-trial path now passes for two new Codex tasks in the
+[partial real-provider report](benchmarks/2026-09-19-m3-real-provider-progress-linux-x86_64.json).
+The explicitly amended M3 scope excludes Claude: eight matrix trials and two
+additional paired runs are required. Two Codex captures qualify; one Hermes
+trial fails its capture/cost gates, and seven cases remain unstarted. Semantic
+response completion does not erase incomplete HTTP transport, unknown cost or
+unresolved hook/proxy correlation. Paid execution is halted. Do not deploy a newer
 worktree based solely on the historical “release-hardened” statement below.
 
 The [compatible-candidate five-hour gate](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
@@ -36,9 +41,10 @@ fresh cryptographic audit of every retained blob.
 Bound M3 workflows now use a private shared admission ledger with durable
 reservation/nonces, inherited locks, conservative cost accounting and explicit
 stop/recovery behavior. This controls subsequent launches through the same ledger
-directory only, not provider billing or bypassing callers. Real paid qualification
-is still pending completed private provider preflight; synthetic ledger tests do
-not count as matrix trials.
+directory only, not provider billing or bypassing callers. The user explicitly
+waived unavailable provider-management cap verification, not cost stop rules or
+the ban on automatic retries. Private preflight and failed-trial reservations
+remain retained; synthetic ledger tests do not count as matrix trials.
 The [ledger regression report](benchmarks/2026-09-18-m3-admission-ledger-linux-x86_64.json)
 records 159 passing Python tests and an actual refusal of the incomplete plan.
 Prior report hashes and shared workspace locks prevent stale successful receipts

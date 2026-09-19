@@ -22,12 +22,26 @@ Hermes 0.19 的受控 profile 使用显式 custom 配置、canonical model ID �
 该估算不是账单核实，也不证明原生 session 已覆盖全部辅助服务开销；计费来源、
 价格版本及 session 导出摘要随 Harbor metadata 保留，未知字段仍使费用停止规则生效。
 
-状态：**尚无本轮真实实验结果**。仓库机器清单示例位于
+状态：**3 次真实 trial 已完成，2 次采集验收通过，M3 未完成**。
+Codex 两题首次运行的 reward 均为 `1.0`，独立传输证明通过；其中一次连接重置
+留下一个 unknown 调用，不能把整题成功等同于全部调用成功。Hermes 首题 reward
+为 `0.0`，8 次模型响应都有结束标记和 usage，但 4 次 HTTP 传输未完整收尾，
+原生 session 导出为空、费用未知，共享账本按规则停止。7 项尚未启动，off/on
+对照未跑。失败原件、原 Codex 安装失败和单独批准的一次补跑均保留；不自动重试。
+详见[分阶段真实结果](../benchmarks/2026-09-19-m3-real-provider-progress-linux-x86_64.json)。
+
+离线修复已验证：在 recorder 临时配置覆盖前初始化 Hermes 原生 SessionDB，避免
+新建数据库随临时目录清除；审计允许明确为零字节的无 blob chunk，但仍拒绝
+非空缺失和序号断档。原 Hermes 证据重新审计后 4 个完整模型响应逐字节匹配，
+其余 4 个仍不通过，不修改旧报告或解除停止。新审计代码未借用旧冻结二进制的
+五小时资格，也尚未部署到平台；168 项 Python、323 项 Rust 测试和 Clippy 通过。
+
+仓库机器清单示例位于
 [`examples/m3-experiment-plan.json`](../examples/m3-experiment-plan.json)。模型和预算
 故意保留 `null`；操作员实际授权、模型选择、凭据来源及费用限制检查保留在本机
 私有计划中，不公开提交预算或凭据。不能把占位模型、安装检查或合成负载计入
-12 次实验。冻结兼容候选的[五小时稳态](../benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
-已通过，但不替代这 12 次及额外 2 次真实对照。
+真实矩阵。冻结兼容候选的[五小时稳态](../benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
+已通过，但不替代本轮修订后的 8 次及额外 2 次真实对照。
 
 ## 数据集与题目
 

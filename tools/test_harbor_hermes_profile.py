@@ -113,6 +113,8 @@ class HermesProfileTests(unittest.TestCase):
         self.assertEqual(p._version, "0.19.0")
         self.assertEqual(p.commands[1]["env"]["HERMES_HOME"], "/tmp/hermes")
         self.assertIn("--reuid=10001", p.commands[1]["command"])
+        self.assertIn("SessionDB()", p.commands[2]["command"])
+        self.assertEqual(p.commands[2]["env"]["HERMES_HOME"], "/tmp/hermes")
         p.audit_runtime["distributions"][0]["version"] = "0.16.0"
         with self.assertRaisesRegex(ValueError, "installed_version_differs"):
             asyncio.run(p.prepare_agent_runtime(None))

@@ -2343,6 +2343,23 @@ fn append_proxy_chunk(
     }
     *expected_sequence = expected_sequence.saturating_add(1);
     let Some(reference) = event.raw.as_ref() else {
+        // HTTP/2 body streams may yield a legitimate zero-byte data frame.
+        // The recorder deliberately creates no blob for empty chunks. Both
+        // observed and captured sizes must explicitly be zero; a missing
+        // nonempty payload or a sequence gap remains an audit failure.
+        let empty = event.normalized.as_ref().is_some_and(|value| {
+            value
+                .get("observed_size")
+                .and_then(serde_json::Value::as_u64)
+                == Some(0)
+                && value
+                    .get("captured_size")
+                    .and_then(serde_json::Value::as_u64)
+                    == Some(0)
+        });
+        if empty {
+            return Ok(());
+        }
         gaps.insert("proxy_body_chunk_not_captured".to_owned());
         return Ok(());
     };
@@ -2687,6 +2704,42 @@ fn add_gap(gaps: &mut BTreeMap<String, u64>, reason: &str, occurrences: u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn empty_http_chunks_need_no_blob_but_still_require_explicit_sizes_and_sequence() {
+        for kind in ["request_body_chunk", "response_body_chunk"] {
+            for (observed, captured, sequence, missing_blob, sequence_gap) in [
+                (Some(0), Some(0), 1, false, false),
+                (Some(0), Some(0), 2, false, true),
+                (Some(1), Some(0), 1, true, false),
+                (Some(0), Some(1), 1, true, false),
+                (None, Some(0), 1, true, false),
+                (Some(0), None, 1, true, false),
+            ] {
+                let mut pending = crate::model::PendingEvent::new("fixture", "proxy", kind);
+                pending.normalized = Some(serde_json::json!({
+                    "chunk_sequence": sequence, "observed_size": observed, "captured_size": captured
+                }));
+                let event = EventEnvelope::from_pending(1, pending);
+                let mut body = BodyAccumulator::default();
+                let mut expected = 1;
+                let mut gaps = BTreeSet::new();
+                append_proxy_chunk(
+                    Path::new("/nonexistent-fixture"),
+                    &event,
+                    &EncryptionKey::new([19; 32]),
+                    &mut body,
+                    &mut expected,
+                    &mut gaps,
+                )
+                .unwrap();
+                assert_eq!(expected, 2);
+                assert_eq!(body.finish().bytes, 0);
+                assert_eq!(gaps.contains("proxy_body_chunk_not_captured"), missing_blob);
+                assert_eq!(gaps.contains("proxy_body_sequence_gap"), sequence_gap);
+            }
+        }
+    }
 
     fn row(columns: &[&str; COLUMN_COUNT - 1]) -> String {
         let mut row = columns.join("\t");

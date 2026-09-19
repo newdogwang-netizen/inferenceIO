@@ -23,8 +23,13 @@ score attached by an operator is labeled `operator_reported_not_recomputed`,
 not promoted to platform-owned transport proof. The
 [new compatible-candidate five-hour gate](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
 passes only for its exact binary/images and synthetic mixed workload. It does not
-upgrade any real-agent/provider cell or complete M3's twelve real trials and
-two additional paired runs. Historical gates remain bound to their own artifacts.
+upgrade any real-agent/provider cell. The amended M3 target is eight Codex/Hermes
+matrix trials plus two paired runs; Claude is excluded, not qualified. The
+[partial real-provider report](benchmarks/2026-09-19-m3-real-provider-progress-linux-x86_64.json)
+adds two exact passing Codex captures and one failed Hermes capture gate, not
+broad provider/version support. Seven cases remain unstarted. Hermes semantic
+endings and usage are present, but four HTTP streams lack full-body proof and
+its native export/cost is missing. Historical gates remain bound to their artifacts.
 The pinned [native Harbor installation checks](benchmarks/2026-09-18-native-harbor-install-linux-x86_64.json)
 and [Hermes installed-runtime check](benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)
 cover container setup/version compatibility only; they do not upgrade any real

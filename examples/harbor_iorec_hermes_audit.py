@@ -56,6 +56,14 @@ class IorecHermesAudit(IorecAuditMixin, Hermes):
         if self._version is not None and self._version != expected:
             raise ValueError("hermes_requested_version_differs_from_bundle")
         self._version = expected
+        # The recorder overlays existing Hermes home entries by symlink. If
+        # state.db first appears inside that temporary overlay, it disappears
+        # at recorder exit and Harbor's later export sees an empty session DB.
+        # Initialize the native database before recording, without a model call.
+        await self.exec_as_agent(environment, command=(
+            "/opt/iorec-hermes/python/bin/python3.11 -I -B -c "
+            + shlex.quote("from hermes_state import SessionDB; db = SessionDB(); db.close()")
+        ), timeout_sec=30)
 
     def parse_version(self, stdout):
         versions = re.findall(r"^Hermes Agent v([0-9A-Za-z.+_-]+)(?:\s|$)", stdout, re.M)
