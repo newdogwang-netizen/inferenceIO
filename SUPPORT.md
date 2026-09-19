@@ -26,10 +26,12 @@ passes only for its exact binary/images and synthetic mixed workload. It does no
 upgrade any real-agent/provider cell. The amended M3 target is eight Codex/Hermes
 matrix trials plus two paired runs; Claude is excluded, not qualified. The
 [partial real-provider report](benchmarks/2026-09-19-m3-real-provider-progress-linux-x86_64.json)
-adds two exact passing Codex captures and one failed Hermes capture gate, not
-broad provider/version support. Seven cases remain unstarted. Hermes semantic
-endings and usage are present, but four HTTP streams lack full-body proof and
-its native export/cost is missing. Historical gates remain bound to their artifacts.
+adds two exact passing Codex captures and the first failed Hermes capture gate, not
+broad provider/version support. The [one approved Hermes replacement](benchmarks/2026-09-19-hermes-authorized-replacement-linux-x86_64.json)
+also fails: 10/13 model requests match independent wire evidence; one cancellation,
+two unmatched full responses and the missing native export/cost remain. Empty-tail
+false cancellations are fixed, but that is not proof of full Hermes support.
+Seven cases remain unstarted. Historical gates remain bound to their artifacts.
 The pinned [native Harbor installation checks](benchmarks/2026-09-18-native-harbor-install-linux-x86_64.json)
 and [Hermes installed-runtime check](benchmarks/2026-09-18-hermes-runtime-and-portable-calibration-linux-x86_64.json)
 cover container setup/version compatibility only; they do not upgrade any real

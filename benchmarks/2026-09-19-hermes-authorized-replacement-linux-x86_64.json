@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "report_kind": "authorized_hermes_replacement_failed_gate",
+  "observed_at": "2026-09-19T08:00:12Z",
+  "qualification_passed": false,
+  "m3_complete": false,
+  "authorization_scope": {
+    "replacement_trials_allowed": 1,
+    "replacement_trials_run": 1,
+    "automatic_retries": 0,
+    "further_paid_execution": "halted",
+    "original_failure_and_ledgers_preserved": true,
+    "private_authorization_and_budget_not_published": true
+  },
+  "cumulative_scope": {
+    "agents": [
+      "codex",
+      "hermes"
+    ],
+    "excluded_agents": [
+      "claude"
+    ],
+    "matrix_target": 8,
+    "additional_off_on_target": 2,
+    "unique_matrix_cases_attempted": 3,
+    "qualified_matrix_cases": 2,
+    "real_model_trials_including_replacement": 4,
+    "failed_real_model_trials_retained": 2,
+    "setup_only_failed_launches_retained": 1,
+    "unstarted_cases": 7
+  },
+  "artifacts": {
+    "source_commit": "db08fe9bd948c04fb8fb1c22d90fda3bde619256",
+    "capture_recorder_sha256": "89bb48a3024e762e79895c3120fd8db868b37ca346e1f68706b0a86ccd041355",
+    "proxy_source_sha256": "a7b7319191a48c4b2160fcc1c35b87e3d3f422a183d69db33875f3fc73b4038b",
+    "rust_auditor_source_sha256": "b39346a0ec6c32295d3ae57de3b06f2e1192bf3a8a93dbbad727636a21227c2c",
+    "platform_worker_image": "sha256:ad510437ad083973948c870be19498a8f977b1450755790ce3d3e9c55b79515c",
+    "platform_worker_binary_sha256": "a2f26de491ce0768fc106c104872da3d59152866dbbeeecefdf68aaec9751432"
+  },
+  "trial": {
+    "run_id": "run-01a0b8ab-9610-71ff-be3e-7dd1f125cdee",
+    "trial": "cancel-async-tasks__jLF39nt",
+    "task": "terminal-bench/cancel-async-tasks",
+    "agent": "hermes",
+    "agent_version": "0.19.0",
+    "model": "openai/accounts/fireworks/models/deepseek-v4-pro-0813",
+    "benchmark_completed": true,
+    "reward": 0,
+    "recorded_command_exit_code": 0,
+    "recorded_wall_seconds": 104.74023033957928,
+    "workflow_status": "incomplete",
+    "workflow_report_sha256": "085643e02f34b2b24a73bfa5ffde93c79da6eb6955efb39c6fbaa600cdab731e",
+    "trial_result_sha256": "38b51067679944eb6584a7920940c5829d29bf0e22f8fb70b25886291bf52c38",
+    "manifest_sha256": "66111507c6af34a1cb05cf3fb96244c6c02126e99633974b41b449e69c22bda3",
+    "events_sha256": "d189b98e3e50b25e3ab0d0622900ab8c5639ac1db4cc7c7650ff786d316915f1",
+    "events": 9309,
+    "blobs": 4460,
+    "integrity_checks_passed": 6,
+    "capture_drops": 0
+  },
+  "response_evidence": {
+    "proxy_model_requests": 13,
+    "http_status_200": 13,
+    "proxy_complete": 12,
+    "proxy_cancelled": 1,
+    "semantic_finish_markers": 12,
+    "stream_terminated": 12,
+    "usage_records": 12,
+    "nonempty_cancellation": {
+      "attempt_id": "01a0b8ad-2566-73e7-a7a4-c87c2fc60b79",
+      "reason": "downstream_cancelled",
+      "last_observed_chunk_bytes": 565,
+      "captured_response_prefix_bytes": 8496,
+      "sse_events": 30
+    },
+    "notes": [
+      "The previous empty-tail false-cancellation path is fixed; this cancellation occurred on nonempty data and is not hidden.",
+      "The cause of the native client's nonempty cancellation is not established by the available diagnostic lines."
+    ]
+  },
+  "independent_audit": {
+    "report_sha256": "082cd3181cbf9e6e2363a18856ac0a4941c1b8f0550f86969bac2dd56c2bba7b",
+    "complete": false,
+    "payload_diff_passed": false,
+    "proxy_attempts_eligible": 12,
+    "matched_attempts": 10,
+    "missing_from_wire": 2,
+    "extra_on_wire": 0,
+    "gaps": [
+      {
+        "reason": "proxy_attempt_ineligible_for_diff",
+        "occurrences": 1
+      },
+      {
+        "reason": "proxy_attempt_missing_from_wire",
+        "occurrences": 2
+      },
+      {
+        "reason": "proxy_response_payload_incomplete",
+        "occurrences": 1
+      },
+      {
+        "reason": "stream_status_missing",
+        "occurrences": 3
+      }
+    ],
+    "missing_interpretation": "Two eligible proxy responses lack a fully decoded matching wire response. This does not by itself prove packets were dropped; manifest drop count is zero."
+  },
+  "native_export": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "reported_cost_usd": null,
+    "billing_verified": false,
+    "status": "unresolved",
+    "note": "Preinitializing SessionDB alone did not fix this real CLI export. Model-free native SessionDB probes persisted a CLI row through the overlay with both clean close and abrupt exit; native CLI export also exported a synthetic row successfully. Those probes do not establish the real CLI path's missing-export cause."
+  },
+  "platform": {
+    "diagnostic_import_only": true,
+    "qualification_passed": false,
+    "transport_proof_status": "incomplete",
+    "coverage_claim": "unknown",
+    "active_jobs": 0,
+    "failed_jobs": 0,
+    "recording_url": "http://127.0.0.1:8088/recordings/run-01a0b8ab-9610-71ff-be3e-7dd1f125cdee%230000",
+    "diagnostic_workflow_report_sha256": "bb3cc7889ee885f9acb31da6b2715889425aaeffd333ef7568baf21332949fda",
+    "plaintext_staging_cleaned": true
+  },
+  "model_free_validation": {
+    "rust_tests": 324,
+    "python_tests": 171,
+    "python_skips": 0,
+    "clippy_passed": true,
+    "go_full_tests_with_isolated_postgres_passed": true,
+    "go_race_passed": true,
+    "go_vet_passed": true,
+    "ci_run": 35430672957,
+    "ci_status": "success",
+    "pages_run": 35430672623,
+    "pages_status": "success",
+    "synthetic_sdk_probe": {
+      "run_id": "run-01a0b8a8-afe6-779a-bc7f-0b3b8e42c040",
+      "summary_sha256": "e468984b952b571f25df9cfc61d2ec40a01f03a6f589695b79ed33ea5d6912c6",
+      "requests": 20,
+      "matched_attempts": 20,
+      "complete": true,
+      "payload_diff_passed": true,
+      "capture_drops": 0,
+      "paid_model_calls": 0,
+      "scope": "Installed Hermes Python SDK against local fixture with task-network pcap; not a public-provider guarantee."
+    },
+    "negative_cases": [
+      "An empty frame alone does not end capture before upstream EOF.",
+      "Nonempty data after downstream close still cancels; upstream error still fails.",
+      "Missing chunk sizes, nonempty absent blobs, truncation and sequence gaps remain audit failures.",
+      "Identical synthetic request bodies correctly produced an ambiguous-signature gap; unique request bodies are needed for the positive one-to-one proof."
+    ]
+  },
+  "remaining_gates": [
+    "Resolve native Hermes CLI export with an end-to-end model-free reproduction before claiming cost recovery.",
+    "Independently decode incomplete HTTP/SSE tails without turning semantic completion into full-transport proof.",
+    "Do not re-run this consumed one-shot authorization or release unknown-cost reservations.",
+    "Finish the remaining matrix/pair only through a separately bound continuation; M3 remains incomplete.",
+    "The new recorder/worker have not inherited the older frozen binary's five-hour qualification."
+  ],
+  "privacy": "No credentials, approval files, budget amounts, prompts, response bodies, pcap or TLS secrets are published."
+}

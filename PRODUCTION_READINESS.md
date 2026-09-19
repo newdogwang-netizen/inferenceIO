@@ -11,8 +11,12 @@ benchmark scores, worker heartbeats and local workflow tooling; its full
 fresh-trial path now passes for two new Codex tasks in the
 [partial real-provider report](benchmarks/2026-09-19-m3-real-provider-progress-linux-x86_64.json).
 The explicitly amended M3 scope excludes Claude: eight matrix trials and two
-additional paired runs are required. Two Codex captures qualify; one Hermes
-trial fails its capture/cost gates, and seven cases remain unstarted. Semantic
+additional paired runs are required. Two Codex captures qualify; both the original
+Hermes trial and its [one approved replacement](benchmarks/2026-09-19-hermes-authorized-replacement-linux-x86_64.json)
+fail capture/cost gates, and seven cases remain unstarted. The replacement matches
+10/13 model requests independently, retaining one nonempty cancellation and two
+incompletely decoded wire responses. The native session export is still empty.
+The newer recorder/worker do not inherit the old five-hour qualification. Semantic
 response completion does not erase incomplete HTTP transport, unknown cost or
 unresolved hook/proxy correlation. Paid execution is halted. Do not deploy a newer
 worktree based solely on the historical “release-hardened” statement below.

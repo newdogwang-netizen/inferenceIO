@@ -15,10 +15,13 @@ annotations, worker liveness, and a resumable controlled audit command; see its
 [scoped qualification](benchmarks/2026-09-18-m2-evidence-workflow-linux-x86_64.json). M2's
 fresh-trial path has now passed for two new Codex tasks; the M3 matrix remains
 incomplete. The [partial real-provider report](benchmarks/2026-09-19-m3-real-provider-progress-linux-x86_64.json)
-retains both passing captures (Harbor reward `1.0` each), one failed Hermes
-capture gate (reward `0.0`), and the original setup-only failure. Hermes has eight
-semantic response endings but four incomplete HTTP transports and an empty
-native session export; diagnostic import is not qualification. Paid execution
+retains both passing captures (Harbor reward `1.0` each), the first failed Hermes
+capture gate and the original setup-only failure. The subsequently
+[authorized Hermes replacement](benchmarks/2026-09-19-hermes-authorized-replacement-linux-x86_64.json)
+also fails qualification (reward `0.0`): 10/13 model requests match independent
+wire evidence, one is genuinely cancelled on nonempty data, and two lack a full
+decoded wire response. Its native export/cost is still missing; preinitializing
+the database alone was insufficient. Diagnostic import is not qualification. Paid execution
 is halted, with seven declared cases unstarted. The
 [compatible-candidate five-hour soak](benchmarks/2026-09-19-m3-portable-connected-5h-linux-x86_64.json)
 passed with 20 collectors, 6,000 successful calls, interruption recovery and final
@@ -27,7 +30,8 @@ or the pending real-provider experiments.
 The [M3 experiment declaration](docs/m3-experiment-plan.md) pins an explicit
 Terminal-Bench 2 snapshot, two task packages and immutable image references;
 the approved scope now excludes Claude and requires eight matrix trials plus
-two additional off/on runs. Three matrix trials have run, two capture-qualified;
+two additional off/on runs. Three distinct matrix cases have been attempted
+(four model trials including the approved replacement), two capture-qualified;
 the original three-agent scope is not claimed complete. Operator-specific
 approvals, credentials and spend-control checks belong in a private plan; the
 repository example deliberately remains incomplete.
