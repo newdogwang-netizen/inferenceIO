@@ -4,6 +4,9 @@ The archive includes the actual installed wheel and dependencies, not a floating
 installer or an adjacent (possibly older) source checkout. Personal state is not
 copied. Only explicit OpenAI-protocol routing is qualified by this profile.
 """
+import hashlib
+import json
+import math
 import os
 import re
 import shlex
@@ -71,6 +74,45 @@ class IorecHermesAudit(IorecAuditMixin, Hermes):
         if not self.model_name or not self.model_name.startswith("openai/") or not os.environ.get("OPENAI_API_KEY"):
             raise ValueError("hermes_audit_requires_explicit_openai_model_and_key_no_fallback")
         return await super().run(instruction, environment, context)
+
+    def populate_context_post_run(self, context):
+        super().populate_context_post_run(context)
+        # Harbor currently converts messages but drops Hermes' session-level
+        # cost. Preserve a narrowly scoped native estimate, never turn an
+        # unknown/default-zero amount into a bill. Multi-session, compression,
+        # route changes and missing provenance require separate reconciliation.
+        path = self.logs_dir / "hermes-session.jsonl"
+        try:
+            with path.open("rb") as source:
+                raw = source.read((8 << 20) + 1)
+            if len(raw) > 8 << 20:
+                return
+            rows = [json.loads(line) for line in raw.splitlines() if line.strip()]
+            if len(rows) != 1 or not isinstance(rows[0], dict):
+                return
+            row = rows[0]
+            amount = row.get("estimated_cost_usd")
+            if (row.get("source") != "cli" or row.get("parent_session_id")
+                    or row.get("end_reason") == "compression" or row.get("segments")
+                    or row.get("model") not in (self.model_name, self.model_name.split("/", 1)[-1])
+                    or row.get("billing_base_url", "").rstrip("/") != self.audit_upstream
+                    or row.get("cost_status") != "estimated"
+                    or row.get("cost_source") != "official_docs_snapshot"
+                    or not isinstance(row.get("pricing_version"), str) or not row["pricing_version"]
+                    or type(row.get("api_call_count")) is not int or row["api_call_count"] <= 0
+                    or type(amount) not in (int, float) or not math.isfinite(amount) or amount <= 0):
+                return
+            context.cost_usd = amount
+            context.metadata = {**(context.metadata or {}), "iorec_native_cost": {
+                "source": "hermes_session_estimate", "cost_status": "estimated",
+                "pricing_source": row["cost_source"], "pricing_version": row["pricing_version"],
+                "session_export_sha256": hashlib.sha256(raw).hexdigest(),
+                "billing_verified": False,
+                "scope": "native_single_cli_session_report_not_independent_billing_or_complete_auxiliary_spend"}}
+        except (OSError, ValueError, TypeError, AttributeError):
+            # Missing or unusable native cost remains None and the shared
+            # ledger stops subsequent trials. Do not guess pricing here.
+            return
 
     async def exec_as_agent(self, environment, command, env=None, cwd=None, timeout_sec=None):
         return await super().exec_as_agent(environment, command,

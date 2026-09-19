@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import tempfile
 import types
 import unittest
 from unittest import mock
@@ -37,6 +38,9 @@ class Parent:
 
     async def exec_as_root(self, environment, **kwargs):
         self.commands.append(kwargs)
+
+    def populate_context_post_run(self, context):
+        pass
 
     @staticmethod
     def _build_config_yaml(model):
@@ -107,6 +111,34 @@ class HermesProfileTests(unittest.TestCase):
         actual = p.commands[-1]["env"]
         self.assertEqual(actual["OPENAI_BASE_URL"], "https://gateway.example.com/v1")
         self.assertEqual(actual["HERMES_HOME"], "/tmp/hermes")
+
+    def test_native_cost_preserves_provenance_and_rejects_unknown_or_ambiguous_totals(self):
+        with tempfile.TemporaryDirectory() as temp, mock.patch.dict(os.environ, {}, clear=True):
+            p = self.profile(model_name="openai/fixture")
+            p.logs_dir = Path(temp)
+            row = {"source": "cli", "model": "fixture", "billing_base_url": p.audit_upstream,
+                   "api_call_count": 3, "estimated_cost_usd": 0.25, "cost_status": "estimated",
+                   "cost_source": "official_docs_snapshot", "pricing_version": "synthetic-only"}
+            path = p.logs_dir / "hermes-session.jsonl"
+            path.write_text(json.dumps(row))
+            context = types.SimpleNamespace(cost_usd=None, metadata=None)
+            p.populate_context_post_run(context)
+            self.assertEqual(context.cost_usd, 0.25)
+            self.assertFalse(context.metadata["iorec_native_cost"]["billing_verified"])
+            self.assertEqual(len(context.metadata["iorec_native_cost"]["session_export_sha256"]), 64)
+            for key, value in (("estimated_cost_usd", None), ("estimated_cost_usd", 0), ("estimated_cost_usd", True),
+                               ("estimated_cost_usd", float("nan")), ("estimated_cost_usd", float("inf")),
+                               ("cost_status", "unknown"), ("cost_source", "none"), ("pricing_version", ""),
+                               ("api_call_count", 0), ("api_call_count", True), ("model", "other"),
+                               ("billing_base_url", "https://other.example/v1"), ("source", "delegate"),
+                               ("parent_session_id", "other"), ("end_reason", "compression")):
+                path.write_text(json.dumps({**row, key: value}))
+                context = types.SimpleNamespace(cost_usd=None, metadata=None)
+                p.populate_context_post_run(context)
+                self.assertIsNone(context.cost_usd, (key, value))
+            path.write_text(json.dumps(row) + "\n" + json.dumps(row))
+            p.populate_context_post_run(context)
+            self.assertIsNone(context.cost_usd)
 
 
 if __name__ == "__main__":
