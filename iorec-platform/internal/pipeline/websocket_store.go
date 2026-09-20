@@ -219,19 +219,49 @@ func (d *Deps) normalizeWebSocketCalls(ctx context.Context, j *jobs.Job, run, id
 					break
 				}
 			}
-			refs, _ := json.Marshal(wsEvidence(capture.Frames, call.Frames))
-			meta, _ := json.Marshal(map[string]any{"schema_version": 1, "kind": "websocket_call", "outcome": call.Outcome, "association": call.Association, "response_id": call.ResponseID, "request_event_id": call.RequestID, "cancel_requested": call.CancelRequested, "issues": call.Problems, "capture_state": captureState, "capture_scope": "parent_connection_observed_messages", "message_count": len(call.Frames)})
 			if !capture.Complete {
 				call.Norm.BodyUnavailable = true
 			}
 			normalized, _ := json.Marshal(call.Norm)
 			usage, _ := json.Marshal(call.Norm.Usage)
+			requestBody, requestNUL, err := postgresJSON(request.Body)
+			if err != nil {
+				return fmt.Errorf("sanitize WebSocket request projection: %w", err)
+			}
+			responseBody, responseNUL, err := postgresJSON(call.Response)
+			if err != nil {
+				return fmt.Errorf("sanitize WebSocket response projection: %w", err)
+			}
+			normalized, normalizedNUL, err := postgresJSON(normalized)
+			if err != nil {
+				return fmt.Errorf("sanitize normalized WebSocket projection: %w", err)
+			}
+			usage, usageNUL, err := postgresJSON(usage)
+			if err != nil {
+				return fmt.Errorf("sanitize WebSocket usage projection: %w", err)
+			}
+			responseText, responseTextNUL := postgresText(truncateStr(call.Norm.ResponseText, 200000))
+			model, modelNUL := postgresText(call.Norm.Model)
+			responseID, responseIDNUL := postgresText(call.ResponseID)
+			requestID, requestIDNUL := postgresText(call.RequestID)
+			problemNUL := 0
+			for index := range call.Problems {
+				var count int
+				call.Problems[index], count = postgresText(call.Problems[index])
+				problemNUL += count
+			}
+			nulReplacements := requestNUL + responseNUL + normalizedNUL + usageNUL + responseTextNUL + modelNUL + responseIDNUL + requestIDNUL + problemNUL
+			if nulReplacements > 0 {
+				call.Problems = appendUnique(call.Problems, "postgres_nul_replaced_in_projection")
+			}
+			refs, _ := json.Marshal(wsEvidence(capture.Frames, call.Frames))
+			meta, _ := json.Marshal(map[string]any{"schema_version": 1, "kind": "websocket_call", "outcome": call.Outcome, "association": call.Association, "response_id": responseID, "request_event_id": requestID, "cancel_requested": call.CancelRequested, "issues": call.Problems, "capture_state": captureState, "capture_scope": "parent_connection_observed_messages", "message_count": len(call.Frames), "postgres_nul_replacements": nulReplacements})
 			fp, _ := hex.DecodeString(call.Norm.Fingerprint)
 			ih, _ := hex.DecodeString(call.Norm.InputHash)
 			_, err = tx.Exec(ctx, `insert into model_attempts(id,native_id,recording_id,project_id,capture_run_id,connection_id,task_id,session_id,source,protocol,method,url,provider_host,api_mode,model,started_at,ended_at,first_byte_at,terminal_state,request_body,request_body_ref,response_body,response_text,usage,normalized,request_fingerprint,input_hash,first_seq,last_seq,processor_version,pid,container_id,entity_kind,parent_attempt_id,projection,evidence_refs)
 			select $1,$1,$3,project_id,capture_run_id,connection_id,task_id,session_id,'proxy:websocket-call','websocket_message','MESSAGE',url,provider_host,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,pid,container_id,'websocket_call',id,$21,$22 from model_attempts where id=$2
 			on conflict(id) do update set recording_id=excluded.recording_id,api_mode=excluded.api_mode,model=excluded.model,started_at=excluded.started_at,ended_at=excluded.ended_at,first_byte_at=excluded.first_byte_at,terminal_state=excluded.terminal_state,request_body=excluded.request_body,request_body_ref=excluded.request_body_ref,response_body=excluded.response_body,response_text=excluded.response_text,usage=excluded.usage,normalized=excluded.normalized,request_fingerprint=excluded.request_fingerprint,input_hash=excluded.input_hash,first_seq=excluded.first_seq,last_seq=excluded.last_seq,processor_version=excluded.processor_version,projection=excluded.projection,evidence_refs=excluded.evidence_refs,updated_at=now()`,
-				callID, id, request.Event.RecordingID, apiMode, nilIfEmpty(call.Norm.Model), request.Event.WallTime, ended, firstByte, wsAttemptTerminal(call.Outcome), json.RawMessage(request.Body), request.Event.PayloadSHA, nullJSON(call.Response), nilIfEmpty(truncateStr(call.Norm.ResponseText, 200000)), usage, normalized, fp, ih, request.Event.Seq, last.Seq, NormalizerVersion, meta, refs)
+				callID, id, request.Event.RecordingID, apiMode, nilIfEmpty(model), request.Event.WallTime, ended, firstByte, wsAttemptTerminal(call.Outcome), requestBody, request.Event.PayloadSHA, nullJSON(responseBody), nilIfEmpty(responseText), usage, normalized, fp, ih, request.Event.Seq, last.Seq, NormalizerVersion, meta, refs)
 			if err != nil {
 				return fmt.Errorf("persist WebSocket call: %w", err)
 			}

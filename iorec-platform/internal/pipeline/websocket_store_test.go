@@ -41,10 +41,10 @@ func TestWebSocketCallProjectionDatabaseReplay(t *testing.T) {
 	d := &Deps{DB: db, Obj: objects}
 	job := &jobs.Job{ProjectID: project, CaptureRunID: &run, RecordingID: &rec}
 	frames := wsFixture(
-		`>{"type":"response.create","model":"ws-test","input":"one"}`,
-		`{"type":"response.created","response":{"id":"r1"}}`,
-		`{"type":"response.completed","response":{"id":"r1","status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"first answer"}]}],"usage":{"input_tokens":10,"output_tokens":5}}}`,
-		`>{"type":"response.create","model":"ws-test","previous_response_id":"r1","input":"two"}`,
+		`>{"type":"response.create","model":"ws\u0000test","input":"one"}`,
+		`{"type":"response.created","response":{"id":"r1\u0000"}}`,
+		`{"type":"response.completed","response":{"id":"r1\u0000","status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"first\u0000answer"}]}],"usage":{"input_tokens":10,"output_tokens":5}}}`,
+		`>{"type":"response.create","model":"ws-test","previous_response_id":"r1\u0000","input":"two"}`,
 		`{"type":"response.created","response":{"id":"r2"}}`,
 		`{"type":"response.completed","response":{"id":"r2","status":"completed","output":[],"usage":{"input_tokens":20,"output_tokens":2}}}`,
 	)
@@ -119,6 +119,14 @@ func TestWebSocketCallProjectionDatabaseReplay(t *testing.T) {
 		}
 		if calls != 4 || connections != 2 || completed != 4 || inferences != 4 || links != 12 {
 			t.Fatalf("calls=%d conn=%d completed=%d inf=%d links=%d", calls, connections, completed, inferences, links)
+		}
+		var safeText, safeModel, safeResponseID string
+		var nulReplacements int
+		if err := db.Pool.QueryRow(ctx, `select response_text,model,projection->>'response_id',(projection->>'postgres_nul_replacements')::int from model_attempts where capture_run_id=$1 and entity_kind='websocket_call' and response_text is not null order by id limit 1`, run).Scan(&safeText, &safeModel, &safeResponseID, &nulReplacements); err != nil {
+			t.Fatal(err)
+		}
+		if safeText != "first\ufffdanswer" || safeModel != "ws\ufffdtest" || safeResponseID != "r1\ufffd" || nulReplacements < 3 {
+			t.Fatalf("unsafe or unreported PostgreSQL projection: text=%q model=%q response=%q replacements=%d", safeText, safeModel, safeResponseID, nulReplacements)
 		}
 		var stale int
 		if err := db.Pool.QueryRow(ctx, `select count(*) from model_attempts where capture_run_id=$1 and entity_kind='websocket_connection' and (normalized is not null or usage is not null or inference_id is not null or terminal_state<>'error')`, run).Scan(&stale); err != nil {

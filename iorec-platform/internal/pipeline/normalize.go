@@ -815,16 +815,16 @@ type websocketFinishMetadata struct {
 // attemptBodyBytes returns an attempt body in wire order. New recorder events
 // intentionally store every transport read as a separate immutable blob, so a
 // multi-chunk body cannot be represented by model_attempts.*_body_ref alone.
-func (d *Deps) attemptBodyBytes(ctx context.Context, project, run, nativeID, chunkEvent string, inline json.RawMessage, ref []byte) ([]byte, bool, error) {
+func (d *Deps) attemptBodyBytes(ctx context.Context, project, run, nativeID, chunkEvent string, inline json.RawMessage, ref []byte) ([]byte, bool, bool, error) {
 	if body, ok, err := d.bodyBytes(ctx, project, inline, ref); err != nil || ok {
-		return body, ok, err
+		return body, ok, false, err
 	}
 	events, err := d.loadRunEvents(ctx, run, `and e.attempt_id=$2 and e.event=$3`, nativeID, chunkEvent)
 	if err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
 	if len(events) == 0 {
-		return nil, false, nil
+		return nil, false, false, nil
 	}
 	const maximum = 64 << 20
 	var out bytes.Buffer
@@ -832,48 +832,52 @@ func (d *Deps) attemptBodyBytes(ctx context.Context, project, run, nativeID, chu
 	for _, event := range events {
 		var metadata bodyChunkMetadata
 		if err := json.Unmarshal(event.Payload, &metadata); err != nil {
-			return nil, false, fmt.Errorf("%s seq %d has invalid chunk metadata: %w", chunkEvent, event.Seq, err)
+			return nil, false, false, fmt.Errorf("%s seq %d has invalid chunk metadata: %w", chunkEvent, event.Seq, err)
 		}
 		if metadata.Sequence != expectedSequence {
-			return nil, false, fmt.Errorf("%s chunk sequence gap: expected %d, got %d", chunkEvent, expectedSequence, metadata.Sequence)
+			// A recorder drop or truncated import can remove a whole chunk event.
+			// That is incomplete evidence, not a transient pipeline failure: fail
+			// the body projection closed while preserving the attempt and allowing
+			// the batch to reach a terminal parsed state.
+			return nil, false, true, nil
 		}
 		expectedSequence++
 		if metadata.CapturedSize < 0 || metadata.ObservedSize < metadata.CapturedSize || event.RawTruncated || metadata.CapturedSize != metadata.ObservedSize {
-			return nil, false, nil
+			return nil, false, true, nil
 		}
 		if metadata.CapturedSize == 0 {
 			emptyDigest := sha256.Sum256(nil)
 			declaredDigest := strings.TrimPrefix(strings.ToLower(metadata.SHA256), "sha256:")
 			if declaredDigest != "" && declaredDigest != hex.EncodeToString(emptyDigest[:]) {
-				return nil, false, fmt.Errorf("%s chunk %d has an invalid empty-body digest", chunkEvent, metadata.Sequence)
+				return nil, false, false, fmt.Errorf("%s chunk %d has an invalid empty-body digest", chunkEvent, metadata.Sequence)
 			}
 			if event.PayloadSize != nil && *event.PayloadSize != 0 {
-				return nil, false, fmt.Errorf("%s chunk %d has a non-zero event size for an empty body", chunkEvent, metadata.Sequence)
+				return nil, false, false, fmt.Errorf("%s chunk %d has a non-zero event size for an empty body", chunkEvent, metadata.Sequence)
 			}
 			if len(event.PayloadSHA) > 0 && subtle.ConstantTimeCompare(event.PayloadSHA, emptyDigest[:]) != 1 {
-				return nil, false, fmt.Errorf("%s chunk %d has a mismatched empty-body event digest", chunkEvent, metadata.Sequence)
+				return nil, false, false, fmt.Errorf("%s chunk %d has a mismatched empty-body event digest", chunkEvent, metadata.Sequence)
 			}
 			continue
 		}
 		if len(event.PayloadSHA) == 0 || event.PayloadSize == nil || *event.PayloadSize != metadata.CapturedSize {
-			return nil, false, nil
+			return nil, false, true, nil
 		}
 		if strings.TrimPrefix(strings.ToLower(metadata.SHA256), "sha256:") != hex.EncodeToString(event.PayloadSHA) {
-			return nil, false, fmt.Errorf("%s chunk %d metadata digest does not match its event reference", chunkEvent, metadata.Sequence)
+			return nil, false, false, fmt.Errorf("%s chunk %d metadata digest does not match its event reference", chunkEvent, metadata.Sequence)
 		}
 		part, ok, err := d.bodyBytes(ctx, project, nil, event.PayloadSHA)
 		if err != nil {
-			return nil, false, err
+			return nil, false, false, err
 		}
 		if !ok || int64(len(part)) != metadata.CapturedSize {
-			return nil, false, nil
+			return nil, false, true, nil
 		}
 		if out.Len() > maximum-len(part) {
-			return nil, false, fmt.Errorf("reassembled %s exceeds processing limit %d", chunkEvent, maximum)
+			return nil, false, false, fmt.Errorf("reassembled %s exceeds processing limit %d", chunkEvent, maximum)
 		}
 		_, _ = out.Write(part)
 	}
-	return out.Bytes(), true, nil
+	return out.Bytes(), true, false, nil
 }
 
 func headerValue(headers json.RawMessage, name string) string {
@@ -1122,13 +1126,13 @@ func (d *Deps) normalizeAttempt(ctx context.Context, j *jobs.Job, run, id string
 		// Child calls are rebuilt only with their connection snapshot.
 		return nil
 	}
-	body, ok, err := d.attemptBodyBytes(ctx, j.ProjectID.String(), run, nativeID, protocol.EvRequestBodyChunk, reqInline, reqRef)
+	body, ok, requestIncomplete, err := d.attemptBodyBytes(ctx, j.ProjectID.String(), run, nativeID, protocol.EvRequestBodyChunk, reqInline, reqRef)
 	if err != nil {
 		return err
 	}
 	var n *Normalized
 	if !ok {
-		n = &Normalized{APIMode: apiMode, BodyUnavailable: requestBodyExpected(apiMode, method, reqHeaders)}
+		n = &Normalized{APIMode: apiMode, BodyUnavailable: requestIncomplete || requestBodyExpected(apiMode, method, reqHeaders)}
 		n.finalize()
 	} else {
 		n, err = NormalizeRequest(apiMode, body)
@@ -1140,7 +1144,7 @@ func (d *Deps) normalizeAttempt(ctx context.Context, j *jobs.Job, run, id string
 	// Prefer the complete wire body. Besides supporting chunked bodies, this is
 	// required when an upstream compresses SSE: capture-time SSE parsing sees
 	// encoded bytes, while the platform can safely decode the complete stream.
-	responseBody, responseAvailable, err := d.attemptBodyBytes(ctx, j.ProjectID.String(), run, nativeID, protocol.EvResponseBodyChunk, respInline, respRef)
+	responseBody, responseAvailable, responseIncomplete, err := d.attemptBodyBytes(ctx, j.ProjectID.String(), run, nativeID, protocol.EvResponseBodyChunk, respInline, respRef)
 	if err != nil {
 		return err
 	}
@@ -1155,6 +1159,9 @@ func (d *Deps) normalizeAttempt(ctx context.Context, j *jobs.Job, run, id string
 			ApplyResponseBody(n, responseBody)
 		}
 	} else {
+		if responseIncomplete {
+			n.BodyUnavailable = true
+		}
 		chunks, err := d.loadRunEvents(ctx, run, `and e.attempt_id=$2 and e.event in ('sse_chunk','sse_event')`, nativeID)
 		if err != nil {
 			return err

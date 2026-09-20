@@ -857,6 +857,24 @@ func TestNormalizeAttemptReassemblesChunkedCompressedBodies(t *testing.T) {
 	if got.BodyUnavailable || len(got.Messages) != 1 || got.Messages[0].Text != "hello" || responseText != "chunked response" || terminal != "completed" || got.StreamTerminated == nil || !*got.StreamTerminated {
 		t.Fatalf("chunked bodies were not reconstructed: normalized=%s response=%q terminal=%q", normalized, responseText, terminal)
 	}
+	// A known evidence gap must downgrade the body projection, not create a
+	// permanently retrying/dead normalization job.
+	if _, err := db.Pool.Exec(ctx, `update recording_events set payload=jsonb_set(payload,'{chunk_sequence}','4') where recording_id=$1 and event=$2 and payload->>'chunk_sequence'='2'`, recording, protocol.EvResponseBodyChunk); err != nil {
+		t.Fatal(err)
+	}
+	if err := deps.normalizeAttempt(ctx, job, run, AttemptKey(run, nativeAttempt)); err != nil {
+		t.Fatalf("sequence gap should be an unavailable body, not a job error: %v", err)
+	}
+	var responseAfterGap *string
+	if err := db.Pool.QueryRow(ctx, `select normalized,response_text from model_attempts where id=$1`, AttemptKey(run, nativeAttempt)).Scan(&normalized, &responseAfterGap); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(normalized, &got); err != nil {
+		t.Fatal(err)
+	}
+	if !got.BodyUnavailable || responseAfterGap != nil {
+		t.Fatalf("sequence gap retained a successful body projection: normalized=%s response=%v", normalized, responseAfterGap)
+	}
 }
 
 func TestResponsesAPIStateRefs(t *testing.T) {
