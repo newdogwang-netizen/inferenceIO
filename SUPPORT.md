@@ -40,8 +40,8 @@ proof remains incomplete. Both off/on tasks score `1.0`, with measured wall time
 The [native export filter](benchmarks/2026-09-19-hermes-native-export-filter-linux-x86_64.json)
 has a model-free reproduction and post-trial correction, not a new paid-provider
 qualification. M1–M3 local technical acceptance is now complete within the
-[declared evidence boundaries](docs/m3-acceptance.md); remote publication is
-pending write access. The
+[declared evidence boundaries](docs/m3-acceptance.md); the qualification commits
+and GitHub Pages site were published on September 20. The
 [current candidate audit](benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json)
 now lists every historical unresolved cross-source association and confirms
 64 calls remain traceable. Three missing decoded responses had byte-matching

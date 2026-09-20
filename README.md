@@ -32,7 +32,8 @@ found that `--source cli` filters out persisted one-shot sessions whose `ended_a
 is null. The isolated-job export is now fixed and model-free tested; old empty
 exports/costs are not rewritten and the fix has not had another paid trial.
 All 186 Python tests pass. **M1–M3 local technical acceptance is complete for
-the amended scope; GitHub publication is pending write access.** See the
+the amended scope; the qualification commits and GitHub Pages site were published
+on September 20.** See the
 [requirement-by-requirement acceptance record](docs/m3-acceptance.md).
 The [final-candidate pre-soak audit](benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json)
 now enumerates all 64 model calls and 66 unresolved cross-source correlations,

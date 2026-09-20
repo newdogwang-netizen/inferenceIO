@@ -1,5 +1,12 @@
 # 下一阶段目标：逐次调用准确还原与可重复验收
 
+发布完成（2026-09-20）：已切换至目标仓库所有者账号，确认写权限并推送最终验收
+提交至 `f935852`。对应 [Pages 部署](https://github.com/newdogwang-netizen/inferenceIO/actions/runs/35494131327)
+成功；[公开导航与 Blog](https://newdogwang-netizen.github.io/inferenceIO/) 返回 HTTP 200，
+含最终验收结论及报告链接。下方“等待写权限”是前一天的历史状态，不再是阻碍。
+CI 结果单独见[对应运行](https://github.com/newdogwang-netizen/inferenceIO/actions/runs/35494131828)，
+不把 Pages 成功冒充源码 CI 通过；原始验收 JSON 的生成时状态保持不变。
+
 最终本地验收（2026-09-19 17:52 UTC）：**按用户修订范围，M1–M3 技术验收完成；
 GitHub / Pages 发布仍待仓库写权限。** 以下按时间倒序保留的“未完成 / 运行中”
 描述均为历史快照，不是当前状态。

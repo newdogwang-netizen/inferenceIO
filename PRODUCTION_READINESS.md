@@ -31,8 +31,8 @@ The newer recorder/worker do not inherit the old five-hour qualification. Semant
 response completion does not erase incomplete HTTP transport, unknown cost or
 unresolved hook/proxy correlation. The authorized paid experiment list is exhausted,
 with no automatic retries; 186 Python tests pass. **M1–M3 local technical acceptance
-is complete for the amended scope; publication remains pending repository write
-access.** The [acceptance record](docs/m3-acceptance.md) defines the qualified
+is complete for the amended scope; the qualification commits and GitHub Pages
+site were published on September 20.** The [acceptance record](docs/m3-acceptance.md) defines the qualified
 boundary, not universal production certification. The
 [final-candidate pre-soak audit](benchmarks/2026-09-19-m3-final-candidate-pre-soak-audit-linux-x86_64.json)
 rechecks all 64 calls, lists all 66 unresolved cross-source associations,

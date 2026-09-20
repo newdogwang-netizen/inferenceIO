@@ -1,8 +1,12 @@
 # M1–M3 acceptance: 2026-09-19
 
-Local technical acceptance is complete for the user-amended scope. Publication
-of these final commits and the updated GitHub Pages site is still pending
-repository write access; no successful remote CI/deployment is claimed here.
+Local technical acceptance is complete for the user-amended scope. The final
+qualification commits through `f935852` were pushed on September 20; their
+[GitHub Pages deployment](https://github.com/newdogwang-netizen/inferenceIO/actions/runs/35494131327)
+succeeded and the [public navigation/blog](https://newdogwang-netizen.github.io/inferenceIO/)
+returned HTTP 200 with the final acceptance and report links. Repository write
+access is no longer blocked. The [separate CI run](https://github.com/newdogwang-netizen/inferenceIO/actions/runs/35494131828)
+records source validation; Pages success alone is not proof that CI passed.
 
 This is not universal production certification. The accepted boundary is Linux
 x86-64, the exact recorder/platform artifacts below, the declared Codex/Hermes
@@ -21,7 +25,7 @@ remain visible.
 | M2: navigable and explainable evidence | Current Chromium checks pass for the 19-call list, child views, two 100-event pages, independent benchmark score and TLS/proof boundaries; no runtime errors. Transport verified and overall unknown remain separate. |
 | M2: a documented fresh-trial workflow and safe recovery | New paid Harbor trials exercised the complete workflow. Two subsequent resumptions of the same new trial preserve six calls, original hashes and cleanup; failure/SIGKILL cleanup and admission-lock regressions also pass. No new model run is launched by replay. |
 | M2: stable local access and health | Host Web is `http://127.0.0.1:8088`; API is `http://127.0.0.1:18080`. API, web and all eight worker pools are healthy. Browser-forwarded ports are temporary aliases. This loopback development instance is separate from the fault-injection platform. |
-| M2: current documentation and machine evidence | README, SUPPORT, PRODUCTION_READINESS, this acceptance record and the machine-readable reports agree on artifact identities and limits. Local blog rendering/navigation and mobile layout are checked; remote publication is pending. |
+| M2: current documentation and machine evidence | README, SUPPORT, PRODUCTION_READINESS, this acceptance record and the machine-readable reports agree on artifact identities and limits. Local blog rendering/navigation and mobile layout are checked; final qualification commits and the Pages site are published. Historical report publication fields retain their generation-time status. |
 | M3: amended real-agent matrix and paired observations | All 8 matrix cases and both extra off/on cases have terminal results. Six matrix captures qualify (Codex 4/4, Hermes 2/4); five have benchmark reward 1. Both paired tasks score 1. Agent/model/task/recorder/decoder inputs and hashes are retained in the experiment report. |
 | M3: traceability and truthful failure handling | All 64 real model calls remain traceable. All 66 unresolved cross-source associations are enumerated with evidence and reasons. Two selected Hermes captures remain strict failures; complete SSE text is not sufficient for complete HTTP transport. |
 | M3: error-path and native-session validation | Controlled socket/cancellation/queue/failure fixtures cover nondeterministic paths. The final recorder's local native Hermes CLI fixture matches its exported session, hook, assistant text and 1/1 independent transport audit. This single-call temporal match does not resolve historical multi-call ambiguity. |
