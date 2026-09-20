@@ -24,7 +24,7 @@ import (
 const (
 	DecoderVersion        = "decoder-v1"
 	AssemblerVersion      = "assembler-v2"
-	NormalizerVersion     = "normalizer-v4"
+	NormalizerVersion     = "normalizer-v5"
 	ResolverVersion       = "resolver-v2"
 	TransportAuditVersion = "transport-audit-v2"
 	CoverageVersion       = "coverage-v4"

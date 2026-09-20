@@ -246,7 +246,13 @@ func TestBatchCommitSemantics(t *testing.T) {
 	}
 	// corrupted hash -> 400 hash_mismatch
 	hdr, comp, _ := protocol.EncodeBatch(events(rec, 31, 2), nil)
-	hdr.SHA256 = "00" + hdr.SHA256[2:]
+	// Always change the digest: replacing its prefix with "00" is a no-op
+	// for roughly one in 256 randomly identified recordings.
+	if hdr.SHA256[0] == '0' {
+		hdr.SHA256 = "1" + hdr.SHA256[1:]
+	} else {
+		hdr.SHA256 = "0" + hdr.SHA256[1:]
+	}
 	var bad bytes.Buffer
 	_ = protocol.WriteBatchBody(&bad, hdr, comp)
 	_, err = svc.UploadBatch(ctx, p, rec, &bad)

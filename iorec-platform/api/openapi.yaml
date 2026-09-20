@@ -125,6 +125,22 @@ paths:
     post: { summary: Offline import of a run/ directory tar(.gz) — re-batched server-side through the same ingest path, requestBody: { content: { application/x-tar: { schema: { type: string, format: binary } } } }, responses: { "201": { description: imported } } }
   /recordings/{id}/timeline:
     get: { summary: Run-scoped logical tasks (agent-task-or-session-v1), sessions, inferences, unattributed attempts, and lifecycle events with task_id across every active Recording segment, parameters: [{ name: id, in: path, required: true, schema: { type: string } }], responses: { "200": { description: ok }, "404": { description: unknown or deletion-fenced recording } } }
+  /recordings/{id}/progress:
+    get:
+      summary: "Viewer: run-wide separated activity counts and paged model/tool progress with explicit evidence links"
+      description: "Reads all available segments from one snapshot. Model requests exclude Hook observations and WS parent connections. Tool results require a unique explicit ID and compatible native session; repeated context does not create another execution. Results observed do not imply success. Full tool arguments and outputs are accessed through linked attempt evidence; previews are bounded."
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: offset, in: query, schema: { type: integer, minimum: 0, maximum: 5000, default: 0 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: snapshot, in: query, schema: { type: string }, description: Pin subsequent pages to the snapshot returned by the first page }
+      responses:
+        "200": { description: "Run-wide summary, tool evidence states, items, total, next_offset, snapshot and separately attributed benchmark result" }
+        "400": { description: Invalid progress cursor }
+        "403": { description: Viewer role required }
+        "404": { description: Unknown or deletion/expiration-fenced recording }
+        "409": { description: Evidence changed since snapshot or malformed normalization; restart pagination or reprocess }
+        "413": { description: "Explicit bounded projection limit (5000 model calls, 8 MiB per normalized call, 64 MiB combined, 10000 tools, 100000 context messages, 1000000 ID comparisons, 8 MiB response); no silently truncated success" }
   /recordings/{id}/coverage:
     get: { summary: Platform-recomputed coverage for an active CaptureRun, parameters: [{ name: id, in: path, required: true, schema: { type: string } }], responses: { "200": { description: ok, content: { application/json: { schema: { $ref: "#/components/schemas/Coverage" } } } }, "404": { description: unknown or deletion-fenced recording } } }
   /recordings/{id}/events:

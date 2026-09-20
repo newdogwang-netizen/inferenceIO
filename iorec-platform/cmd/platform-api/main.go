@@ -491,6 +491,7 @@ func main() {
 		r.Get("/recordings/{id}", qs.GetRecording)
 		r.Delete("/recordings/{id}", ret.DeleteHandler("recording"))
 		r.Get("/recordings/{id}/timeline", qs.Timeline)
+		r.Get("/recordings/{id}/progress", qs.GetProgress)
 		r.Get("/recordings/{id}/events", qs.Events)
 		r.Get("/recordings/{id}/coverage", func(w http.ResponseWriter, r *http.Request) {
 			p, err := httpapi.RequireUser(r, auth.RoleViewer)

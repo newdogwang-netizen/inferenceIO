@@ -127,6 +127,10 @@ func (s *Service) ListRecordings(w http.ResponseWriter, r *http.Request) {
 			case when c.state='active' and r.state not in ('deleting','deleted') then c.relation_revision else 0 end as relation_revision,
 			case when c.state='active' and r.state not in ('deleting','deleted') then c.analysis_revision else 0 end as analysis_revision,
 			case when c.state='active' and r.state not in ('deleting','deleted') then (select count(*) from model_attempts a where a.recording_id=r.id) else 0 end as attempt_count,
+			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then (select count(*) from model_attempts a where a.recording_id=r.id and a.project_id=r.project_id and (`+modelCallPredicate+`)) end as model_call_count,
+			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then (select count(*) from model_attempts a where a.recording_id=r.id and a.project_id=r.project_id and a.entity_kind='websocket_connection') end as websocket_connection_count,
+			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then (select count(*) from model_attempts a where a.recording_id=r.id and a.project_id=r.project_id and a.source like 'hook:%') end as hook_observation_count,
+			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then (select count(*) from recording_events e where e.recording_id=r.id and e.event in ('sse_event','websocket_frame')) end as stream_event_count,
 			case when c.state='active' and r.state not in ('deleting','deleted') then (select count(*) from processing_jobs pj where pj.recording_id=r.id and pj.status in ('dead','failed')) else 0 end as failed_jobs,
 			case when c.state='active' and r.state not in ('deleting','deleted') then (select count(*) from processing_jobs pj where pj.recording_id=r.id and pj.status in ('pending','leased')) else 0 end as active_jobs
 		from recordings r join capture_runs c on c.id=r.capture_run_id

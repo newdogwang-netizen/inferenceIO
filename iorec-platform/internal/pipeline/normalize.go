@@ -217,7 +217,7 @@ func NormalizeRequest(apiMode string, body []byte) (*Normalized, error) {
 					fn, _ := t["function"].(map[string]any)
 					name, _ := fn["name"].(string)
 					id, _ := t["id"].(string)
-					nm.ToolCalls = append(nm.ToolCalls, NToolCall{ID: id, Name: name, ArgsHash: argsHash(fn["arguments"])})
+					nm.ToolCalls = append(nm.ToolCalls, NToolCall{ID: id, Name: name, Arguments: fn["arguments"], ArgsHash: argsHash(fn["arguments"])})
 				}
 			}
 			if id, ok := m["tool_call_id"].(string); ok {
@@ -592,6 +592,7 @@ func ApplyStream(n *Normalized, chunks []string) {
 	for _, index := range indices {
 		tc := toolCalls[index]
 		tc.ArgsHash = argsHash(toolArgs[index].String())
+		tc.Arguments = toolArgs[index].String()
 		n.ResponseToolCalls = append(n.ResponseToolCalls, *tc)
 	}
 	n.ResponseText = text.String()
@@ -631,7 +632,7 @@ func ApplyResponseBody(n *Normalized, body []byte) {
 				function, _ := call["function"].(map[string]any)
 				name, _ := function["name"].(string)
 				id, _ := call["id"].(string)
-				n.ResponseToolCalls = append(n.ResponseToolCalls, NToolCall{ID: id, Name: name, ArgsHash: argsHash(function["arguments"])})
+				n.ResponseToolCalls = append(n.ResponseToolCalls, NToolCall{ID: id, Name: name, Arguments: function["arguments"], ArgsHash: argsHash(function["arguments"])})
 			}
 		}
 	}
@@ -657,7 +658,7 @@ func ApplyResponseBody(n *Normalized, body []byte) {
 					fn, _ := t["function"].(map[string]any)
 					name, _ := fn["name"].(string)
 					id, _ := t["id"].(string)
-					n.ResponseToolCalls = append(n.ResponseToolCalls, NToolCall{ID: id, Name: name, ArgsHash: argsHash(fn["arguments"])})
+					n.ResponseToolCalls = append(n.ResponseToolCalls, NToolCall{ID: id, Name: name, Arguments: fn["arguments"], ArgsHash: argsHash(fn["arguments"])})
 				}
 			}
 		}
