@@ -147,6 +147,19 @@ class InputTests(unittest.TestCase):
         self.assertEqual(off["recording_mode"], "off")
 
     @mock.patch.object(inputs, "harbor_runtime")
+    def test_task_network_subnet_and_implementation_are_frozen_inputs(self, runtime):
+        runtime.return_value = self.runtime
+        default = inputs.fresh_identity(self.args)
+        self.assertNotIn("task_network_override", default)
+        self.assertIn("tools/harbor_task_network.py", default["controller"])
+        self.args.task_network_subnet = "10.203.240.0/24"
+        explicit = inputs.fresh_identity(self.args)
+        self.assertEqual(explicit["task_network_override"]["subnet"], "10.203.240.0/24")
+        self.assertEqual(explicit["task"], default["task"])
+        self.args.task_network_subnet = "10.203.241.0/24"
+        self.assertNotEqual(inputs.fresh_identity(self.args), explicit)
+
+    @mock.patch.object(inputs, "harbor_runtime")
     def test_experiment_binding_code_is_an_additional_pinned_controller_input(self, runtime):
         runtime.return_value = self.runtime
         normal = inputs.fresh_identity(self.args)

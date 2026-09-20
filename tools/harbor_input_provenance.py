@@ -17,6 +17,8 @@ import stat
 import subprocess
 import tomllib
 
+from harbor_task_network import task_network_input
+
 ROOT = Path(__file__).resolve().parents[1]
 MAX_FILE_BYTES = 1 << 30
 MAX_TREE_BYTES = 2 << 30
@@ -224,7 +226,7 @@ def fresh_identity(args, launcher: Path | None = None):
                         if remote != "/tmp/iorec.key"},
             "harbor": harbor_runtime(launcher),
             "controller": {str(p.relative_to(ROOT)): file_identity(p) for p in (
-                Path(__file__), ROOT / "tools/harbor_audit_workflow.py", path,
+                Path(__file__), ROOT / "tools/harbor_audit_workflow.py", ROOT / "tools/harbor_task_network.py", path,
                 ROOT / "examples/harbor_iorec_audit_base.py",
                 ROOT / ("examples/harbor_iorec_" + agent + "_audit.py"),
                 ROOT / "examples/harbor-audit-compose.yaml")}}
@@ -241,6 +243,8 @@ def fresh_identity(args, launcher: Path | None = None):
         result["controller"][str(verifier_path.relative_to(ROOT))] = file_identity(verifier_path)
     if getattr(args, "task_image", None):
         result["task_image_override"] = task_image_input(args.task, args.task_image)
+    if getattr(args, "task_network_subnet", None):
+        result["task_network_override"] = task_network_input(args.task, args.task_network_subnet)
     if getattr(args, "experiment_plan", None):
         for name in ("m3_experiment_plan.py", "m3_trial_ledger.py"):
             validator = ROOT / "tools" / name

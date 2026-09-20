@@ -96,6 +96,33 @@ Remove `--print-config` to execute. Keep one attempt and no retries so the
 benchmark result, agent session, iorec run, and transport report have an
 unambiguous one-to-one relationship.
 
+## Task-scoped subnet when Docker's default address pool is exhausted
+
+For a **new** controlled workflow, `tools/harbor_audit_workflow.py` accepts
+`--task-network-subnet CIDR`. It generates a final task-local Compose overlay;
+it does not edit the task package or Docker daemon configuration. Choose an
+unused RFC1918 IPv4 `/24` through `/28` explicitly. There is no automatic subnet
+selection and no network pruning. This option supports only a single-service task
+with a shared verifier and no Harbor egress sidecar; it cannot be silently added
+to an existing M3 declaration.
+
+Run the normal fresh-workflow command with both `--task-network-subnet CIDR` and
+`--preflight-only` first. **This opt-in preflight briefly creates and removes one
+empty, uniquely labelled Docker bridge, but never starts an agent or model call.**
+It requires a local Unix Docker endpoint, rejects overlaps with Docker IPAM and
+all local IPv4 routing tables, then tests actual allocation. Cleanup checks the
+probe's exact ownership label, immutable ID and zero endpoints. It never deletes
+another network or stops containers. An interruption or unverified cleanup stays
+an error; investigate only the named/labelled probe, never use global `prune`.
+
+The check is point-in-time, not a reservation: another job can allocate a subnet
+after it returns. Preserve original failure records; correcting networking does
+not grant permission to retry a paid trial. Use a separately declared/authorized
+replacement in a new work directory. Subnet choice, the overlay and its controller
+code are included in the frozen input identity, and a change prevents reuse of an
+old case. Evidence-only recovery of an already launched case does not allocate a
+new network. Existing frozen qualification reports are not retroactively updated.
+
 ## Qualify the evidence
 
 Locate the downloaded iorec run below the Harbor trial's `agent` directory,

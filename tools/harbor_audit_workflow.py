@@ -31,6 +31,7 @@ from urllib.parse import quote, urlsplit
 from harbor_input_provenance import InputFailure, audit_definitions, fresh_identity, harbor_environment, image_compose, file_identity, measurement_definitions
 from m3_experiment_plan import PlanFailure, bind_case
 from m3_trial_ledger import Ledger, LedgerFailure
+from harbor_task_network import NetworkFailure, network_compose, probe_network
 
 ROOT = Path(__file__).resolve().parents[1]
 IDENTIFIER = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_.:/@+~-]{0,255}\Z")
@@ -193,6 +194,8 @@ def harbor_config(args, work):
     overlays = [str(ROOT / "examples/harbor-audit-compose.yaml")]
     if getattr(args, "task_image", None):
         overlays.append(str(work / "task-image.compose.json"))
+    if getattr(args, "task_network_subnet", None):
+        overlays.append(str(work / "task-network.compose.json"))
     return {"job_name": "audit", "jobs_dir": str(work / "jobs"), "n_attempts": 1,
             "n_concurrent_trials": 1, "retry": {"max_retries": 0},
             "tasks": [{"path": str(args.task)}],
@@ -286,6 +289,8 @@ class Workflow:
         return self.ledger.reserve(bound["case_id"], self.work.path, config_sha256, self.state.get("launch_intent"))
 
     def preflight(self):
+        if getattr(self.a, "task_network_subnet", None) and getattr(self.a, "experiment_plan", None):
+            raise Failure("task_network_override_not_declared_by_M3_plan_schema")
         if getattr(self.a, "experiment_ledger", None) and not getattr(self.a, "experiment_plan", None):
             raise Failure("experiment_ledger_requires_bound_plan")
         if bool(getattr(self.a, "experiment_plan", None)) != bool(getattr(self.a, "experiment_case", None)) or (getattr(self.a, "experiment_plan", None) and not self.a.task):
@@ -314,6 +319,10 @@ class Workflow:
                 overlay = self.work.path / "task-image.compose.json"
                 atomic_json(overlay, image_compose(self.a.task_image))
                 config["task_image_compose"] = file_identity(overlay)
+            if getattr(self.a, "task_network_subnet", None):
+                overlay = self.work.path / "task-network.compose.json"
+                atomic_json(overlay, network_compose(self.a.task_network_subnet))
+                config["task_network_compose"] = file_identity(overlay)
             config["fresh_inputs_sha256"] = hashlib.sha256(
                 json.dumps(config["fresh_inputs"], sort_keys=True, separators=(",", ":")).encode()).hexdigest()
             self.command(["docker", "info", "--format", "{{.ServerVersion}}"], timeout=30)
@@ -337,7 +346,11 @@ class Workflow:
         for origin, path, token in [(self.a.api, "/healthz", ""), (self.a.api, "/v1/system/health", self.token), (self.a.web, "/healthz", "")]:
             if api_request(origin, path, token).get("ok") is not True:
                 raise Failure("platform_preflight_not_healthy")
-        return {k: v for k, v in config.items() if k.endswith("sha256") or k == "mode"}
+        result = {k: v for k, v in config.items() if k.endswith("sha256") or k == "mode"}
+        # No reallocation on evidence-only recovery of an existing trial.
+        if getattr(self.a, "task_network_subnet", None) and not self.state.get("launch_intent"):
+            result["task_network_preflight"] = probe_network(self.a.task_network_subnet)
+        return result
 
     def assert_fresh_inputs(self):
         private_path(self.a.key_file)
@@ -354,6 +367,11 @@ class Workflow:
             private_path(overlay)
             if file_identity(overlay) != self.state["config"]["task_image_compose"]:
                 raise Failure("task_image_overlay_changed_no_launch_or_qualification")
+        if "task_network_compose" in self.state["config"]:
+            overlay = self.work.path / "task-network.compose.json"
+            private_path(overlay)
+            if file_identity(overlay) != self.state["config"]["task_network_compose"]:
+                raise Failure("task_network_overlay_changed_no_launch_or_qualification")
 
     def record(self):
         if self.a.from_trial:
@@ -542,7 +560,7 @@ class Workflow:
             self.stage("platform", self.qualify_platform)
             self.state["status"] = "completed"
         except BaseException as error:
-            code = str(error) if isinstance(error, (Failure, InputFailure, PlanFailure, LedgerFailure)) else type(error).__name__
+            code = str(error) if isinstance(error, (Failure, InputFailure, PlanFailure, LedgerFailure, NetworkFailure)) else type(error).__name__
             self.state["stages"].setdefault(self.phase, {}).update(status="failed", error=code, finished_at=now())
             self.state["status"] = "incomplete"
             raise
@@ -583,6 +601,7 @@ def parser():
     p.add_argument("--claude", type=Path, default=Path(shutil.which("claude") or "/missing/claude"))
     p.add_argument("--hermes-bundle", type=Path, help="verified installed Hermes/Python archive; required for fresh Hermes trials")
     p.add_argument("--task-image", help="locally available repository@sha256 digest matching the task image; single-service/shared-verifier tasks only")
+    p.add_argument("--task-network-subnet", help="optional task-scoped RFC1918 IPv4 /24 through /28; preflight creates/removes its own empty probe network, never prunes existing networks")
     p.add_argument("--api", default="http://127.0.0.1:18080")
     p.add_argument("--web", default="http://127.0.0.1:8088")
     p.add_argument("--token-file", type=Path)
@@ -621,6 +640,8 @@ def main():
             raise Failure("preflight_only_requires_fresh_task")
         if args.task_image and not args.task:
             raise Failure("task_image_override_requires_fresh_task")
+        if args.task_network_subnet and not args.task:
+            raise Failure("task_network_override_requires_fresh_task")
         if args.task and args.agent == "hermes" and not args.hermes_bundle:
             raise Failure("fresh_hermes_trial_requires_pinned_runtime_bundle")
         with Workspace(args.work_dir) as work:
@@ -633,7 +654,7 @@ def main():
     except BaseException as error:
         if isinstance(error, SystemExit):
             raise
-        print(json.dumps({"status": "incomplete", "error": str(error) if isinstance(error, (Failure, InputFailure, PlanFailure, LedgerFailure)) else type(error).__name__}), file=sys.stderr)
+        print(json.dumps({"status": "incomplete", "error": str(error) if isinstance(error, (Failure, InputFailure, PlanFailure, LedgerFailure, NetworkFailure)) else type(error).__name__}), file=sys.stderr)
         return 1
 
 

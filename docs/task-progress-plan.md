@@ -134,3 +134,20 @@ belong to this project. None were removed; running platform services were not
 stopped. A task-scoped explicit subnet is a possible remedy without changing global
 Docker configuration. Replacement approval was requested. The long-horizon goal
 remains open, and no new benchmark score or capture qualification is claimed.
+
+### Prepared remediation, not yet exercised by a real trial
+
+The workflow now has an optional, input-bound `--task-network-subnet` overlay and
+an allocation preflight that precedes the model launch marker. It rejects route
+overlaps, non-private/broad subnets, remote Docker endpoints and unsupported task
+topologies. Only its own labelled empty probe can be removed; no global cleanup
+or daemon reconfiguration is used. This is a new controller version, not a change
+to frozen historical qualification artifacts.
+
+Read-only inspection found no overlap for `10.203.240.0/24` among 33 Docker
+networks and 639 IPv4 routes, and `docker compose config` accepted the generated
+overlay. These are **not** successful network-allocation or agent-execution
+evidence. No live network was created/removed and no replacement agent was
+started while waiting for approval. Offline tests cover successful and failed
+probes, cleanup ownership/in-use fences, input drift, preflight failure before
+launch, and no reallocation during evidence-only recovery.
