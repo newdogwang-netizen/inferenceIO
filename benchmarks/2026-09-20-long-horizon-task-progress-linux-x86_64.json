@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "report_kind": "long_horizon_task_progress_observations_with_separate_capture_verdicts",
+  "observed_at": "2026-09-20",
+  "scope": {
+    "framework": "harbor",
+    "task": "terminal-bench/make-mips-interpreter",
+    "agents": [
+      "codex",
+      "hermes"
+    ],
+    "excluded_agents": [
+      "claude"
+    ],
+    "automatic_paid_retries": 0,
+    "provider_billing_cap_verified": false,
+    "reported_cost_scope": "harbor_reported_approximation_not_provider_invoice"
+  },
+  "predeclared_long_trajectory_criterion": {
+    "minimum_model_calls": 26,
+    "minimum_uniquely_observed_tool_results": 20,
+    "requires_real_investigation_implementation_and_execution": true,
+    "duration_is_separate": true,
+    "capture_qualification_is_separate": true,
+    "benchmark_reward_is_separate": true
+  },
+  "status": {
+    "criterion_met_by_at_least_one_capture_qualified_trial": true,
+    "capture_qualified_trials": 1,
+    "diagnostic_incomplete_trials": 1,
+    "benchmark_reward_one_trials": 2,
+    "reported_total_cost_usd": 2.562941988
+  },
+  "codex_qualified_baseline": {
+    "run_id": "run-01a0be8e-ba36-72f9-ac36-2d1ed31bcf16",
+    "recording_id": "run-01a0be8e-ba36-72f9-ac36-2d1ed31bcf16#0000",
+    "agent_version": "0.154.0",
+    "model": "openai/gpt-5.6-sol",
+    "benchmark_reward": 1.0,
+    "reported_cost_usd": 1.4033978000000003,
+    "agent_wall_seconds": 193.9765805369243,
+    "model_calls": 27,
+    "tool_requests": 25,
+    "tool_results_observed": 25,
+    "websocket_connections": 1,
+    "hook_observations": 0,
+    "stream_events": 10300,
+    "raw_events": 10600,
+    "blobs": 10498,
+    "platform_parsed_seq": 10600,
+    "platform_active_jobs": 0,
+    "platform_failed_jobs": 0,
+    "integrity_checks_passed": 6,
+    "transport_audit": {
+      "complete": true,
+      "payload_diff_passed": true,
+      "completeness_boundary": "target-network-namespace-ip-transport",
+      "manifest_capture_drops": 0,
+      "matched_attempts": 1,
+      "missing_from_wire": 0,
+      "extra_on_wire": 0,
+      "gaps_count": 0,
+      "websocket_rows": 10300
+    },
+    "browser_progress_verification": {
+      "passed": true,
+      "checked_real_recording": true,
+      "checked_pagination": true,
+      "checked_evidence_links": true,
+      "checked_tool_expansion": true,
+      "checked_mobile_width": true
+    },
+    "workflow_report_sha256": "857e89f6a8d5885eaf74259fc2ff4ae727e13510f78961592d18d47aee965453",
+    "manifest_sha256": "74b0f050ded98582a333de5763f97c3f2be295351e1791dd09a11d3a6f2d2382",
+    "events_sha256": "f5559c48e98d19d6c7699420a792f768062bd6cabb827c18df2cbbb65ea42909"
+  },
+  "hermes_diagnostic_incomplete": {
+    "run_id": "run-01a0be9f-dd96-71c1-ab28-fcb7907261d5",
+    "recording_id": "run-01a0be9f-dd96-71c1-ab28-fcb7907261d5#0000",
+    "agent_version": "0.19.0",
+    "model": "openai/accounts/fireworks/models/deepseek-v4-pro-0813",
+    "benchmark_reward": 1.0,
+    "reported_cost_usd": 1.159544188,
+    "agent_wall_seconds": 1661.2665456738323,
+    "model_calls": 61,
+    "tool_requests": 67,
+    "tool_results_observed": 67,
+    "unmatched_tool_result_observations": 98,
+    "websocket_connections": 0,
+    "hook_observations": 60,
+    "other_http_requests": 20,
+    "stream_events": 88843,
+    "raw_events": 130725,
+    "platform_parsed_seq": 130725,
+    "platform_active_jobs": 0,
+    "platform_failed_jobs": 0,
+    "integrity_checks_passed": 6,
+    "transport_audit": {
+      "complete": false,
+      "payload_diff_passed": false,
+      "completeness_boundary": "target-network-namespace-ip-transport",
+      "manifest_capture_drops": 3573,
+      "proxy_attempts": 61,
+      "proxy_attempts_eligible": 57,
+      "matched_attempts": 29,
+      "missing_from_wire": 28,
+      "extra_on_wire": 1,
+      "gaps_count": 11,
+      "pcap_bytes": 60426704,
+      "tls_decrypted_streams": 78
+    },
+    "multiple_invocation_selection": {
+      "policy": "unique_dominant_wall_seconds_at_least_4x",
+      "capture_count": 2,
+      "primary_invocation_id": "6c799cc67e3144049cffbc06919e6596",
+      "primary_wall_seconds": 1661.2665456738323,
+      "auxiliary_run_id": "run-01a0beb9-375a-729f-94aa-ed7ab0fb39b1",
+      "auxiliary_invocation_id": "35102a4933594415a8c8706a79b11f37",
+      "auxiliary_wall_seconds": 1.252057840116322,
+      "auxiliary_evidence_retained": true
+    },
+    "browser_progress_verification": {
+      "passed": true,
+      "checked_real_recording": true,
+      "diagnostic_only": true
+    },
+    "offline_replay_workflow_report_sha256": "553942241b71f4691e529623cca5012a309543208b7e1372df8a7c71387b41b9",
+    "transport_audit_report_sha256": "b9845d4ec2f36400f0542fa93f56dc16176b66aeade65ece29b5676e539f897e",
+    "manifest_sha256": "e7b9eed3be8cb07ce6f5284bccdf53bdd967807b575014fc45a00669b92848a6",
+    "events_sha256": "218fbaca73fcd99ff99a8eea349826900a5bc2beae0a624ee86f03c986504f47"
+  },
+  "post_trial_repairs_without_paid_rerun": [
+    "PostgreSQL query projections replace U+0000 with U+FFFD while immutable content-addressed body evidence remains unchanged.",
+    "Known body-chunk sequence gaps now terminate normalization with body_unavailable instead of creating permanent dead jobs.",
+    "Pcap pipe reading is decoupled from encrypted persistence through a bounded 32 MiB memory-only queue.",
+    "Harbor workflows retain every bounded invocation and select a primary only when its wall time is at least four times the longest auxiliary invocation."
+  ],
+  "model_free_validation": {
+    "rust_tests_passed": 328,
+    "go_packages_passed": "all_including_postgresql_integration",
+    "python_tests_passed": 204,
+    "python_tests_skipped": 1,
+    "real_hermes_offline_replay_selected_primary": true,
+    "real_hermes_offline_replay_integrity_passed": true,
+    "real_hermes_offline_replay_transport_failed_as_expected": true
+  },
+  "privacy": "No credentials, prompts, responses, pcap, TLS keys, plaintext export bundles or private browser screenshots are published.",
+  "limitations": [
+    "The pcap queue repair has full automated coverage but no additional paid provider trial was authorized after the original drop-bearing Hermes run.",
+    "Harbor benchmark reward is operator-reported to the platform and is not recomputed by iorec.",
+    "The Hermes platform view is useful for diagnosis but is not a capture-qualified baseline."
+  ]
+}

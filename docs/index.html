@@ -24,6 +24,7 @@
         <a class="brand" href="./" aria-label="iorec home">io<span>rec</span></a>
         <div class="nav-links">
           <a href="#navigate">Navigate</a>
+          <a href="#long-trial">Long trial</a>
           <a href="#evidence">Evidence</a>
           <a href="#architecture">Architecture</a>
           <a href="#boundaries">Boundaries</a>
@@ -90,8 +91,22 @@
           <h2 id="experiments-title">September 19: real experiments, separate verdicts.</h2>
           <p>All eight Codex/Hermes matrix cases and both recorder-off/on cases have terminal results. Six matrix captures pass independent verification; five tasks score 1.0. Task correctness and evidence completeness are different measurements. Claude was excluded from this stage.</p>
           <p>The audit traces 64 model calls and enumerates 66 unresolved cross-source associations. Hermes failures remain failures: three byte-matching SSE responses lack HTTP chunked terminators, and one cancellation delivered only a prefix. A local native-CLI fixture verifies the export correction without another paid experiment.</p>
-          <p><strong>M1–M3 local technical acceptance is complete.</strong> After fixing the live-inspection race, the frozen replacement passed its own full five-hour run: 20 collectors, 6,000 successful calls, 112,647 events and 1,140 recording segments. Recovery, integrity, projection and final queue-drain checks all passed. The earlier failed hour is retained, not accumulated. Thirty coverage findings and the real-provider failures remain visible; this is bounded acceptance, not universal certification. The qualification commits and this Pages site were published on September 20. The older metrics below remain bound to the September 16 release.</p>
-          <p><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-19-m3-completed-experiments-linux-x86_64.json">Experiment results</a> · <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/m3-acceptance.md">M1–M3 acceptance</a> · <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-19-m3-final-connected-5h-linux-x86_64.json">Final five-hour evidence</a> · <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/hermes-http-framing-diagnostic.md">Why a response can exist while transport verification fails</a></p>
+          <p><strong>M1-M3 local technical acceptance is complete.</strong> After fixing the live-inspection race, the frozen replacement passed its own full five-hour run: 20 collectors, 6,000 successful calls, 112,647 events and 1,140 recording segments. Recovery, integrity, projection and final queue-drain checks all passed. The earlier failed hour is retained, not accumulated. Thirty coverage findings and the real-provider failures remain visible; this is bounded acceptance, not universal certification. The qualification commits and this Pages site were published on September 20. The older metrics below remain bound to the September 16 release.</p>
+          <p><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-19-m3-completed-experiments-linux-x86_64.json">Experiment results</a> | <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/m3-acceptance.md">M1-M3 acceptance</a> | <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-19-m3-final-connected-5h-linux-x86_64.json">Final five-hour evidence</a> | <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/hermes-http-framing-diagnostic.md">Why a response can exist while transport verification fails</a></p>
+        </section>
+
+        <section id="long-trial" class="long-trial-section" aria-labelledby="long-trial-title">
+          <div>
+            <h2 id="long-trial-title">The progress chain now has a real long task.</h2>
+            <p>Codex produced a capture-qualified 27-call trajectory with 25 observed tool results. Hermes produced a longer 61-call diagnostic trace, but 3,573 pcap drops keep it outside the qualified baseline.</p>
+            <a class="text-link" href="long-horizon-evidence.html">Read the long-horizon report</a>
+          </div>
+          <dl aria-label="Long-horizon trial verdicts">
+            <div><dt>Qualified model calls</dt><dd>27</dd></div>
+            <div><dt>Qualified tool results</dt><dd>25</dd></div>
+            <div><dt>Diagnostic model calls</dt><dd>61</dd></div>
+            <div><dt>Benchmark rewards</dt><dd>2 × 1.0</dd></div>
+          </dl>
         </section>
 
         <section id="architecture" class="architecture-section" aria-labelledby="architecture-title">
@@ -169,12 +184,13 @@ iorec run \
           </header>
           <nav aria-label="Project resources">
             <ul class="directory-grid">
-              <li><a href="#quickstart"><span>01 · Run</span><strong>Quickstart</strong><small>Create a key and record the first encrypted run.</small></a></li>
-              <li><a href="https://github.com/newdogwang-netizen/inferenceIO#readme"><span>02 · Learn</span><strong>README</strong><small>Understand the recorder, platform, and operating model.</small></a></li>
-              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/PRODUCTION_READINESS.md"><span>03 · Verify</span><strong>Production audit</strong><small>Review release gates, soak evidence, and residual risk.</small></a></li>
-              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/SUPPORT.md"><span>04 · Scope</span><strong>Support matrix</strong><small>See exactly what is qualified and what remains outside scope.</small></a></li>
-              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/SECURITY.md"><span>05 · Defend</span><strong>Security</strong><small>Inspect trust boundaries, secret handling, and reporting.</small></a></li>
-              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/PERFORMANCE.md"><span>06 · Measure</span><strong>Performance</strong><small>Read benchmark method, overhead, and steady-state results.</small></a></li>
+              <li><a href="#quickstart"><span>Run</span><strong>Quickstart</strong><small>Create a key and record the first encrypted run.</small></a></li>
+              <li><a href="long-horizon-evidence.html"><span>Observe</span><strong>Long-horizon report</strong><small>Follow the real model and tool chain with separate evidence verdicts.</small></a></li>
+              <li><a href="https://github.com/newdogwang-netizen/inferenceIO#readme"><span>Learn</span><strong>README</strong><small>Understand the recorder, platform, and operating model.</small></a></li>
+              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/PRODUCTION_READINESS.md"><span>Verify</span><strong>Production audit</strong><small>Review release gates, soak evidence, and residual risk.</small></a></li>
+              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/SUPPORT.md"><span>Scope</span><strong>Support matrix</strong><small>See exactly what is qualified and what remains outside scope.</small></a></li>
+              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/SECURITY.md"><span>Defend</span><strong>Security</strong><small>Inspect trust boundaries, secret handling, and reporting.</small></a></li>
+              <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/PERFORMANCE.md"><span>Measure</span><strong>Performance</strong><small>Read benchmark method, overhead, and steady-state results.</small></a></li>
             </ul>
           </nav>
         </section>

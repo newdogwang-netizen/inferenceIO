@@ -1,9 +1,11 @@
 # Task progress and long-horizon recording
 
-Status: progress UI implemented and locally verified; first long-horizon case
-failed during Docker environment creation, before agent execution (2026-09-20).
-No automatic retry; Hermes case not started. This stage does not inherit
-the previous frozen recorder/platform qualification for changed artifacts.
+Status: progress UI and the declared long-horizon experiment are complete
+(2026-09-20). One Codex trial is a capture-qualified baseline and meets the
+predeclared trajectory criterion. One Hermes trial passed the benchmark and is
+retained as diagnostic-only because its independent pcap evidence dropped packets.
+No automatic paid retry was performed. Changed artifacts do not inherit the
+previous frozen recorder/platform qualification.
 
 ## Acceptance requirements
 
@@ -86,9 +88,8 @@ their historical reports must not be overwritten to manufacture completion.
   `00` did not necessarily change it. The fixture now guarantees corruption;
   ingestion behavior was not changed.
 
-Remaining: independently recorded long-horizon real tasks and browser checks of
-their actual multi-page progress, then a reproducible outcome report. None of the
-above claims a new five-hour qualification or converts a short task into a long one.
+This phase was subsequently completed by the real trials documented below. None
+of the Phase 1 checks is retroactively treated as long-horizon evidence.
 
 ## New long-horizon declaration
 
@@ -171,5 +172,74 @@ node tools/verify_task_progress_ui.mjs http://127.0.0.1:8088 \
 
 This check and the existing real Codex/Hermes browser checks passed after the
 refresh change. They validate UI mechanics, **not** a 53-call agent experiment.
-The actual long-horizon requirement is still open pending a separately approved
-replacement launch and its real captured results.
+At that point the long-horizon requirement remained open; the later approved
+replacement and its real results are recorded next.
+
+## Final long-horizon result (2026-09-20)
+
+The approved replacement used the scoped `10.203.240.0/24` task network. Both
+agents ran the unchanged official `terminal-bench/make-mips-interpreter` task and
+both received reward 1. Benchmark correctness, task length and capture evidence
+remain separate verdicts.
+
+### Codex: qualified baseline
+
+- Run `run-01a0be8e-ba36-72f9-ac36-2d1ed31bcf16` completed in 193.98 seconds
+  of measured agent execution at a Harbor-reported approximate cost of USD 1.4034.
+- The rendered chain contains 27 model calls, 25 requested tools and 25 uniquely
+  observed tool results. It therefore meets the predeclared 26-call/20-result
+  criterion without padding or a silent retry.
+- The sealed import contains 10,600 events and 10,498 blobs. Platform processing
+  reached 10,600/10,600 with zero active or failed jobs.
+- Integrity passed 6 checks. The independent task-network transport audit matched
+  the eligible proxy attempt with zero missing/extra wire attempts, zero capture
+  drops, 10,300 WebSocket rows and a passing payload diff.
+- Real Chromium verification covered multi-page progress, evidence links, tool
+  expansion, final benchmark placement and a 390-pixel mobile viewport.
+
+This is the phase's qualified long-trajectory baseline. Its workflow report hash
+is `857e89f6a8d5885eaf74259fc2ff4ae727e13510f78961592d18d47aee965453`.
+
+### Hermes: long diagnostic, not capture-qualified
+
+- The main invocation ran for 1,661.27 seconds at a Harbor-reported approximate
+  cost of USD 1.1595. The rendered diagnostic chain contains 61 model calls,
+  67 requested/observed tool results, 60 Hook observations and 88,843 SSE events.
+- Hermes invoked the recorded CLI twice. The controller now retains both and
+  selects the main capture only under a declared rule: its measured duration must
+  be at least four times the longest auxiliary. The 1.25-second auxiliary run and
+  its hashes remain in the source identity; nothing is silently discarded.
+- The benchmark reward is 1 and integrity passed, but the task-namespace pcap
+  reported 3,573 drops. The independent audit matched only 29 of 57 eligible proxy
+  attempts, with 28 missing from wire, one extra on wire and 11 gap categories.
+  Payload agreement therefore failed. This recording is diagnostic-only.
+- The diagnostic import reached 130,725/130,725 parsed events with zero active or
+  failed jobs after normalization was hardened. Its progress UI passed the same
+  read-only browser checks, but the UI result does not upgrade transport evidence.
+
+### Repairs learned from the real evidence
+
+- WebSocket JSON containing `U+0000` remains immutable in content-addressed raw
+  evidence; only PostgreSQL query projections replace it with `U+FFFD` and record
+  the replacement count (`normalizer-v6`).
+- A known response-body chunk sequence gap now yields `body_unavailable` and a
+  terminal parsed job. Corrupt metadata/digests remain hard failures.
+- Pcap pipe drainage is separated from encrypted persistence by a bounded,
+  memory-only 32 MiB queue. This addresses the observed durability backpressure
+  without writing plaintext packets to disk. The fix has automated stress coverage,
+  but no additional paid provider trial was authorized, so no post-fix zero-drop
+  claim is made for Hermes.
+- The Harbor controller accepts at most 16 invocations, pairs measurements and
+  encrypted captures by bounded start-time/exit-code evidence, rejects ambiguity,
+  and retains auxiliary identities and hashes.
+
+Model-free validation passed 328 Rust tests, all Go packages including PostgreSQL
+integration, and 204 Python tests (one explicitly capture-dependent test skipped).
+The original Hermes trial was replayed offline: primary selection and 6/6 integrity
+passed, then the known incomplete transport audit failed as expected. No model was
+called during this replay.
+
+The redacted public result is
+[`benchmarks/2026-09-20-long-horizon-task-progress-linux-x86_64.json`](../benchmarks/2026-09-20-long-horizon-task-progress-linux-x86_64.json).
+Prompts, responses, pcap, TLS secrets, plaintext bundles and browser screenshots
+remain private.
