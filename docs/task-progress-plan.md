@@ -1,7 +1,8 @@
 # Task progress and long-horizon recording
 
-Status: progress UI implemented and locally verified; long-horizon experiments
-not yet started (2026-09-20). This stage does not inherit
+Status: progress UI implemented and locally verified; first long-horizon case
+failed during Docker environment creation, before agent execution (2026-09-20).
+No automatic retry; Hermes case not started. This stage does not inherit
 the previous frozen recorder/platform qualification for changed artifacts.
 
 ## Acceptance requirements
@@ -88,3 +89,48 @@ their historical reports must not be overwritten to manufacture completion.
 Remaining: independently recorded long-horizon real tasks and browser checks of
 their actual multi-page progress, then a reproducible outcome report. None of the
 above claims a new five-hour qualification or converts a short task into a long one.
+
+## New long-horizon declaration
+
+This is a new goal stage, not a restart of the exhausted M3 ledger. Two cases,
+serial, one trial each, no automatic paid retry, with a separate private declaration
+and once-only launch receipts. Claude remains excluded. Costs are estimates, not
+a provider-enforced hard cap; unknown amounts remain unknown.
+
+- Official TB2 task: [`make-mips-interpreter`](https://github.com/harbor-framework/terminal-bench-2/tree/main/make-mips-interpreter),
+  implementing a JavaScript MIPS interpreter, system calls and rendered frames.
+  Expected to require iterative implementation/debugging; length is an observation,
+  not a fact inferred from the task's difficulty label.
+- Registry dataset digest: `c6fc2e2382c1dbae99b2d5ecd2f4f4a60c3c01e0d84642d69b4afd92e99d078b`
+  (89 tasks); downloaded task content independently recomputed as
+  `608e82ecd67ce469824a34181b580cbd0e1096cdfc05fe40edda3e6bfada9773`.
+- Task image: `alexgshaw/make-mips-interpreter@sha256:082fc8821b317f30fdfbf8d08d528874ce331c03e8083aef0406d48cdd7132a2`.
+  Original instruction, verifier and 1800-second agent/verifier limits unchanged.
+- Case order: `codex-mips-r1` (`openai/gpt-5.6-sol`, Codex 0.154.0, high reasoning),
+  then `hermes-mips-r1` (`openai/accounts/fireworks/models/deepseek-v4-pro-0813`,
+  frozen Hermes 0.19 runtime, 60-turn limit).
+- Recorder SHA-256: `59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee`;
+  full encrypted capture plus independent task-network-namespace pcap/TLS audit.
+  The controlled privileged outer container/non-root agent profile is not claimed
+  to be leaderboard-equivalent. No user home or project workspace is mounted.
+- Predeclared observation criterion: at least one actual trajectory with **26+
+  model requests and 20+ uniquely observed tool results**, including investigation,
+  implementation and execution/debugging. Duration, capture qualification and
+  benchmark reward remain separate. No padded waits, prompt changes or silent
+  reruns to manufacture this criterion. If neither task reaches it, report that
+  honestly and leave the long-horizon requirement open.
+
+### First launch failure (10:57 UTC)
+
+Both input-only preflights passed, but Docker could not create the task network:
+`all predefined address pools have been fully subnetted`. Harbor's trial ended
+before agent setup/execution; there was no agent result, measurement or recording.
+The workflow correctly remained incomplete instead of claiming a zero-call capture
+or successful long-horizon run. The original result and once-only launch receipt
+are retained; the failed trial is not restarted automatically.
+
+Read-only checks found many old networks but did not establish that the empty ones
+belong to this project. None were removed; running platform services were not
+stopped. A task-scoped explicit subnet is a possible remedy without changing global
+Docker configuration. Replacement approval was requested. The long-horizon goal
+remains open, and no new benchmark score or capture qualification is claimed.
