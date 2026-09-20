@@ -24,6 +24,23 @@ const modelCallPredicate = `((a.source='proxy' and a.entity_kind='request') or
  (a.source='proxy:websocket-call' and a.entity_kind='websocket_call')) and
  a.api_mode in ('chat_completions','completions','responses','codex_responses','anthropic_messages','gemini_generate')`
 
+// Usage is provider evidence, not an estimate. Accept only bounded non-negative
+// integer values under the documented provider keys so malformed JSON cannot
+// fail a whole list query or silently turn into zero. The bound is far above a
+// plausible per-call token count and keeps the aggregate inside int64 for any
+// recording the ingestion limits can represent.
+const inputTokenValueExpr = `coalesce(
+ case when jsonb_typeof(a.usage->'input_tokens')='number' and (a.usage->>'input_tokens') ~ '^[0-9]{1,12}$' then (a.usage->>'input_tokens')::bigint end,
+ case when jsonb_typeof(a.usage->'prompt_tokens')='number' and (a.usage->>'prompt_tokens') ~ '^[0-9]{1,12}$' then (a.usage->>'prompt_tokens')::bigint end,
+ case when jsonb_typeof(a.usage->'promptTokenCount')='number' and (a.usage->>'promptTokenCount') ~ '^[0-9]{1,12}$' then (a.usage->>'promptTokenCount')::bigint end
+)`
+
+const outputTokenValueExpr = `coalesce(
+ case when jsonb_typeof(a.usage->'output_tokens')='number' and (a.usage->>'output_tokens') ~ '^[0-9]{1,12}$' then (a.usage->>'output_tokens')::bigint end,
+ case when jsonb_typeof(a.usage->'completion_tokens')='number' and (a.usage->>'completion_tokens') ~ '^[0-9]{1,12}$' then (a.usage->>'completion_tokens')::bigint end,
+ case when jsonb_typeof(a.usage->'candidatesTokenCount')='number' and (a.usage->>'candidatesTokenCount') ~ '^[0-9]{1,12}$' then (a.usage->>'candidatesTokenCount')::bigint end
+)`
+
 const progressMaxCalls = 5000
 const progressMaxBytes = 64 << 20
 const progressMaxResponseBytes = 8 << 20

@@ -127,13 +127,30 @@ func (s *Service) ListRecordings(w http.ResponseWriter, r *http.Request) {
 			case when c.state='active' and r.state not in ('deleting','deleted') then c.relation_revision else 0 end as relation_revision,
 			case when c.state='active' and r.state not in ('deleting','deleted') then c.analysis_revision else 0 end as analysis_revision,
 			case when c.state='active' and r.state not in ('deleting','deleted') then (select count(*) from model_attempts a where a.recording_id=r.id) else 0 end as attempt_count,
-			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then (select count(*) from model_attempts a where a.recording_id=r.id and a.project_id=r.project_id and (`+modelCallPredicate+`)) end as model_call_count,
+			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then token_usage.model_call_count end as model_call_count,
+			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then token_usage.input_token_count end as input_token_count,
+			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then token_usage.input_token_call_count end as input_token_call_count,
+			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then token_usage.output_token_count end as output_token_count,
+			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then token_usage.output_token_call_count end as output_token_call_count,
 			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then (select count(*) from model_attempts a where a.recording_id=r.id and a.project_id=r.project_id and a.entity_kind='websocket_connection') end as websocket_connection_count,
 			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then (select count(*) from model_attempts a where a.recording_id=r.id and a.project_id=r.project_id and a.source like 'hook:%') end as hook_observation_count,
 			case when c.state='active' and r.state not in ('deleting','deleted','expired','expiring') then (select count(*) from recording_events e where e.recording_id=r.id and e.event in ('sse_event','websocket_frame')) end as stream_event_count,
 			case when c.state='active' and r.state not in ('deleting','deleted') then (select count(*) from processing_jobs pj where pj.recording_id=r.id and pj.status in ('dead','failed')) else 0 end as failed_jobs,
 			case when c.state='active' and r.state not in ('deleting','deleted') then (select count(*) from processing_jobs pj where pj.recording_id=r.id and pj.status in ('pending','leased')) else 0 end as active_jobs
 		from recordings r join capture_runs c on c.id=r.capture_run_id
+		left join lateral (
+			select count(*)::bigint as model_call_count,
+				sum(token_values.input_tokens)::bigint as input_token_count,
+				count(token_values.input_tokens)::bigint as input_token_call_count,
+				sum(token_values.output_tokens)::bigint as output_token_count,
+				count(token_values.output_tokens)::bigint as output_token_call_count
+			from (
+				select `+inputTokenValueExpr+` as input_tokens, `+outputTokenValueExpr+` as output_tokens
+				from model_attempts a
+				where a.recording_id=r.id and a.project_id=r.project_id and c.state='active'
+					and r.state not in ('deleting','deleted','expired','expiring') and (`+modelCallPredicate+`)
+			) token_values
+		) token_usage on true
 		where r.project_id=$1 and ($2 = '' or r.created_at < (select created_at from recordings where id=$2 and project_id=$1)) order by r.created_at desc limit $3`, p.ProjectID, cursor, limit)
 	if err != nil {
 		httpapi.WriteError(w, r, err)
@@ -206,10 +223,25 @@ func (s *Service) GetRecording(w http.ResponseWriter, r *http.Request) {
 	it, err := s.one(r.Context(), `select r.*, c.agent_kind, c.agent_version, c.command, c.cwd, c.started_at as run_started_at, c.ended_at as run_ended_at, c.exit_code, c.relation_revision, c.analysis_revision, c.metadata as run_metadata, c.transport_proof, c.transport_proof_revision,c.benchmark_result,
 			(select count(*) from model_attempts a where a.recording_id=r.id) as attempt_count,
 			(select count(*) from model_inferences i where i.recording_id=r.id) as inference_count,
+			token_usage.model_call_count, token_usage.input_token_count, token_usage.input_token_call_count,
+			token_usage.output_token_count, token_usage.output_token_call_count,
 			(select count(*) from processing_jobs pj where pj.recording_id=r.id and pj.status in ('dead','failed')) as failed_jobs,
 			(select count(*) from processing_jobs pj where pj.recording_id=r.id and pj.status in ('pending','leased')) as active_jobs,
 			(select coalesce(json_agg(json_build_object('batch_id',b.batch_id,'first_seq',b.first_seq,'last_seq',b.last_seq,'received_at',b.received_at,'parsed_at',b.parsed_at) order by b.first_seq), '[]'::json) from batches b where b.recording_id=r.id) as batches
-		from recordings r join capture_runs c on c.id=r.capture_run_id where r.id=$1 and r.project_id=$2 and c.state='active' and r.state not in ('deleting','deleted')`, id, p.ProjectID)
+		from recordings r join capture_runs c on c.id=r.capture_run_id
+		left join lateral (
+			select count(*)::bigint as model_call_count,
+				sum(token_values.input_tokens)::bigint as input_token_count,
+				count(token_values.input_tokens)::bigint as input_token_call_count,
+				sum(token_values.output_tokens)::bigint as output_token_count,
+				count(token_values.output_tokens)::bigint as output_token_call_count
+			from (
+				select `+inputTokenValueExpr+` as input_tokens, `+outputTokenValueExpr+` as output_tokens
+				from model_attempts a
+				where a.recording_id=r.id and a.project_id=r.project_id and (`+modelCallPredicate+`)
+			) token_values
+		) token_usage on true
+		where r.id=$1 and r.project_id=$2 and c.state='active' and r.state not in ('deleting','deleted')`, id, p.ProjectID)
 	if err != nil {
 		// Deleting and deleted entities remain discoverable as minimal
 		// tombstones, but sensitive run, batch, and analysis fields are fenced

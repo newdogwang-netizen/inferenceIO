@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api, enc, fmtDur, fmtTime, short } from "../api";
-import { Claim, Json, Loading, RelStatus, Terminal, UiState } from "../components";
+import { Claim, Json, Loading, RelStatus, Terminal, TokenUsageStat, UiState } from "../components";
 import DeletionAction from "../DeletionAction";
 import EvidenceContext from "../EvidenceContext";
 import TaskProgress from "../TaskProgress";
@@ -29,6 +29,8 @@ export default function RecordingDetail() {
             <Claim c={cov?.claim} />
             <span className="muted">state={r.state}</span>
             <span className="mono">durable {r.durable_seq} · parsed {r.parsed_seq} · final {r.final_seq ?? "–"}</span>
+            <TokenUsageStat value={r.input_token_count} observedCalls={r.input_token_call_count} modelCalls={r.model_call_count} label="输入 Token" />
+            <TokenUsageStat value={r.output_token_count} observedCalls={r.output_token_call_count} modelCalls={r.model_call_count} label="输出 Token" />
             <span className="muted">rev {r.relation_revision}/{r.analysis_revision}</span>
           </div>
           <p className="small muted">{r.benchmark_result?.result?.agent ?? r.agent_kind ?? "Agent 未标注"} · {fmtTime(r.run_started_at)} → {fmtTime(r.run_ended_at)} · exit {r.exit_code ?? "–"}</p>

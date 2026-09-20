@@ -96,6 +96,75 @@ func TestEncodedInferenceIDAndScalarMessagesAreReadable(t *testing.T) {
 	}
 }
 
+func TestRecordingTokenTotalsUseOnlyModelCallsAndExposeCoverage(t *testing.T) {
+	db := queryTestDB(t)
+	service := &Service{DB: db}
+	principal := queryProject(t, db)
+	ctx := context.Background()
+	run := "run-query-tokens-" + uuid.NewString()[:8]
+	recording := run + "#0000"
+	if _, err := db.Pool.Exec(ctx, `insert into capture_runs(id,project_id) values($1,$2)`, run, principal.ProjectID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into recordings(id,project_id,capture_run_id,state) values($1,$2,$3,'sealed')`, recording, principal.ProjectID, run); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into model_attempts(id,native_id,recording_id,project_id,capture_run_id,source,api_mode,entity_kind,usage,processor_version) values
+		($1,'native-1',$7,$8,$9,'proxy','responses','request','{"input_tokens":10,"output_tokens":5}','test'),
+		($2,'native-2',$7,$8,$9,'proxy','chat_completions','request','{"prompt_tokens":20,"completion_tokens":7}','test'),
+		($3,'native-3',$7,$8,$9,'proxy','gemini_generate','request','{"promptTokenCount":3,"candidatesTokenCount":4}','test'),
+		($4,'native-4',$7,$8,$9,'proxy','anthropic_messages','request','{"input_tokens":2,"output_tokens":-3}','test'),
+		($5,'native-5',$7,$8,$9,'proxy','responses','request','{"total_tokens":99}','test'),
+		($6,'native-parent',$7,$8,$9,'proxy','responses','websocket_connection','{"input_tokens":900,"output_tokens":900}','test'),
+		($10,'native-hook',$7,$8,$9,'hook:hermes','responses','request','{"input_tokens":800,"output_tokens":800}','test')`,
+		"attempt-1-"+run, "attempt-2-"+run, "attempt-3-"+run, "attempt-4-"+run, "attempt-5-"+run,
+		"parent-"+run, recording, principal.ProjectID, run, "hook-"+run); err != nil {
+		t.Fatal(err)
+	}
+
+	type usageSummary struct {
+		ModelCalls       int64  `json:"model_call_count"`
+		InputTokens      *int64 `json:"input_token_count"`
+		InputTokenCalls  int64  `json:"input_token_call_count"`
+		OutputTokens     *int64 `json:"output_token_count"`
+		OutputTokenCalls int64  `json:"output_token_call_count"`
+	}
+	assertUsage := func(label string, got usageSummary) {
+		t.Helper()
+		if got.ModelCalls != 5 || got.InputTokens == nil || *got.InputTokens != 35 || got.InputTokenCalls != 4 ||
+			got.OutputTokens == nil || *got.OutputTokens != 16 || got.OutputTokenCalls != 3 {
+			t.Fatalf("%s token summary is wrong: %#v", label, got)
+		}
+	}
+
+	listResponse := httptest.NewRecorder()
+	service.ListRecordings(listResponse, httptest.NewRequest(http.MethodGet, "/v1/recordings", nil).WithContext(auth.WithPrincipal(ctx, principal)))
+	if listResponse.Code != http.StatusOK {
+		t.Fatalf("list status=%d body=%s", listResponse.Code, listResponse.Body.String())
+	}
+	var listBody struct {
+		Items []usageSummary `json:"items"`
+	}
+	if err := json.Unmarshal(listResponse.Body.Bytes(), &listBody); err != nil {
+		t.Fatal(err)
+	}
+	if len(listBody.Items) != 1 {
+		t.Fatalf("unexpected recording list: %s", listResponse.Body.String())
+	}
+	assertUsage("list", listBody.Items[0])
+
+	detailResponse := httptest.NewRecorder()
+	service.GetRecording(detailResponse, requestWithID(t, principal, recording))
+	if detailResponse.Code != http.StatusOK {
+		t.Fatalf("detail status=%d body=%s", detailResponse.Code, detailResponse.Body.String())
+	}
+	var detailBody usageSummary
+	if err := json.Unmarshal(detailResponse.Body.Bytes(), &detailBody); err != nil {
+		t.Fatal(err)
+	}
+	assertUsage("detail", detailBody)
+}
+
 func TestAttemptReturnsChunkBodyEvidenceAlongsideMetadata(t *testing.T) {
 	db := queryTestDB(t)
 	service := &Service{DB: db}

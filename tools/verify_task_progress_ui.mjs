@@ -95,6 +95,12 @@ try {
   assert.equal(Number(metrics[0].value.replaceAll(',','')), expectedCalls);
   assert.equal(Number(metrics[1].value.split('/')[0].trim().replaceAll(',','')), expectedTools);
   report.checks.separate_metrics = metrics;
+  if (!paginationFixture) {
+    await waitFor("document.querySelectorAll('.panel .token-stat').length>=2");
+    const tokenUsage = await evaluate("[...document.querySelectorAll('.panel .token-stat')].slice(0,2).map(x=>({value:x.querySelector('strong').textContent,coverage:x.querySelector('small').textContent}))");
+    assert(tokenUsage.every(x => x.value && /^(–|[0-9,.]+)$/.test(x.value) && /^(覆盖未知|[0-9]+\/[0-9]+ 调用上报)$/.test(x.coverage)));
+    report.checks.token_usage_with_call_coverage = tokenUsage;
+  }
   assert.equal(await evaluate("document.querySelectorAll('.progress-step').length"), Math.min(expectedCalls,25));
   report.checks.first_page_steps = Math.min(expectedCalls,25);
   assert(await evaluate("document.body.textContent.includes('不把时间先后当作因果关系')"));
@@ -153,9 +159,11 @@ try {
   await evaluate("location.href="+JSON.stringify(new URL('/recordings',origin).href));
   await waitFor("document.querySelectorAll('tbody tr').length>0");
   const headers = await evaluate("[...document.querySelectorAll('th')].map(x=>x.textContent)");
-  for (const label of ['模型调用','工具执行','连接（WS）','Hook 观测','流式事件']) assert(headers.includes(label));
+  for (const label of ['模型调用','输入 Token','输出 Token','工具执行','连接（WS）','Hook 观测','流式事件']) assert(headers.includes(label));
   assert(!headers.includes('attempt'));
   report.checks.recording_list_separate_columns = true;
+  assert.equal(await evaluate("document.querySelectorAll('tbody tr:first-child .token-stat').length"), 2);
+  report.checks.recording_list_token_columns = true;
   assert.equal(runtimeErrors, 0, 'browser runtime error');
   report.checks.runtime_errors = runtimeErrors;
   report.passed = true;

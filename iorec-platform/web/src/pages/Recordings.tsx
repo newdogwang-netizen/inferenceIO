@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, fmtTime } from "../api";
-import { Claim, Loading, RecLink, UiState } from "../components";
+import { Claim, Loading, RecLink, TokenUsageStat, UiState } from "../components";
 import { Link } from "react-router-dom";
 import { enc } from "../api";
 
@@ -12,11 +12,11 @@ export default function Recordings() {
   return (
     <>
       <h2>录制</h2>
-      <p className="muted small">下表按录制分段分别统计模型请求、WebSocket 连接、Hook 观测与流式事件，不混算对话轮数。跨分段的工具执行与完整任务链请打开“任务进度”。</p>
+      <p className="muted small">下表按录制分段分别统计模型请求、Provider 上报的输入/输出 Token、WebSocket 连接、Hook 观测与流式事件，不混算对话轮数。Token 覆盖率按模型调用计算，未上报的调用不按零计算。跨分段的工具执行与完整任务链请打开“任务进度”。</p>
       <Loading q={q} />
       <div className="recordings-scroll">
       <table>
-        <thead><tr><th>录制</th><th>运行 / Agent</th><th>状态</th><th>coverage</th><th>模型调用</th><th>工具执行</th><th>连接（WS）</th><th>Hook 观测</th><th>流式事件</th><th>durable / parsed / final</th><th>缺失 blob</th><th>告警</th><th>创建</th></tr></thead>
+        <thead><tr><th>录制</th><th>运行 / Agent</th><th>状态</th><th>coverage</th><th>模型调用</th><th>输入 Token</th><th>输出 Token</th><th>工具执行</th><th>连接（WS）</th><th>Hook 观测</th><th>流式事件</th><th>durable / parsed / final</th><th>缺失 blob</th><th>告警</th><th>创建</th></tr></thead>
         <tbody>
           {(q.data?.items ?? []).map((r: any) => (
             <tr key={r.id}>
@@ -28,6 +28,8 @@ export default function Recordings() {
               <td><UiState s={r.ui_state} /> <span className="muted small">{r.state}</span></td>
               <td><Claim c={r.coverage_claim} /></td>
               <td>{r.model_call_count ?? "–"}</td>
+              <td><TokenUsageStat value={r.input_token_count} observedCalls={r.input_token_call_count} modelCalls={r.model_call_count} label="输入 Token" /></td>
+              <td><TokenUsageStat value={r.output_token_count} observedCalls={r.output_token_call_count} modelCalls={r.model_call_count} label="输出 Token" /></td>
               <td><Link to={`/recordings/${enc(r.id)}`}>任务进度</Link></td>
               <td>{r.websocket_connection_count ?? "–"}</td>
               <td>{r.hook_observation_count ?? "–"}</td>

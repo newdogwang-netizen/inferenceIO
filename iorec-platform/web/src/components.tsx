@@ -57,6 +57,24 @@ export function EvidenceLinks({ refs }: { refs?: any[] }) {
   );
 }
 
+export function TokenUsageStat({ value, observedCalls, modelCalls, label }: {
+  value?: number | null;
+  observedCalls?: number | null;
+  modelCalls?: number | null;
+  label: string;
+}) {
+  const hasValue = typeof value === "number" && Number.isFinite(value);
+  const observed = typeof observedCalls === "number" ? observedCalls : null;
+  const total = typeof modelCalls === "number" ? modelCalls : null;
+  const coverage = observed == null || total == null ? "覆盖未知" : `${observed}/${total} 调用上报`;
+  return (
+    <span className="token-stat" title={`${label}为模型提供方上报值之和；${coverage}，未上报的调用不按零计算。`}>
+      <strong className="mono">{hasValue ? value.toLocaleString() : "–"}</strong>
+      <small className="muted">{coverage}</small>
+    </span>
+  );
+}
+
 export function Loading({ q }: { q: { isLoading: boolean; error: any } }) {
   if (q.isLoading) return <div className="muted">加载中…</div>;
   if (q.error) return <div className="error">{String((q.error as any).message ?? q.error)}</div>;

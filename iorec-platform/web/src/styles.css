@@ -88,6 +88,9 @@ input, select { background:#0b0d12; color:var(--fg); border:1px solid var(--line
 .recordings-scroll { overflow-x:auto; }
 .recordings-scroll .mono { overflow-wrap:anywhere; }
 .recording-title { overflow-wrap:anywhere; }
+.token-stat { display:inline-flex; min-width:76px; flex-direction:column; gap:2px; font-variant-numeric:tabular-nums; }
+.token-stat strong { font-size:13px; }
+.token-stat small { font-size:10.5px; white-space:nowrap; }
 .task-progress button:disabled { opacity:.5; cursor:default; }
 .task-progress button:focus-visible, .task-progress summary:focus-visible, .task-progress a:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
 @media (max-width:1000px) { .activity-metrics { grid-template-columns:repeat(3,minmax(0,1fr)); } }
