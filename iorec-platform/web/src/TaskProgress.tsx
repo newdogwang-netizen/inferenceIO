@@ -51,11 +51,17 @@ export default function TaskProgress({ recordingID }: { recordingID: string }) {
     // stay bound to their snapshot. A changed snapshot requires explicit reset.
     refetchInterval: page.offset === 0 ? 10000 : false,
   });
-  const reset = () => { setPage({ offset: 0 }); setHistory([]); void q.refetch(); };
+  const reset = () => {
+    setPage({ offset: 0 });
+    setHistory([]);
+    // Changing the key fetches page one. Do not also refetch the old page with
+    // its stale snapshot, which would generate another avoidable 409.
+    if (page.offset === 0) void q.refetch();
+  };
   const changed = q.error instanceof ApiError && q.error.code === "progress_snapshot_changed";
   const d = q.data;
   const s = d?.summary;
-  return <section aria-label="任务进度链" className="task-progress">
+  return <section aria-label="任务进度链" aria-busy={q.isFetching} className="task-progress">
     <div className="row progress-heading">
       <div><h3>任务进度链</h3><p className="muted small">跨本次运行的全部可用录制分段。按证据顺序排列，不把时间先后当作因果关系。</p></div>
       <button onClick={reset}>刷新进度</button>

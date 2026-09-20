@@ -151,3 +151,25 @@ evidence. No live network was created/removed and no replacement agent was
 started while waiting for approval. Offline tests cover successful and failed
 probes, cleanup ownership/in-use fences, input drift, preflight failure before
 launch, and no reallocation during evidence-only recovery.
+
+After the remediation, the Python suite reported **200 tests: 199 passed, 1
+explicit capture-dependent test skipped**. No model call is part of that suite.
+
+### Browser pagination regression (synthetic, not long-horizon evidence)
+
+The isolated Chromium verifier can inject 53 fake calls into its own `fetch`
+responses, without adding anything to the platform database. It exercises three
+pages, final-page outcome placement, a mid-pagination snapshot change (409),
+refresh back to page one, and no eager legacy-tree fetch. A refresh bug that
+unnecessarily refetched the stale old page was corrected. This mode is explicitly
+labelled `synthetic_browser_only_not_a_real_benchmark` in its output.
+
+```bash
+node tools/verify_task_progress_ui.mjs http://127.0.0.1:8088 \
+  browser-pagination-fixture 53 0 --pagination-fixture
+```
+
+This check and the existing real Codex/Hermes browser checks passed after the
+refresh change. They validate UI mechanics, **not** a 53-call agent experiment.
+The actual long-horizon requirement is still open pending a separately approved
+replacement launch and its real captured results.

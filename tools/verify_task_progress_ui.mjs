@@ -5,6 +5,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
+import { installProgressFixture } from './task_progress_ui_fixture.mjs';
 
 const origin = new URL(process.argv[2] ?? 'http://127.0.0.1:8088');
 assert(['127.0.0.1', 'localhost', '[::1]'].includes(origin.hostname) && origin.protocol === 'http:');
@@ -14,6 +15,12 @@ const expectedCalls = Number(process.argv[4]);
 const expectedTools = Number(process.argv[5]);
 assert(Number.isInteger(expectedCalls) && expectedCalls > 0 && Number.isInteger(expectedTools));
 const captureScreenshots = process.argv.includes('--screenshots');
+const paginationFixture = process.argv.includes('--pagination-fixture');
+if (paginationFixture) {
+  assert.equal(run, 'browser-pagination-fixture', 'fixture mode must not masquerade as a real capture');
+  assert.equal(expectedCalls, 53);
+  assert.equal(expectedTools, 0);
+}
 const profile = await mkdtemp(join(tmpdir(), 'iorec-evidence-ui-'));
 const browser = spawn(process.env.IOREC_CHROME_BIN ?? '/opt/google/chrome/chrome', [
   '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-background-networking', '--disable-component-update',
@@ -28,7 +35,7 @@ const pending = new Map();
 let nextID = 0;
 let sessionId;
 let runtimeErrors = 0;
-const report = { passed: false, checks: {} };
+const report = { passed: false, evidence_source: paginationFixture ? 'synthetic_browser_only_not_a_real_benchmark' : 'existing_platform_recording', checks: {} };
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 try {
@@ -62,9 +69,14 @@ try {
     pending.set(id, { resolve, reject, timer });
     socket.send(JSON.stringify({ id, method, params, ...(session ? { sessionId: session } : {}) }));
   });
-  const target = await command('Target.createTarget', { url: new URL(`/recordings/${encodeURIComponent(run+'#0000')}`, origin).href });
+  const target = await command('Target.createTarget', { url: 'about:blank' });
   sessionId = (await command('Target.attachToTarget', { targetId: target.targetId, flatten: true })).sessionId;
   await command('Runtime.enable');
+  await command('Page.enable');
+  if (paginationFixture) {
+    await command('Page.addScriptToEvaluateOnNewDocument', { source: `(${installProgressFixture.toString()})(${JSON.stringify(run)})` });
+  }
+  await command('Page.navigate', { url: new URL(`/recordings/${encodeURIComponent(run+'#0000')}`, origin).href });
   const evaluate = async expression => {
     const r = await command('Runtime.evaluate', { expression, returnByValue: true });
     assert(!r.exceptionDetails, 'DOM evaluation failed');
@@ -100,6 +112,29 @@ try {
     await click('上一页');
     await waitFor("document.querySelector('.progress-step-title strong')?.textContent==='调用 1'");
     report.checks.progress_pagination = true;
+  }
+  if (paginationFixture) {
+    assert.equal(await evaluate('globalThis.__iorecProgressFixture.timelineRequests'), 0, 'progress eagerly fetches legacy tree');
+    await click('下一页');
+    await waitFor("document.querySelector('.progress-step-title strong')?.textContent==='调用 26'");
+    await evaluate('globalThis.__iorecProgressFixture.revision=2');
+    await click('下一页');
+    await waitFor("document.body.textContent.includes('任务证据已更新，请刷新进度重新翻页')");
+    assert.equal(await evaluate("document.querySelectorAll('.progress-step').length"), 0, 'stale graph visible after snapshot conflict');
+    assert.equal(await evaluate('globalThis.__iorecProgressFixture.conflicts'), 1, 'automatic conflict retry');
+    await click('刷新进度');
+    await waitFor("document.querySelector('.progress-step-title strong')?.textContent==='调用 1' && document.querySelector('.task-progress')?.getAttribute('aria-busy')==='false' && globalThis.__iorecProgressFixture.served.some(p=>p.offset===0&&p.snapshot==='fixture-2')");
+    assert.equal(await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='上一页').disabled"), true);
+    await click('下一页');
+    await waitFor("document.querySelector('.progress-step-title strong')?.textContent==='调用 26'");
+    assert.equal(await evaluate("document.querySelectorAll('.progress-outcome').length"), 0, 'outcome displayed before final page');
+    await click('下一页');
+    await waitFor("document.querySelector('.progress-step-title strong')?.textContent==='调用 51'");
+    assert.deepEqual(await evaluate("[...document.querySelectorAll('.progress-step-title strong')].map(x=>x.textContent)"), ['调用 51','调用 52','调用 53']);
+    assert.equal(await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='下一页').disabled"), true);
+    assert.equal(await evaluate("document.querySelectorAll('.progress-outcome').length"), 1);
+    report.checks.synthetic_snapshot_conflict_reset_and_three_pages = true;
+    report.checks.synthetic_no_eager_legacy_tree = true;
   }
   if (captureScreenshots) {
     report.screenshot_directory = await mkdtemp(join(tmpdir(), 'iorec-progress-view-'));
