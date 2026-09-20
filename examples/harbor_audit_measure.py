@@ -140,8 +140,8 @@ def main():
     return code
 
 
-def read_trial_measurement(trial: Path, mode: str):
-    """Validate one complete observation and copy only bounded known fields.
+def read_trial_measurements(trial: Path, mode: str):
+    """Validate a bounded set of complete CLI observations.
 
     Harbor downloads these target-owned files. Shape/hash validation does not
     make them independent security evidence against the target.
@@ -154,11 +154,35 @@ def read_trial_measurement(trial: Path, mode: str):
     with os.scandir(root) as children:
         for entry in children:
             entries.append(entry.name)
-            if len(entries) > 1:
-                raise ValueError("expected_exactly_one_measurement")
-    if len(entries) != 1 or not re.fullmatch(r"[0-9a-f]{32}", entries[0]):
-        raise ValueError("expected_exactly_one_measurement")
-    directory = root / entries[0]
+            if len(entries) > 16:
+                raise ValueError("measurement_count_limit_exceeded")
+    entries.sort()
+    if not entries or any(not re.fullmatch(r"[0-9a-f]{32}", entry) for entry in entries):
+        raise ValueError("invalid_measurement_set")
+    return [_read_measurement_directory(root / entry, mode) for entry in entries]
+
+
+def read_trial_measurement(trial: Path, mode: str):
+    """Compatibility helper for workflows that require exactly one CLI call."""
+    root = trial / "agent/iorec-measurements"
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("measurement_missing")
+    with os.scandir(root) as children:
+        try:
+            next(children)
+        except StopIteration:
+            raise ValueError("expected_exactly_one_measurement") from None
+        try:
+            next(children)
+        except StopIteration:
+            pass
+        else:
+            raise ValueError("expected_exactly_one_measurement")
+    measurements = read_trial_measurements(trial, mode)
+    return measurements[0]
+
+
+def _read_measurement_directory(directory: Path, mode: str):
     if directory.is_symlink() or not directory.is_dir():
         raise ValueError("invalid_measurement_directory")
 

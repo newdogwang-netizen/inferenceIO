@@ -123,6 +123,15 @@ class MeasurementTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "exactly_one"):
             self.read()
 
+    def test_bounded_measurement_set_retains_every_valid_invocation(self):
+        subprocess.run(self.command("pass"), check=True, timeout=10)
+        subprocess.run(self.command("pass"), check=True, timeout=10)
+        reports = measure.read_trial_measurements(self.trial, "on")
+        self.assertEqual(len(reports), 2)
+        self.assertEqual(len({report["invocation_id"] for report in reports}), 2)
+        with self.assertRaisesRegex(ValueError, "exactly_one"):
+            self.read()
+
     def test_symlink_fifo_oversize_and_non_private_output_rejected(self):
         subprocess.run(self.command("pass"), check=True, timeout=10)
         path = next(self.output.iterdir()) / "result.json"
@@ -222,9 +231,11 @@ class BaselineWorkflowTests(unittest.TestCase):
         with workflow.Workspace(self.args.work_dir) as work:
             w = workflow.Workflow(self.args, work)
             self.setup_finished_trial(w)
+            measurement = measure.read_trial_measurement(self.trial, "on")
             run = self.trial / "agent/iorec-runs/run-fixture"
             run.mkdir(parents=True)
             workflow.atomic_json(run / "manifest.json", {"run_id": "run-fixture", "status": "finished",
+                "started_at": measurement["started_at"], "exit_code": measurement["exit_code"],
                 "storage": {"encryption": {"algorithm": "fixture-only"}}})
             (run / "events.jsonl").write_bytes(b"fixture-only")
             with mock.patch.object(w, "assert_fresh_inputs"):
@@ -235,6 +246,37 @@ class BaselineWorkflowTests(unittest.TestCase):
                 next((self.trial / "agent/iorec-measurements").glob("*/result.json")).unlink()
                 with self.assertRaisesRegex(workflow.Failure, "measurement_missing_or_invalid"):
                     w.record()
+
+    def test_on_mode_retains_auxiliary_capture_and_selects_only_clear_dominant(self):
+        self.args.recording_mode = "on"
+        with workflow.Workspace(self.args.work_dir) as work:
+            w = workflow.Workflow(self.args, work)
+            self.setup_finished_trial(w)
+            measure.measure(self.trial / "agent/iorec-measurements", "on", [sys.executable, "-c", "pass"])
+            reports = measure.read_trial_measurements(self.trial, "on")
+            reports.sort(key=lambda value: value["invocation_id"])
+            for report, wall in zip(reports, (40.0, 1.0), strict=True):
+                result_path = self.trial / "agent/iorec-measurements" / report["invocation_id"] / "result.json"
+                result = json.loads(result_path.read_text())
+                result["wall_seconds"] = wall
+                result_path.write_text(json.dumps(result))
+            reports = measure.read_trial_measurements(self.trial, "on")
+            captures = self.trial / "agent/iorec-runs"
+            for index, report in enumerate(reports):
+                run = captures / f"run-fixture-{index}"
+                run.mkdir(parents=True)
+                workflow.atomic_json(run / "manifest.json", {
+                    "run_id": run.name, "status": "finished", "started_at": report["started_at"],
+                    "exit_code": report["exit_code"], "storage": {"encryption": {"algorithm": "fixture-only"}},
+                })
+                (run / "events.jsonl").write_bytes(f"fixture-{index}".encode())
+            with mock.patch.object(w, "assert_fresh_inputs"):
+                result = w.record()
+            self.assertEqual(result["measurement"]["wall_seconds"], 40.0)
+            selection = result["capture_selection"]
+            self.assertEqual(selection["capture_count"], 2)
+            self.assertEqual(len(selection["auxiliary_captures"]), 1)
+            self.assertNotEqual(selection["auxiliary_captures"][0]["run_id"], result["run_id"])
 
     def test_baseline_with_any_capture_artifact_is_rejected(self):
         with workflow.Workspace(self.args.work_dir) as work:

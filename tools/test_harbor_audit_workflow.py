@@ -50,6 +50,33 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(provenance["reported_cost_usd"], 0.25)
         self.assertEqual(result["artifact_sha256"], workflow.digest(self.trial / "result.json"))
 
+    def test_dominant_measurement_requires_a_clear_fourfold_lead(self):
+        primary = {"invocation_id": "a", "wall_seconds": 40.0}
+        auxiliary = {"invocation_id": "b", "wall_seconds": 10.0}
+        selected, retained = workflow.dominant_measurement([auxiliary, primary])
+        self.assertIs(selected, primary)
+        self.assertEqual(retained, [auxiliary])
+        with self.assertRaisesRegex(workflow.Failure, "without_unique_dominant"):
+            workflow.dominant_measurement([primary, {**auxiliary, "wall_seconds": 10.01}])
+
+    def test_measurement_capture_pairing_rejects_ambiguous_times(self):
+        trial = self.base / "ambiguous-trial"
+        captures = trial / "agent/iorec-runs"
+        started = "2026-09-20T12:00:00+00:00"
+        for name in ("run-a", "run-b"):
+            run = captures / name
+            run.mkdir(parents=True)
+            workflow.atomic_json(run / "manifest.json", {
+                "run_id": name, "status": "finished", "started_at": started, "exit_code": 0,
+                "storage": {"encryption": {"algorithm": "fixture"}},
+            })
+        measurements = [
+            {"invocation_id": "a", "wall_seconds": 40.0, "started_at": started, "exit_code": 0},
+            {"invocation_id": "b", "wall_seconds": 1.0, "started_at": started, "exit_code": 0},
+        ]
+        with self.assertRaisesRegex(workflow.Failure, "pairing_ambiguous"):
+            workflow.pair_measurements_and_captures(trial, measurements)
+
     def test_unfinished_trial_not_retried(self):
         workflow.atomic_json(self.trial / "result.json", {"finished_at": None})
         with self.assertRaisesRegex(workflow.Failure, "trial_not_finished_no_restart"):

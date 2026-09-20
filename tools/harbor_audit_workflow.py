@@ -186,6 +186,71 @@ def benchmark_from_trial(trial: Path):
     return b, {"agent_version": info.get("version"), "reported_cost_usd": cost}
 
 
+def dominant_measurement(measurements):
+    """Select one clearly dominant CLI invocation without hiding auxiliaries."""
+    if not measurements:
+        raise Failure("fresh_trial_measurement_missing_or_invalid")
+    ordered = sorted(measurements, key=lambda value: (-value["wall_seconds"], value["invocation_id"]))
+    primary = ordered[0]
+    auxiliaries = ordered[1:]
+    if auxiliaries and (primary["wall_seconds"] <= 0 or primary["wall_seconds"] < 4 * auxiliaries[0]["wall_seconds"]):
+        raise Failure("multiple_agent_invocations_without_unique_dominant_capture")
+    return primary, auxiliaries
+
+
+def parse_utc_timestamp(value):
+    if not isinstance(value, str) or len(value) > 40:
+        raise Failure("invalid_capture_time")
+    try:
+        parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        raise Failure("invalid_capture_time") from None
+    if parsed.utcoffset() != dt.timedelta(0):
+        raise Failure("invalid_capture_time")
+    return parsed
+
+
+def pair_measurements_and_captures(trial: Path, measurements):
+    manifests = list((trial / "agent/iorec-runs").glob("run-*/manifest.json"))
+    if not 1 <= len(manifests) <= 16 or len(manifests) != len(measurements):
+        raise Failure("measurement_capture_count_mismatch")
+    captures = []
+    for path in manifests:
+        run = path.parent
+        if run.is_symlink() or path.is_symlink() or not path.is_file():
+            raise Failure("invalid_capture_manifest_path")
+        manifest = read_json(path)
+        if manifest.get("status") != "finished" or not manifest.get("storage", {}).get("encryption"):
+            raise Failure("capture_not_finished_and_encrypted")
+        if not IDENTIFIER.fullmatch(manifest.get("run_id", "")) or run.name != manifest["run_id"]:
+            raise Failure("invalid_capture_identifier")
+        exit_code = manifest.get("exit_code")
+        if type(exit_code) is not int or not -64 <= exit_code <= 255:
+            raise Failure("invalid_capture_exit")
+        captures.append({"path": run, "manifest": manifest,
+                         "started_at": parse_utc_timestamp(manifest.get("started_at")),
+                         "exit_code": exit_code})
+    available = captures[:]
+    pairs = []
+    for measurement in measurements:
+        started = parse_utc_timestamp(measurement.get("started_at"))
+        compatible = sorted(
+            ((abs((capture["started_at"] - started).total_seconds()), capture)
+             for capture in available if capture["exit_code"] == measurement.get("exit_code")),
+            key=lambda item: (item[0], item[1]["manifest"]["run_id"]),
+        )
+        if not compatible or compatible[0][0] > 2:
+            raise Failure("measurement_capture_time_or_exit_mismatch")
+        if len(compatible) > 1 and compatible[1][0] == compatible[0][0]:
+            raise Failure("measurement_capture_pairing_ambiguous")
+        capture = compatible[0][1]
+        available.remove(capture)
+        pairs.append({**capture, "measurement": measurement})
+    if available:
+        raise Failure("measurement_capture_pairing_incomplete")
+    return pairs
+
+
 def harbor_config(args, work):
     agent = getattr(args, "agent", "codex")
     kwargs = {"reasoning_effort": "high", "web_search": "disabled"} if agent == "codex" else ({"max_turns": 60} if agent == "claude" else {})
@@ -441,35 +506,76 @@ class Workflow:
             if any(actual.get(key) != value for key, value in expected.items()):
                 raise Failure("experiment_reported_trial_identity_mismatch")
         measurement = None
+        auxiliary_measurements = []
+        measurements = []
         mode = getattr(self.a, "recording_mode", "on")
         if self.a.task:
             try:
-                measurement = measurement_definitions().read_trial_measurement(trial, mode)
+                measurements = measurement_definitions().read_trial_measurements(trial, mode)
+                measurement, auxiliary_measurements = dominant_measurement(measurements)
             except (ValueError, OSError, TypeError, KeyError):
                 raise Failure("fresh_trial_measurement_missing_or_invalid") from None
+        else:
+            measurement_root = trial / "agent/iorec-measurements"
+            if measurement_root.exists() or measurement_root.is_symlink():
+                try:
+                    measurements = measurement_definitions().read_trial_measurements(trial, mode)
+                    measurement, auxiliary_measurements = dominant_measurement(measurements)
+                except (ValueError, OSError, TypeError, KeyError):
+                    raise Failure("trial_measurement_invalid") from None
         runs = list((trial / "agent/iorec-runs").glob("run-*/manifest.json"))
         if mode == "off":
             if runs or any((trial / "agent/iorec-runs").iterdir() if (trial / "agent/iorec-runs").exists() else ()):
                 raise Failure("baseline_unexpected_recording_artifacts")
             identity = {"benchmark": benchmark, "measurement": measurement, "recording_mode": "off"}
+            if auxiliary_measurements:
+                identity["measurement_selection"] = {
+                    "policy": "unique_dominant_wall_seconds_at_least_4x",
+                    "primary_invocation_id": measurement["invocation_id"],
+                    "auxiliary_measurements": auxiliary_measurements,
+                }
             if self.state.get("source_identity") not in (None, identity):
                 raise Failure("source_evidence_changed")
             self.state["source_identity"] = identity
             self.save()
             return {**identity, **provenance, "fresh_trial": True, "fresh_inputs_unchanged": True,
                     "capture_qualification": "not_applicable_recorder_off"}
-        if len(runs) != 1:
-            raise Failure("expected_exactly_one_encrypted_capture")
-        run = runs[0].parent
-        manifest = read_json(run / "manifest.json")
-        if manifest.get("status") != "finished" or not manifest.get("storage", {}).get("encryption"):
-            raise Failure("capture_not_finished_and_encrypted")
-        if not IDENTIFIER.fullmatch(manifest.get("run_id", "")):
-            raise Failure("invalid_capture_identifier")
+        if measurements:
+            pairs = pair_measurements_and_captures(trial, measurements)
+            selected_measurement, _ = dominant_measurement([pair["measurement"] for pair in pairs])
+            selected = next(pair for pair in pairs if pair["measurement"]["invocation_id"] == selected_measurement["invocation_id"])
+            run, manifest, measurement = selected["path"], selected["manifest"], selected["measurement"]
+        else:
+            if len(runs) != 1:
+                raise Failure("expected_exactly_one_encrypted_capture_without_measurements")
+            run = runs[0].parent
+            manifest = read_json(runs[0])
+            if manifest.get("status") != "finished" or not manifest.get("storage", {}).get("encryption"):
+                raise Failure("capture_not_finished_and_encrypted")
+            if not IDENTIFIER.fullmatch(manifest.get("run_id", "")) or run.name != manifest["run_id"]:
+                raise Failure("invalid_capture_identifier")
+            pairs, selected = [], None
         identity = {"run_id": manifest["run_id"], "manifest_sha256": digest(run / "manifest.json"),
                     "events_sha256": digest(run / "events.jsonl"), "benchmark": benchmark}
         if measurement is not None:
             identity["measurement"] = measurement
+        auxiliary_captures = []
+        for pair in pairs:
+            if pair is selected:
+                continue
+            auxiliary_captures.append({
+                "run_id": pair["manifest"]["run_id"],
+                "manifest_sha256": digest(pair["path"] / "manifest.json"),
+                "events_sha256": digest(pair["path"] / "events.jsonl"),
+                "measurement": pair["measurement"],
+            })
+        if auxiliary_captures:
+            identity["capture_selection"] = {
+                "policy": "unique_dominant_wall_seconds_at_least_4x",
+                "primary_invocation_id": measurement["invocation_id"],
+                "capture_count": len(pairs),
+                "auxiliary_captures": auxiliary_captures,
+            }
         if self.state.get("source_identity") not in (None, identity):
             raise Failure("source_evidence_changed")
         self.state["source_identity"] = identity

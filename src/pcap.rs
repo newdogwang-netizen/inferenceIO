@@ -18,7 +18,7 @@ use serde_json::json;
 use tokio::{
     io::{AsyncReadExt, BufReader},
     process::{Child, Command},
-    sync::oneshot,
+    sync::{mpsc, oneshot},
     task::JoinHandle,
 };
 
@@ -26,12 +26,18 @@ use crate::{model::RedactionRecord, storage::RunStore};
 
 const START_TIMEOUT: Duration = Duration::from_secs(2);
 const STOP_TIMEOUT: Duration = Duration::from_secs(5);
-const READER_STOP_TIMEOUT: Duration = Duration::from_secs(5);
+const READER_STOP_TIMEOUT: Duration = Duration::from_secs(30);
 const STDERR_LIMIT: usize = 64 * 1024;
 // Keep packet ingestion ahead of bursty WebSocket responses. Each persisted
 // chunk requires encrypted blob storage plus a durable event append, so small
 // chunks can back-pressure tcpdump even when average traffic is modest.
 const CHUNK_BYTES: usize = 1024 * 1024;
+// Drain tcpdump independently from encrypted blob/event durability. The host's
+// net.core.rmem_max is commonly only ~208 KiB and cannot be raised from our
+// rootless user namespace, so blocking the pipe on every durable chunk can
+// overflow libpcap during bursty model responses. This queue is memory-only,
+// bounded to 32 MiB, and is fully drained before capture shutdown returns.
+const PERSIST_QUEUE_CHUNKS: usize = 32;
 const CAPTURE_BUFFER_KIB: usize = 32 * 1024;
 const PCAP_GLOBAL_HEADER_BYTES: usize = 24;
 
@@ -489,60 +495,57 @@ async fn capture_stderr(mut input: impl tokio::io::AsyncRead + Unpin) -> io::Res
 }
 
 async fn capture_stream(
-    mut input: impl tokio::io::AsyncRead + Unpin,
+    input: impl tokio::io::AsyncRead + Unpin,
     max_bytes: u64,
     store: RunStore,
     ready: oneshot::Sender<io::Result<()>>,
     evidence: &'static str,
 ) -> io::Result<CaptureReport> {
-    let mut ready = Some(ready);
-    let mut report = CaptureReport::default();
+    let (sender, receiver) = mpsc::channel(PERSIST_QUEUE_CHUNKS);
+    let reader = read_capture_chunks(input, sender);
+    let persister = persist_capture_chunks(receiver, max_bytes, store, ready, evidence);
+    let (read_result, persist_result) = tokio::join!(reader, persister);
+    // A persistence failure closes the receiver and can surface secondarily as
+    // BrokenPipe in the reader; preserve the durable-storage error in that case.
+    let report = persist_result?;
+    read_result?;
+    Ok(report)
+}
+
+async fn read_capture_chunks(
+    mut input: impl tokio::io::AsyncRead + Unpin,
+    sender: mpsc::Sender<Vec<u8>>,
+) -> io::Result<()> {
     let mut buffer = vec![0_u8; CHUNK_BYTES].into_boxed_slice();
     let mut header = Vec::with_capacity(PCAP_GLOBAL_HEADER_BYTES);
     let mut pending = Vec::with_capacity(CHUNK_BYTES);
-    let mut header_persisted = false;
+    let mut header_sent = false;
     loop {
-        let length = match input.read(&mut buffer).await {
-            Ok(length) => length,
-            Err(error) => {
-                notify_ready_error(&mut ready, error.kind(), &error.to_string());
-                return Err(error);
-            }
-        };
+        let length = input.read(&mut buffer).await?;
         if length == 0 {
-            notify_ready_error(
-                &mut ready,
-                io::ErrorKind::UnexpectedEof,
-                "pcap helper exited before writing a complete capture header",
-            );
-            if header_persisted && !pending.is_empty() {
-                persist_capture_bytes(&pending, max_bytes, &store, &mut report, evidence).await?;
+            if !header_sent {
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "pcap helper exited before writing a complete capture header",
+                ));
             }
-            break;
+            if !pending.is_empty() {
+                send_capture_chunk(&sender, pending).await?;
+            }
+            return Ok(());
         }
 
         let mut consumed = 0;
-        if !header_persisted {
+        if !header_sent {
             let needed = PCAP_GLOBAL_HEADER_BYTES.saturating_sub(header.len());
             consumed = needed.min(length);
             header.extend_from_slice(&buffer[..consumed]);
             if header.len() < PCAP_GLOBAL_HEADER_BYTES {
                 continue;
             }
-            if let Err(error) = validate_pcap_header(&header) {
-                notify_ready_error(&mut ready, error.kind(), &error.to_string());
-                return Err(error);
-            }
-            if let Err(error) =
-                persist_capture_bytes(&header, max_bytes, &store, &mut report, evidence).await
-            {
-                notify_ready_error(&mut ready, error.kind(), &error.to_string());
-                return Err(error);
-            }
-            header_persisted = true;
-            if let Some(ready) = ready.take() {
-                let _ = ready.send(Ok(()));
-            }
+            validate_pcap_header(&header)?;
+            send_capture_chunk(&sender, std::mem::take(&mut header)).await?;
+            header_sent = true;
         }
         if consumed < length {
             let mut remaining = &buffer[consumed..length];
@@ -551,12 +554,65 @@ async fn capture_stream(
                 pending.extend_from_slice(&remaining[..copied]);
                 remaining = &remaining[copied..];
                 if pending.len() == CHUNK_BYTES {
-                    persist_capture_bytes(&pending, max_bytes, &store, &mut report, evidence)
-                        .await?;
-                    pending.clear();
+                    send_capture_chunk(
+                        &sender,
+                        std::mem::replace(&mut pending, Vec::with_capacity(CHUNK_BYTES)),
+                    )
+                    .await?;
                 }
             }
         }
+    }
+}
+
+async fn send_capture_chunk(sender: &mpsc::Sender<Vec<u8>>, chunk: Vec<u8>) -> io::Result<()> {
+    sender.send(chunk).await.map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::BrokenPipe,
+            "pcap persistence queue closed before the capture stream ended",
+        )
+    })
+}
+
+async fn persist_capture_chunks(
+    mut receiver: mpsc::Receiver<Vec<u8>>,
+    max_bytes: u64,
+    store: RunStore,
+    ready: oneshot::Sender<io::Result<()>>,
+    evidence: &'static str,
+) -> io::Result<CaptureReport> {
+    let mut ready = Some(ready);
+    let mut report = CaptureReport::default();
+    let mut header_persisted = false;
+    while let Some(bytes) = receiver.recv().await {
+        if !header_persisted && validate_pcap_header(&bytes).is_err() {
+            let error = io::Error::new(
+                io::ErrorKind::InvalidData,
+                "pcap persistence queue did not begin with a valid global header",
+            );
+            notify_ready_error(&mut ready, error.kind(), &error.to_string());
+            return Err(error);
+        }
+        if let Err(error) =
+            persist_capture_bytes(&bytes, max_bytes, &store, &mut report, evidence).await
+        {
+            notify_ready_error(&mut ready, error.kind(), &error.to_string());
+            return Err(error);
+        }
+        if !header_persisted {
+            header_persisted = true;
+            if let Some(ready) = ready.take() {
+                let _ = ready.send(Ok(()));
+            }
+        }
+    }
+    if !header_persisted {
+        let error = io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "pcap helper exited before writing a complete capture header",
+        );
+        notify_ready_error(&mut ready, error.kind(), &error.to_string());
+        return Err(error);
     }
     Ok(report)
 }
@@ -895,6 +951,39 @@ mod tests {
         assert_eq!(report.chunks, 3);
         assert_eq!(report.bytes, expected_bytes as u64);
         assert_eq!(store.shutdown().await.unwrap().events, 3);
+    }
+
+    #[tokio::test]
+    async fn capture_reader_drains_a_burst_before_persistence() {
+        use tokio::io::AsyncWriteExt;
+
+        let (mut writer, reader) = tokio::io::duplex(4096);
+        let (sender, mut receiver) = mpsc::channel(PERSIST_QUEUE_CHUNKS);
+        let reader_task = tokio::spawn(read_capture_chunks(reader, sender));
+        let writer_task = tokio::spawn(async move {
+            writer.write_all(&pcap_header()).await.unwrap();
+            writer
+                .write_all(&vec![23_u8; CHUNK_BYTES * 2 + 17])
+                .await
+                .unwrap();
+            writer.shutdown().await.unwrap();
+        });
+
+        // Deliberately do not consume the persistence queue yet. The pipe
+        // writer must still finish because the bounded memory queue drains it.
+        tokio::time::timeout(Duration::from_secs(2), writer_task)
+            .await
+            .expect("pcap pipe back-pressured on persistence")
+            .unwrap();
+        let mut sizes = Vec::new();
+        while let Some(chunk) = receiver.recv().await {
+            sizes.push(chunk.len());
+        }
+        reader_task.await.unwrap().unwrap();
+        assert_eq!(
+            sizes,
+            vec![PCAP_GLOBAL_HEADER_BYTES, CHUNK_BYTES, CHUNK_BYTES, 17]
+        );
     }
 
     #[tokio::test]
