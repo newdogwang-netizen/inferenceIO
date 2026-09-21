@@ -247,6 +247,6 @@ Prompts, responses, pcap, TLS secrets, plaintext bundles and browser screenshots
 remain private.
 
 September 21 follow-up: the [agent / Token comparison](agent-token-comparison.html)
-adds Pi and GLM trials, usage coverage, cache accounting and tool-trajectory
-analysis. Statements above about further-run authorization describe the September
-20 publication cutoff, not the later experiment history.
+adds Pi, common-price cost estimates, usage coverage, cache accounting and
+tool-trajectory analysis. Statements above about further-run authorization
+describe the September 20 publication cutoff, not the later experiment history.

@@ -35,7 +35,7 @@
         <div class="comparison-meta"><time datetime="2026-09-21">2026 年 9 月 21 日</time><span>实验日期：9 月 20-21 日（UTC）</span><span>单任务案例研究</span></div>
       </header>
       <nav class="comparison-toc" aria-label="文章目录">
-        <a href="#method">任务与方法</a><a href="#results">真实结果</a><a href="#trajectory">过程差异</a><a href="#tokens">Token 与费用</a><a href="#failures">未通过样本</a><a href="#evidence">录制可信度</a><a href="#next">下一步</a>
+        <a href="#method">任务与方法</a><a href="#results">真实结果</a><a href="#trajectory">过程差异</a><a href="#tokens">Token 与费用</a><a href="#evidence">录制可信度</a><a href="#next">下一步</a>
       </nav>
       <article class="comparison-article">
         <section id="method" aria-labelledby="method-title">
@@ -115,26 +115,33 @@
             </table>
           </div>
           <p>Pi 总输入是 Codex 的 3.83 倍，但“输入减 cached input”只有约 1.69 倍。输出也并非全是最终答案或代码：usage 中分别有 4,479、65,958、87,394 个 reasoning tokens。Pi 的客户端虽然设为 thinking off，Provider 仍上报了 reasoning 用量，说明客户端开关不能直接当成服务端计量事实。不同模型的分词和上报语义有差异，这些数字不能换算成等量的有效推理。</p>
-          <p>Harbor / Agent 日志给出的近似费用分别为 Codex <strong>$1.4034</strong>、Hermes＋DeepSeek <strong>$1.1595</strong>、Pi＋DeepSeek <strong>$0.9518</strong>。它们来自不同 Agent 的计量范围与价格配置，没有 Provider 账单核对，本文仅保留为参考。Fireworks 的模型页面分别列出 input、cached input、output 价格，说明总 Token 倍率不能当作美元费用倍率。<a href="https://fireworks.ai/models/deepseek-ai/deepseek-v4-pro-0813">计费分类来源</a></p>
-        </section>
-        <section id="failures" aria-labelledby="failures-title">
-          <h2 id="failures-title">最近的 GLM 实验要单独读</h2>
-          <p>GLM-5.3-Flash 的实验有录制数据，但没有给出与前面三个成功样本等价的结果。</p>
-          <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="GLM 实验结果与限制，可横向滚动">
+          <h3>按同一价格快照重算</h3>
+          <p>这里采用你提供的价格：DeepSeek-V4-Pro-0813 Standard 每百万 Token 的未缓存输入、缓存输入、输出分别为 <strong>$1.32</strong>、<wbr><strong>$0.044</strong>、<wbr><strong>$3.96</strong>；GPT-5.6-Sol 还单列 cache write。价格只是本次复盘快照，后续可能变化。</p>
+          <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="模型计费单价，每百万 Token，可横向滚动">
             <table class="comparison-table">
-              <caption>未通过与运行异常的样本仍然保留</caption>
-              <thead><tr><th scope="col">实验</th><th scope="col">可见数据</th><th scope="col">任务结果</th><th scope="col">解释</th></tr></thead>
+              <caption>本次估算采用的单价，单位：美元 / 百万 Token</caption>
+              <thead><tr><th scope="col">模型与计费档</th><th scope="col" class="num">Input</th><th scope="col" class="num">Cached input</th><th scope="col" class="num">Cache write</th><th scope="col" class="num">Output</th></tr></thead>
               <tbody>
-                <tr><th scope="row">Hermes＋GLM</th><td>62 次请求；79 个可重建工具请求<br>输入 5,151,448；输出 50,877<br>usage 61/62；10 分 23 秒</td><td>reward 0<br>0/3 测试通过</td><td>验证器等待 30 秒仍没有目标帧文件。最后一次模型请求被客户端取消，无 usage。</td></tr>
-                <tr><th scope="row">Pi＋GLM 首次启动</th><td>1 次 HTTP 401<br>usage 0/1，未报告用量</td><td>未解题<br>reward 0</td><td>认证失败。该条传输核对反而通过，说明录制可以完整地保留一次失败请求。</td></tr>
-                <tr><th scope="row">Pi＋GLM 后续 trial</th><td>Harbor Agent 执行阶段约 882 秒<br>进程退出码 137</td><td>trial error<br>验证器 reward 0</td><td>有帧文件，2/3 项通过，但图像相似度不足。与前一个 401 是不同 trial，录制未正常封账。</td></tr>
+                <tr><th scope="row">GPT-5.6-Sol<small>Short context，本次使用</small></th><td class="num">$4.00</td><td class="num">$0.40</td><td class="num">$5.00</td><td class="num">$20.00</td></tr>
+                <tr><th scope="row">GPT-5.6-Sol<small>Long context，本次未触发</small></th><td class="num">$8.00</td><td class="num">$0.80</td><td class="num">$10.00</td><td class="num">$30.00</td></tr>
+                <tr><th scope="row">DeepSeek-V4-Pro-0813<small>Fireworks Standard</small></th><td class="num">$1.32</td><td class="num">$0.044</td><td class="num">—</td><td class="num">$3.96</td></tr>
               </tbody>
             </table>
           </div>
-          <p>Hermes＋GLM 第 42 次写实现时 lint 报错，第 43 次修正；第 44 次运行报 COP1 解码错误，第 45-50 次继续修改，第 51 次运行后又持续调查源码。79 个可重建工具请求中还包含一个无效工具名，原生 hook 实际进入 78 个。这些证据证明有解题过程，最终正确性仍以 reward 0 为准。</p>
-          <p>Pi＋GLM 后续 trial 的帧相似度为 0.7581，低于验证器要求的 0.95。退出码 137 表示进程被 SIGKILL，现有证据不能确定是 OOM。该条缺少完整结束测量，882 秒来自 Harbor 阶段时间，不能和前表的观察器计时严格等同。</p>
-          <h3>启动故障也属于实验历史</h3>
-          <p>这批记录保留了 Codex 初次遇到 Docker 地址池耗尽、Pi＋DeepSeek 和 Hermes＋GLM 初次遇到录制器 GLIBC 版本不兼容的失败。修复后的启动使用独立 trial；这些没有正常进入解题的尝试，不混进成功样本的效率分母。Hermes 还产生过一个短暂的辅助导出 invocation，控制器保留全部证据，并按主运行时长至少为辅助 4 倍的规则选择主录制。</p>
+          <p class="note">OpenAI 的 GPT-5.6-Sol 规则是单次请求输入超过 272K 时，整条请求按 2 倍输入和 1.5 倍输出费率计价；cache write 是普通未缓存输入的 1.25 倍。本次最大单次输入为 94,254，26 次实际生成调用均属于 short context。<a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">OpenAI 官方计价说明</a>；<a href="https://fireworks.ai/models/deepseek-ai/deepseek-v4-pro-0813">DeepSeek 服务价格</a>。</p>
+          <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="三组成功样本按价格快照重算的费用，可横向滚动">
+            <table class="comparison-table" id="cost-table">
+              <caption>按录制 usage 与 Agent 原生计量重算，单位：美元</caption>
+              <thead><tr><th scope="col">组合</th><th scope="col">可计价 Token</th><th scope="col" class="num">重算费用</th><th scope="col">覆盖与限制</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Codex＋GPT</th><td>普通输入 78<br>cache write 94,251<br>cached input 1,588,427<br>输出 14,823</td><td class="num"><strong>$1.4034</strong></td><td>26 / 26 次实际生成调用；另有一次 <code>generate=false</code> 请求未进入 Agent 原生费用汇总。</td></tr>
+                <tr><th scope="row">Hermes＋DeepSeek</th><td>未缓存输入 330,442<br>cached input 5,418,099<br>输出 85,968</td><td class="num"><strong>$1.0150</strong><small>已录 usage 小计</small></td><td>只覆盖 56 / 61 次；Agent 原生全会话估算为 $1.1595，缺失调用无法从公开 Token 独立拆算。</td></tr>
+                <tr><th scope="row">Pi＋DeepSeek</th><td>未缓存输入 172,013<br>cached input 6,293,272<br>输出 113,083</td><td class="num"><strong>$0.9518</strong></td><td>75 / 75 次 usage 完整；重算值与 Agent 原生估算一致。</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>计算后，Pi 虽然累计输入是 Codex 的 3.83 倍，估算费用却更低。原因是模型单价不同，而且 Pi 的缓存输入占比达到 97.34%。所以 Token 规模适合解释轨迹负担，不能直接当作美元费用排名。</p>
+          <p class="note">Codex 的计费桶来自 Agent 原生 trajectory：26 次生成调用共有 1,682,756 个 prompt tokens；其中 1,588,427 个为 cached input、94,251 个为 cache write、78 个为普通 input。平台表里的 1,690,213 还包含一次 <code>generate=false</code> 请求的 7,457 个输入 Token，Agent 原生费用汇总未纳入这次请求。所有金额都是根据用量与价格快照重算的估算，不是 Provider 账单。</p>
         </section>
         <section id="evidence" aria-labelledby="evidence-title">
           <h2 id="evidence-title">能读出 Token，不代表每个字节都录全了</h2>
@@ -147,7 +154,6 @@
                 <tr><th scope="row">Codex＋GPT</th><td>通过；capture drops 0</td><td>符合核对条件的 WebSocket 连接匹配，无 missing / extra。</td><td>本次任务网络命名空间的传输合格样本。</td></tr>
                 <tr><th scope="row">Hermes＋DeepSeek</th><td>未通过；29/57 eligible attempts 匹配</td><td>pcap 丢包 3,560；响应正文 chunk 缺 13；另有协议 / 关联缺口。</td><td>可分析已保留轨迹和 usage，不能宣称完整捕获。</td></tr>
                 <tr><th scope="row">Pi＋DeepSeek</th><td>未通过；34/75 eligible attempts 匹配</td><td>pcap 丢包 2,246；41 个 eligible attempts 缺少独立 wire 匹配。</td><td>75/75 usage 可统计；41 个 wire 缺口不等于 41 份代理响应正文丢失。</td></tr>
-                <tr><th scope="row">Hermes＋GLM</th><td>未通过；58/61 eligible attempts 匹配</td><td>capture drops 0，但有 1 条响应不完整、3 个 eligible attempts 缺匹配及状态解码缺口。</td><td>正文可读且没有 body_unavailable；整体传输证明仍不通过。</td></tr>
               </tbody>
             </table>
           </div>
@@ -167,16 +173,13 @@
         <section id="sources" aria-labelledby="sources-title">
           <h2 id="sources-title">数据与溯源</h2>
           <p>正文数字来自本机 Platform 的录制、progress、逐调用 usage 与原始事件；任务判分和版本来自 Harbor trial / workflow 报告。公开附件保留聚合指标、调用序号和来源哈希。原始提示、响应、任务解答、pcap、TLS 密钥及私有截图不随文章发布。</p>
-          <p><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-21-agent-token-comparison.json">机器可读实验摘要与逐调用数值</a>。Pi 与 GLM 运行使用本机冻结的审计适配器快照；附件中的版本和哈希标识本次实验，不能假定仓库任意后续版本会产生同样轨迹。</p>
+          <p><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-21-agent-token-comparison.json">机器可读实验摘要、逐调用数值与费用重算</a>。Pi 运行使用本机冻结的审计适配器快照；附件中的版本和哈希标识本次实验，不能假定仓库任意后续版本会产生同样轨迹。</p>
           <details class="evidence-ledger">
             <summary>展开录制 ID 与共同输入指纹</summary>
             <dl>
               <dt>Codex＋GPT-5.6-Sol</dt><dd><code>run-01a0be8e-ba36-72f9-ac36-2d1ed31bcf16#0000</code></dd>
               <dt>Hermes＋DeepSeek-V4-Pro-0813</dt><dd><code>run-01a0be9f-dd96-71c1-ab28-fcb7907261d5#0000</code></dd>
               <dt>Pi＋DeepSeek-V4-Pro-0813</dt><dd><code>run-01a0c206-6d92-72d9-80de-2fc4f9c7e8ab#0000</code></dd>
-              <dt>Hermes＋GLM-5.3-Flash</dt><dd><code>run-01a0c2ca-2ff3-7639-b4c6-102a4b23d018#0000</code></dd>
-              <dt>Pi＋GLM 首次启动（401）</dt><dd><code>run-01a0c2c6-ee02-7296-abde-3d687a4d4128#0000</code></dd>
-              <dt>Pi＋GLM 后续 trial（未正常封账）</dt><dd><code>run-01a0c2c9-d9f1-73b6-a673-cb5a54721645</code></dd>
               <dt>共同任务树 SHA-256</dt><dd><code>e3127fed0d7a62ae35aedfc76be6d7f4aba3ee038153339c72fe7aa4c19bd1f1</code></dd>
               <dt>共同镜像</dt><dd><code>alexgshaw/make-mips-interpreter@sha256:082fc8821b317f30fdfbf8d08d528874ce331c03e8083aef0406d48cdd7132a2</code></dd>
             </dl>

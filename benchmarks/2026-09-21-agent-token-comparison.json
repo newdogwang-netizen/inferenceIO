@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "published_on": "2026-09-21",
   "observed_at": "2026-09-21T08:50:07.326Z",
   "title": "Same terminal task: Codex, Hermes and Pi model-call and Token comparison",
@@ -36,7 +36,7 @@
     "reasoning": "provider_reported_subset_of_output_tokens_not_additive_to_output",
     "tools": "normalized_requested_tool_IDs_and_correlated_result_observations_not_shell_commands_or_successful_steps",
     "native_hooks": "pre_and_post_tool_hooks_are_independent_execution_evidence_and_can_exceed_normalized_response_tool_counts",
-    "cost": "heterogeneous_Harbor_or_agent_reported_approximation_not_provider_invoice_or_a_common_pricing_recalculation",
+    "cost": "recalculated_from_the_published_price_snapshot_where_usage_is_available; source_reported_cost_is_retained_separately_as_provenance_not_a_provider_invoice",
     "wire_matching": "eligible_transport_attempts_use_protocol_specific_granularity_one_WS_parent_can_contain_many_model_requests"
   },
   "trials": [
@@ -471,6 +471,28 @@
         "manifest_sha256": "74b0f050ded98582a333de5763f97c3f2be295351e1791dd09a11d3a6f2d2382",
         "events_sha256": "f5559c48e98d19d6c7699420a792f768062bd6cabb827c18df2cbbb65ea42909",
         "harbor_trial_result_sha256": "0df930ef8feac4a90c408cc2d21af4af7767c11c8dd08b551dac841732dcc7e4"
+      },
+      "reported_cost_usd_semantics": "agent_native_full_generating_trajectory_estimate_reproduced_by_price_snapshot_not_provider_invoice",
+      "pricing_recalculation": {
+        "usage_scope": "26_of_26_generating_requests; excludes_one_generate_false_endpoint_request",
+        "pricing_tier": "short_context",
+        "maximum_single_request_input_tokens": 94254,
+        "billable_tokens": {
+          "input": 78,
+          "cache_write": 94251,
+          "cached_input": 1588427,
+          "output": 14823,
+          "prompt_total": 1682756
+        },
+        "component_cost_usd": {
+          "input": 0.000312,
+          "cache_write": 0.471255,
+          "cached_input": 0.6353708,
+          "output": 0.29646
+        },
+        "recalculated_cost_usd": 1.4033978,
+        "native_trajectory_sha256": "6617700a83876e459001097db866756eb7e48ed8e153cd5c99f0508f50ef7f89",
+        "platform_input_tokens_excluded_from_agent_native_cost_summary": 7457
       }
     },
     {
@@ -1418,6 +1440,24 @@
         "manifest_sha256": "e7b9eed3be8cb07ce6f5284bccdf53bdd967807b575014fc45a00669b92848a6",
         "events_sha256": "218fbaca73fcd99ff99a8eea349826900a5bc2beae0a624ee86f03c986504f47",
         "harbor_trial_result_sha256": "0ec91606a0e81c144bd2d5398ae9433371d4c555c300ca675d1ca98cb7d88242"
+      },
+      "reported_cost_usd_semantics": "agent_native_full_session_estimate_includes_usage_not_available_in_platform_projection_not_provider_invoice",
+      "pricing_recalculation": {
+        "usage_scope": "recorded_usage_for_56_of_61_requests_lower_bound_not_full_session_cost",
+        "billable_tokens": {
+          "uncached_input": 330442,
+          "cached_input": 5418099,
+          "output": 85968
+        },
+        "component_cost_usd": {
+          "uncached_input": 0.43618344,
+          "cached_input": 0.238396356,
+          "output": 0.34043328
+        },
+        "recalculated_observed_usage_cost_usd": 1.015013076,
+        "agent_native_full_session_estimate_usd": 1.159544188,
+        "missing_usage_requests": 5,
+        "missing_usage_not_imputed": true
       }
     },
     {
@@ -2391,997 +2431,23 @@
         "manifest_sha256": "140c0e75ba9481a32ce6a71a42918d188319ea8f4df42961c4a8d8a38ea3532e",
         "events_sha256": "c2968dd4d2b263389fb7df93a9f8ab9ec094bc7c6abc2461867dd1fdb341fc20",
         "harbor_trial_result_sha256": "3895af960fb5c8df996084f62a6505c32a2c4b068994b896191f17f0523bc5dc"
+      },
+      "reported_cost_usd_semantics": "agent_native_full_session_estimate_reproduced_by_price_snapshot_not_provider_invoice",
+      "pricing_recalculation": {
+        "usage_scope": "recorded_usage_for_75_of_75_requests",
+        "billable_tokens": {
+          "uncached_input": 172013,
+          "cached_input": 6293272,
+          "output": 113083
+        },
+        "component_cost_usd": {
+          "uncached_input": 0.22705716,
+          "cached_input": 0.276903968,
+          "output": 0.44780868
+        },
+        "recalculated_cost_usd": 0.951769808,
+        "matches_agent_native_estimate": true
       }
-    },
-    {
-      "label": "pi-glm-auth-failure",
-      "run_id": "run-01a0c2c6-ee02-7296-abde-3d687a4d4128",
-      "recording_id": "run-01a0c2c6-ee02-7296-abde-3d687a4d4128#0000",
-      "benchmark": {
-        "agent": "pi",
-        "artifact_sha256": "dca92f07cba759c943bf0f1ae805024498b73b72a6f95526eeebcbfe795c7b54",
-        "framework": "harbor",
-        "model": "openai/accounts/fireworks/models/glm-5p3-flash",
-        "reward": 0,
-        "status": "completed",
-        "task": "terminal-bench/make-mips-interpreter",
-        "trial": "make-mips-interpreter__ciZkjZT"
-      },
-      "benchmark_provenance": "operator_reported_not_recomputed",
-      "summary": {
-        "observed_model_requests": 1,
-        "usage_covered_calls": 0,
-        "input_tokens": null,
-        "output_tokens": null,
-        "cached_input_tokens": null,
-        "cached_input_coverage_calls": 0,
-        "cached_input_ratio": null,
-        "mean_input_per_covered_call": null,
-        "max_input_per_covered_call": null,
-        "min_input_per_covered_call": null,
-        "output_reasoning_tokens": null,
-        "tool_requests": 0,
-        "input_cumulative_sum_is_context_recounted": true
-      },
-      "thirds": [],
-      "missing_usage": [
-        {
-          "ordinal": 1,
-          "attempt_id": "run-01a0c2c6-ee02-7296-abde-3d687a4d4128~01a0c2c6-efce-7395-b61e-0cccdb2af5a2",
-          "terminal": "error",
-          "status_code": 401,
-          "error_class": "http_401",
-          "category": "http_authentication_failure",
-          "started_at": "2026-09-21T07:03:32.558542Z",
-          "ended_at": "2026-09-21T07:03:32.649705Z",
-          "first_seq": 16,
-          "last_seq": 33
-        }
-      ],
-      "transport": {
-        "manifest_capture_drops": 0,
-        "verified": true,
-        "payload_diff_passed": true,
-        "boundary": "target-network-namespace-ip-transport",
-        "eligible_attempts": 1,
-        "matched_attempts": 1,
-        "missing_from_wire": 0,
-        "extra_on_wire": 0,
-        "gaps": []
-      },
-      "native_tool_hook_summary": [],
-      "non_generating_request": null,
-      "pcap_drop_evidence": [
-        {
-          "seq": 43,
-          "event": "pcap_capture_finished",
-          "packets_dropped": 0,
-          "packets_captured": 31
-        }
-      ],
-      "response_chunk_gaps": [],
-      "calls": [
-        {
-          "ordinal": 1,
-          "first_seq": 16,
-          "last_seq": 33,
-          "terminal": "error",
-          "input_tokens": null,
-          "output_tokens": null,
-          "cached_input_tokens": null,
-          "output_reasoning_tokens": null,
-          "tool_requests": 0
-        }
-      ],
-      "agent_version": "0.86.1",
-      "measurement": {
-        "wall_seconds": 0.706626589410007,
-        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
-        "measurement_status": "completed",
-        "provenance": "target_owned_observer_output_not_independent_attestation",
-        "result_sha256": "75d0b6d7baf076eac290872727f7164312763a99453822d144bbd906b5f115f9"
-      },
-      "reported_cost_usd": null,
-      "artifacts": {
-        "workflow_report_sha256": "dfab36aa4c543e7a8afa1656d4d344827a41e0db07dbabfd4d232872aaa2f190",
-        "workflow_status": "completed",
-        "recorder_sha256": [
-          "0ffb9e8d281f38d817350acf1a3b4d928bf3fbdd3a4e126fae0ca914529b725d"
-        ],
-        "manifest_sha256": "61b468c02ebd90b315d21a4c6679de7e0b26b62baa35086b082f2b907cef4127",
-        "events_sha256": "b410ec89686fddbe383ad0351b3ba2a35886223176944bf2fcac0bac68acc408",
-        "harbor_trial_result_sha256": "dca92f07cba759c943bf0f1ae805024498b73b72a6f95526eeebcbfe795c7b54"
-      }
-    },
-    {
-      "label": "hermes-glm",
-      "run_id": "run-01a0c2ca-2ff3-7639-b4c6-102a4b23d018",
-      "recording_id": "run-01a0c2ca-2ff3-7639-b4c6-102a4b23d018#0000",
-      "benchmark": {
-        "agent": "hermes",
-        "artifact_sha256": "5282cb7797e5b80daa9407c7f21037da17343680fcc78be6179c5188f34059bf",
-        "framework": "harbor",
-        "model": "openai/accounts/fireworks/models/glm-5p3-flash",
-        "reward": 0,
-        "status": "completed",
-        "task": "terminal-bench/make-mips-interpreter",
-        "trial": "make-mips-interpreter__6qo2bZ4"
-      },
-      "benchmark_provenance": "operator_reported_not_recomputed",
-      "summary": {
-        "observed_model_requests": 62,
-        "usage_covered_calls": 61,
-        "input_tokens": 5151448,
-        "output_tokens": 50877,
-        "cached_input_tokens": 4835328,
-        "cached_input_coverage_calls": 61,
-        "cached_input_ratio": 0.9386347294974151,
-        "mean_input_per_covered_call": 84449.96721311475,
-        "max_input_per_covered_call": 131835,
-        "min_input_per_covered_call": 12951,
-        "output_reasoning_tokens": 28625,
-        "tool_requests": 79,
-        "input_cumulative_sum_is_context_recounted": true
-      },
-      "thirds": [
-        {
-          "segment": "early",
-          "ordinal_from": 1,
-          "ordinal_to": 20,
-          "observed_model_requests": 20,
-          "usage_covered_calls": 20,
-          "input_tokens": 1000394,
-          "output_tokens": 4246,
-          "cached_input_tokens": 905216,
-          "cached_input_coverage_calls": 20,
-          "cached_input_ratio": 0.9048594853627671,
-          "mean_input_per_covered_call": 50019.7,
-          "max_input_per_covered_call": 73017,
-          "min_input_per_covered_call": 12951,
-          "output_reasoning_tokens": 2889,
-          "tool_requests": 30,
-          "input_cumulative_sum_is_context_recounted": true
-        },
-        {
-          "segment": "middle",
-          "ordinal_from": 21,
-          "ordinal_to": 41,
-          "observed_model_requests": 21,
-          "usage_covered_calls": 21,
-          "input_tokens": 1778864,
-          "output_tokens": 20284,
-          "cached_input_tokens": 1736704,
-          "cached_input_coverage_calls": 21,
-          "cached_input_ratio": 0.9762994810170985,
-          "mean_input_per_covered_call": 84707.80952380953,
-          "max_input_per_covered_call": 93809,
-          "min_input_per_covered_call": 74036,
-          "output_reasoning_tokens": 18305,
-          "tool_requests": 26,
-          "input_cumulative_sum_is_context_recounted": true
-        },
-        {
-          "segment": "late",
-          "ordinal_from": 42,
-          "ordinal_to": 62,
-          "observed_model_requests": 21,
-          "usage_covered_calls": 20,
-          "input_tokens": 2372190,
-          "output_tokens": 26347,
-          "cached_input_tokens": 2193408,
-          "cached_input_coverage_calls": 20,
-          "cached_input_ratio": 0.9246341987783441,
-          "mean_input_per_covered_call": 118609.5,
-          "max_input_per_covered_call": 131835,
-          "min_input_per_covered_call": 94020,
-          "output_reasoning_tokens": 7431,
-          "tool_requests": 23,
-          "input_cumulative_sum_is_context_recounted": true
-        }
-      ],
-      "missing_usage": [
-        {
-          "ordinal": 62,
-          "attempt_id": "run-01a0c2ca-2ff3-7639-b4c6-102a4b23d018~01a0c2d3-7463-7431-8071-ab01ac3e4fd9",
-          "terminal": "cancelled",
-          "status_code": 200,
-          "error_class": null,
-          "category": "downstream_cancelled_before_usage",
-          "started_at": "2026-09-21T07:17:12.931546Z",
-          "ended_at": "2026-09-21T07:17:14.080253Z",
-          "first_seq": 65565,
-          "last_seq": 65603
-        }
-      ],
-      "transport": {
-        "manifest_capture_drops": 0,
-        "verified": false,
-        "payload_diff_passed": false,
-        "boundary": "target-network-namespace-ip-transport",
-        "eligible_attempts": 61,
-        "matched_attempts": 58,
-        "missing_from_wire": 3,
-        "extra_on_wire": 0,
-        "gaps": [
-          {
-            "occurrences": 1,
-            "reason": "proxy_attempt_ineligible_for_diff"
-          },
-          {
-            "occurrences": 3,
-            "reason": "proxy_attempt_missing_from_wire"
-          },
-          {
-            "occurrences": 1,
-            "reason": "proxy_response_incomplete"
-          },
-          {
-            "occurrences": 4,
-            "reason": "stream_status_missing"
-          }
-        ]
-      },
-      "native_tool_hook_summary": [
-        {
-          "event": "post_tool_call",
-          "events": 78,
-          "unique_tool_call_ids": 78
-        },
-        {
-          "event": "pre_tool_call",
-          "events": 78,
-          "unique_tool_call_ids": 78
-        }
-      ],
-      "non_generating_request": null,
-      "pcap_drop_evidence": [
-        {
-          "seq": 65607,
-          "event": "pcap_capture_finished",
-          "packets_dropped": 0,
-          "packets_captured": 57257
-        }
-      ],
-      "response_chunk_gaps": [],
-      "calls": [
-        {
-          "ordinal": 1,
-          "first_seq": 66,
-          "last_seq": 290,
-          "terminal": "completed",
-          "input_tokens": 12951,
-          "output_tokens": 158,
-          "cached_input_tokens": 0,
-          "output_reasoning_tokens": 84,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 2,
-          "first_seq": 305,
-          "last_seq": 386,
-          "terminal": "completed",
-          "input_tokens": 13542,
-          "output_tokens": 50,
-          "cached_input_tokens": 12288,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 3,
-          "first_seq": 389,
-          "last_seq": 784,
-          "terminal": "completed",
-          "input_tokens": 20357,
-          "output_tokens": 303,
-          "cached_input_tokens": 12288,
-          "output_reasoning_tokens": 164,
-          "tool_requests": 4
-        },
-        {
-          "ordinal": 4,
-          "first_seq": 796,
-          "last_seq": 839,
-          "terminal": "completed",
-          "input_tokens": 24730,
-          "output_tokens": 22,
-          "cached_input_tokens": 18432,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 5,
-          "first_seq": 842,
-          "last_seq": 908,
-          "terminal": "completed",
-          "input_tokens": 30478,
-          "output_tokens": 55,
-          "cached_input_tokens": 24576,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 6,
-          "first_seq": 913,
-          "last_seq": 983,
-          "terminal": "completed",
-          "input_tokens": 37635,
-          "output_tokens": 57,
-          "cached_input_tokens": 28672,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 7,
-          "first_seq": 987,
-          "last_seq": 1038,
-          "terminal": "completed",
-          "input_tokens": 40872,
-          "output_tokens": 34,
-          "cached_input_tokens": 36864,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 8,
-          "first_seq": 1034,
-          "last_seq": 1083,
-          "terminal": "completed",
-          "input_tokens": 46236,
-          "output_tokens": 35,
-          "cached_input_tokens": 38912,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 9,
-          "first_seq": 1087,
-          "last_seq": 1250,
-          "terminal": "completed",
-          "input_tokens": 54334,
-          "output_tokens": 127,
-          "cached_input_tokens": 45056,
-          "output_reasoning_tokens": 52,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 10,
-          "first_seq": 1253,
-          "last_seq": 1325,
-          "terminal": "completed",
-          "input_tokens": 54436,
-          "output_tokens": 59,
-          "cached_input_tokens": 53248,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 11,
-          "first_seq": 1328,
-          "last_seq": 1412,
-          "terminal": "completed",
-          "input_tokens": 54506,
-          "output_tokens": 42,
-          "cached_input_tokens": 53248,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 12,
-          "first_seq": 1388,
-          "last_seq": 1445,
-          "terminal": "completed",
-          "input_tokens": 55394,
-          "output_tokens": 35,
-          "cached_input_tokens": 53248,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 13,
-          "first_seq": 1449,
-          "last_seq": 1496,
-          "terminal": "completed",
-          "input_tokens": 60992,
-          "output_tokens": 37,
-          "cached_input_tokens": 55296,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 14,
-          "first_seq": 1501,
-          "last_seq": 5252,
-          "terminal": "completed",
-          "input_tokens": 68324,
-          "output_tokens": 2738,
-          "cached_input_tokens": 59392,
-          "output_reasoning_tokens": 2589,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 15,
-          "first_seq": 5259,
-          "last_seq": 5393,
-          "terminal": "completed",
-          "input_tokens": 69095,
-          "output_tokens": 95,
-          "cached_input_tokens": 67584,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 16,
-          "first_seq": 5399,
-          "last_seq": 5548,
-          "terminal": "completed",
-          "input_tokens": 70229,
-          "output_tokens": 105,
-          "cached_input_tokens": 67584,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 17,
-          "first_seq": 5554,
-          "last_seq": 5683,
-          "terminal": "completed",
-          "input_tokens": 70777,
-          "output_tokens": 91,
-          "cached_input_tokens": 69632,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 18,
-          "first_seq": 5689,
-          "last_seq": 5813,
-          "terminal": "completed",
-          "input_tokens": 71130,
-          "output_tokens": 84,
-          "cached_input_tokens": 69632,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 19,
-          "first_seq": 5816,
-          "last_seq": 5937,
-          "terminal": "completed",
-          "input_tokens": 71359,
-          "output_tokens": 83,
-          "cached_input_tokens": 69632,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 20,
-          "first_seq": 5940,
-          "last_seq": 5989,
-          "terminal": "completed",
-          "input_tokens": 73017,
-          "output_tokens": 36,
-          "cached_input_tokens": 69632,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 21,
-          "first_seq": 5993,
-          "last_seq": 6084,
-          "terminal": "completed",
-          "input_tokens": 74036,
-          "output_tokens": 58,
-          "cached_input_tokens": 71680,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 22,
-          "first_seq": 6089,
-          "last_seq": 6115,
-          "terminal": "completed",
-          "input_tokens": 74667,
-          "output_tokens": 27,
-          "cached_input_tokens": 73728,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 23,
-          "first_seq": 6118,
-          "last_seq": 6164,
-          "terminal": "completed",
-          "input_tokens": 74786,
-          "output_tokens": 35,
-          "cached_input_tokens": 73728,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 24,
-          "first_seq": 6167,
-          "last_seq": 7398,
-          "terminal": "completed",
-          "input_tokens": 75575,
-          "output_tokens": 879,
-          "cached_input_tokens": 73728,
-          "output_reasoning_tokens": 749,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 25,
-          "first_seq": 7408,
-          "last_seq": 7661,
-          "terminal": "completed",
-          "input_tokens": 79575,
-          "output_tokens": 182,
-          "cached_input_tokens": 73728,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 26,
-          "first_seq": 7682,
-          "last_seq": 7755,
-          "terminal": "completed",
-          "input_tokens": 81452,
-          "output_tokens": 45,
-          "cached_input_tokens": 77824,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 27,
-          "first_seq": 7760,
-          "last_seq": 7890,
-          "terminal": "completed",
-          "input_tokens": 82137,
-          "output_tokens": 88,
-          "cached_input_tokens": 79872,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 28,
-          "first_seq": 7899,
-          "last_seq": 8079,
-          "terminal": "completed",
-          "input_tokens": 82904,
-          "output_tokens": 128,
-          "cached_input_tokens": 81920,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 29,
-          "first_seq": 8083,
-          "last_seq": 8159,
-          "terminal": "completed",
-          "input_tokens": 83509,
-          "output_tokens": 47,
-          "cached_input_tokens": 81920,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 30,
-          "first_seq": 8160,
-          "last_seq": 30738,
-          "terminal": "completed",
-          "input_tokens": 84266,
-          "output_tokens": 16324,
-          "cached_input_tokens": 81920,
-          "output_reasoning_tokens": 16148,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 31,
-          "first_seq": 30744,
-          "last_seq": 30873,
-          "terminal": "completed",
-          "input_tokens": 84978,
-          "output_tokens": 80,
-          "cached_input_tokens": 83968,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 32,
-          "first_seq": 30877,
-          "last_seq": 31000,
-          "terminal": "completed",
-          "input_tokens": 85121,
-          "output_tokens": 81,
-          "cached_input_tokens": 83968,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 33,
-          "first_seq": 31005,
-          "last_seq": 31056,
-          "terminal": "completed",
-          "input_tokens": 85562,
-          "output_tokens": 27,
-          "cached_input_tokens": 83968,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 34,
-          "first_seq": 31061,
-          "last_seq": 31437,
-          "terminal": "completed",
-          "input_tokens": 88651,
-          "output_tokens": 277,
-          "cached_input_tokens": 83968,
-          "output_reasoning_tokens": 109,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 35,
-          "first_seq": 31441,
-          "last_seq": 31573,
-          "terminal": "completed",
-          "input_tokens": 89656,
-          "output_tokens": 90,
-          "cached_input_tokens": 88064,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 36,
-          "first_seq": 31577,
-          "last_seq": 31655,
-          "terminal": "completed",
-          "input_tokens": 90491,
-          "output_tokens": 48,
-          "cached_input_tokens": 88064,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 37,
-          "first_seq": 31658,
-          "last_seq": 31863,
-          "terminal": "completed",
-          "input_tokens": 90867,
-          "output_tokens": 142,
-          "cached_input_tokens": 90112,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 38,
-          "first_seq": 31875,
-          "last_seq": 31980,
-          "terminal": "completed",
-          "input_tokens": 91280,
-          "output_tokens": 67,
-          "cached_input_tokens": 90112,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 39,
-          "first_seq": 31982,
-          "last_seq": 32033,
-          "terminal": "completed",
-          "input_tokens": 92184,
-          "output_tokens": 27,
-          "cached_input_tokens": 90112,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 40,
-          "first_seq": 32037,
-          "last_seq": 32901,
-          "terminal": "completed",
-          "input_tokens": 93358,
-          "output_tokens": 601,
-          "cached_input_tokens": 92160,
-          "output_reasoning_tokens": 393,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 41,
-          "first_seq": 32906,
-          "last_seq": 34383,
-          "terminal": "completed",
-          "input_tokens": 93809,
-          "output_tokens": 1031,
-          "cached_input_tokens": 92160,
-          "output_reasoning_tokens": 906,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 42,
-          "first_seq": 34398,
-          "last_seq": 47462,
-          "terminal": "completed",
-          "input_tokens": 94020,
-          "output_tokens": 10135,
-          "cached_input_tokens": 92160,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 43,
-          "first_seq": 47470,
-          "last_seq": 48008,
-          "terminal": "completed",
-          "input_tokens": 104345,
-          "output_tokens": 441,
-          "cached_input_tokens": 92160,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 2
-        },
-        {
-          "ordinal": 44,
-          "first_seq": 48027,
-          "last_seq": 48125,
-          "terminal": "completed",
-          "input_tokens": 105420,
-          "output_tokens": 64,
-          "cached_input_tokens": 102400,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 45,
-          "first_seq": 48142,
-          "last_seq": 52169,
-          "terminal": "completed",
-          "input_tokens": 105549,
-          "output_tokens": 2981,
-          "cached_input_tokens": 104448,
-          "output_reasoning_tokens": 2368,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 46,
-          "first_seq": 52183,
-          "last_seq": 52395,
-          "terminal": "completed",
-          "input_tokens": 106512,
-          "output_tokens": 165,
-          "cached_input_tokens": 104448,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 47,
-          "first_seq": 52408,
-          "last_seq": 54089,
-          "terminal": "completed",
-          "input_tokens": 107024,
-          "output_tokens": 1359,
-          "cached_input_tokens": 106496,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 48,
-          "first_seq": 54099,
-          "last_seq": 54679,
-          "terminal": "completed",
-          "input_tokens": 109715,
-          "output_tokens": 459,
-          "cached_input_tokens": 106496,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 49,
-          "first_seq": 54689,
-          "last_seq": 58713,
-          "terminal": "completed",
-          "input_tokens": 110741,
-          "output_tokens": 3182,
-          "cached_input_tokens": 108544,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 50,
-          "first_seq": 58726,
-          "last_seq": 60451,
-          "terminal": "completed",
-          "input_tokens": 117328,
-          "output_tokens": 1378,
-          "cached_input_tokens": 110592,
-          "output_reasoning_tokens": 543,
-          "tool_requests": 4
-        },
-        {
-          "ordinal": 51,
-          "first_seq": 60485,
-          "last_seq": 60549,
-          "terminal": "completed",
-          "input_tokens": 119278,
-          "output_tokens": 41,
-          "cached_input_tokens": 116736,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 52,
-          "first_seq": 60566,
-          "last_seq": 62370,
-          "terminal": "completed",
-          "input_tokens": 128498,
-          "output_tokens": 1292,
-          "cached_input_tokens": 118784,
-          "output_reasoning_tokens": 1201,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 53,
-          "first_seq": 62375,
-          "last_seq": 62474,
-          "terminal": "completed",
-          "input_tokens": 128869,
-          "output_tokens": 63,
-          "cached_input_tokens": 126976,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 54,
-          "first_seq": 62479,
-          "last_seq": 62574,
-          "terminal": "completed",
-          "input_tokens": 128983,
-          "output_tokens": 60,
-          "cached_input_tokens": 126976,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 55,
-          "first_seq": 62578,
-          "last_seq": 62659,
-          "terminal": "completed",
-          "input_tokens": 129653,
-          "output_tokens": 51,
-          "cached_input_tokens": 126976,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 56,
-          "first_seq": 62664,
-          "last_seq": 62750,
-          "terminal": "completed",
-          "input_tokens": 130184,
-          "output_tokens": 54,
-          "cached_input_tokens": 129024,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 57,
-          "first_seq": 62755,
-          "last_seq": 62803,
-          "terminal": "completed",
-          "input_tokens": 130488,
-          "output_tokens": 33,
-          "cached_input_tokens": 129024,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 58,
-          "first_seq": 62807,
-          "last_seq": 65360,
-          "terminal": "completed",
-          "input_tokens": 131225,
-          "output_tokens": 1821,
-          "cached_input_tokens": 129024,
-          "output_reasoning_tokens": 1659,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 59,
-          "first_seq": 65365,
-          "last_seq": 65467,
-          "terminal": "completed",
-          "input_tokens": 131635,
-          "output_tokens": 67,
-          "cached_input_tokens": 131072,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 60,
-          "first_seq": 65472,
-          "last_seq": 65536,
-          "terminal": "completed",
-          "input_tokens": 131835,
-          "output_tokens": 35,
-          "cached_input_tokens": 131072,
-          "output_reasoning_tokens": 0,
-          "tool_requests": 1
-        },
-        {
-          "ordinal": 61,
-          "first_seq": 65539,
-          "last_seq": 65559,
-          "terminal": "completed",
-          "input_tokens": 120888,
-          "output_tokens": 2666,
-          "cached_input_tokens": 0,
-          "output_reasoning_tokens": 1660,
-          "tool_requests": 0
-        },
-        {
-          "ordinal": 62,
-          "first_seq": 65565,
-          "last_seq": 65603,
-          "terminal": "cancelled",
-          "input_tokens": null,
-          "output_tokens": null,
-          "cached_input_tokens": null,
-          "output_reasoning_tokens": null,
-          "tool_requests": 0
-        }
-      ],
-      "agent_version": "0.19.0",
-      "measurement": {
-        "wall_seconds": 623.1648409506306,
-        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
-        "measurement_status": "completed",
-        "provenance": "target_owned_observer_output_not_independent_attestation",
-        "result_sha256": "7a7b4fe5ddd426c8caf13d3ae3ba791513697c88d59ab3a45adeae6d5cf8c8b1"
-      },
-      "reported_cost_usd": 0.19845014,
-      "artifacts": {
-        "workflow_report_sha256": "837bc9a81fcc0664c533f1b9259ad93f6c06c04403950adaf4c11d2a8b489178",
-        "workflow_status": "incomplete",
-        "recorder_sha256": [
-          "0ffb9e8d281f38d817350acf1a3b4d928bf3fbdd3a4e126fae0ca914529b725d"
-        ],
-        "manifest_sha256": "151a9c602530b23319939c60b84742f1b72f8a283969d92b010959d2bb109958",
-        "events_sha256": "e7e8884f63ded31cc7668f5bdfdf83560dd77187a2ddd00edf5282612f531088",
-        "harbor_trial_result_sha256": "5282cb7797e5b80daa9407c7f21037da17343680fcc78be6179c5188f34059bf"
-      }
-    }
-  ],
-  "additional_incomplete_trials": [
-    {
-      "label": "pi-glm-killed",
-      "run_id": "run-01a0c2c9-d9f1-73b6-a673-cb5a54721645",
-      "agent_version": "0.86.1",
-      "benchmark": {
-        "agent": "pi",
-        "artifact_sha256": "c400a2fc577bf1e6585ff48039c073d03250dc865a8bb47c2b3a39976e1e7d81",
-        "framework": "harbor",
-        "model": "openai/accounts/fireworks/models/glm-5p3-flash",
-        "reward": null,
-        "status": "error",
-        "task": "terminal-bench/make-mips-interpreter",
-        "trial": "make-mips-interpreter__TKLBZTq"
-      },
-      "recording_state": "unsealed_not_imported_into_platform_comparison",
-      "model_request_statistics": null,
-      "agent_exit_code": 137,
-      "oom_proven": false,
-      "raw_verifier": {
-        "reward": 0,
-        "tests_passed": 2,
-        "tests_total": 3,
-        "frame_similarity": 0.7581,
-        "required_similarity": 0.95
-      },
-      "measurement": {
-        "wall_seconds": 881.96,
-        "wall_scope": "Harbor_agent_execution_stage_not_observer_command_lifetime"
-      },
-      "workflow_report_sha256": "37b7f0eeffac98ceb30a372fa2b12579f4ddd61fa41fd9ace21a86ab0f76abb8",
-      "recorder_sha256": [
-        "0ffb9e8d281f38d817350acf1a3b4d928bf3fbdd3a4e126fae0ca914529b725d"
-      ]
     }
   ],
   "trajectory_observations": [
@@ -3434,14 +2500,6 @@
           "result": "pass"
         }
       ]
-    },
-    {
-      "label": "hermes-glm",
-      "first_vm_js_write_model_request": 42,
-      "reconstructed_tool_requests_before_write": 56,
-      "first_runtime_error_model_request": 44,
-      "first_runtime_error_category": "COP1_decode_error_not_proof_of_missing_instruction_support",
-      "max_turns": 60
     }
   ],
   "retained_launch_failures": [
@@ -3453,11 +2511,6 @@
     {
       "combination": "pi-deepseek",
       "failure": "recorder_GLIBC_2_38_and_2_39_runtime_incompatibility_before_agent",
-      "replacement": "separate_fixed_runtime_trial"
-    },
-    {
-      "combination": "hermes-glm",
-      "failure": "recorder_runtime_GLIBC_incompatibility_before_agent",
       "replacement": "separate_fixed_runtime_trial"
     }
   ],
@@ -3474,5 +2527,33 @@
     "Hermes_DeepSeek_usage_only_56_of_61_requests",
     "DeepSeek_combinations_failed_independent_transport_qualification",
     "raw_private_artifacts_are_not_published_hashes_identify_sources_but_do_not_enable_public_byte_level_reproduction"
-  ]
+  ],
+  "pricing_recalculated_on": "2026-09-21",
+  "pricing_snapshot": {
+    "currency": "USD",
+    "unit": "per_1M_tokens",
+    "deepseek_v4_pro_0813_fireworks_standard": {
+      "uncached_input": 1.32,
+      "cached_input": 0.044,
+      "output": 3.96,
+      "source": "user_supplied_pricing_screenshot",
+      "public_reference": "https://fireworks.ai/models/deepseek-ai/deepseek-v4-pro-0813"
+    },
+    "gpt_5_6_sol_short_context": {
+      "input": 4.0,
+      "cached_input": 0.4,
+      "cache_write": 5.0,
+      "output": 20.0,
+      "applies_when_input_tokens_lte": 272000
+    },
+    "gpt_5_6_sol_long_context": {
+      "input": 8.0,
+      "cached_input": 0.8,
+      "cache_write": 10.0,
+      "output": 30.0,
+      "applies_when_input_tokens_gt": 272000
+    },
+    "gpt_public_reference": "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+    "note": "price_snapshot_for_recalculation_not_provider_invoice"
+  }
 }
