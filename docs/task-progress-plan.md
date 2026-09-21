@@ -209,8 +209,10 @@ is `857e89f6a8d5885eaf74259fc2ff4ae727e13510f78961592d18d47aee965453`.
   selects the main capture only under a declared rule: its measured duration must
   be at least four times the longest auxiliary. The 1.25-second auxiliary run and
   its hashes remain in the source identity; nothing is silently discarded.
-- The benchmark reward is 1 and integrity passed, but the task-namespace pcap
-  reported 3,573 drops. The independent audit matched only 29 of 57 eligible proxy
+- The benchmark reward is 1 and integrity passed, but the manifest reported
+  3,573 aggregate capture drops: 3,560 task-namespace pcap packets plus 13 missing
+  response-body chunks (classification corrected September 21; frozen artifact
+  unchanged). The independent audit matched only 29 of 57 eligible proxy
   attempts, with 28 missing from wire, one extra on wire and 11 gap categories.
   Payload agreement therefore failed. This recording is diagnostic-only.
 - The diagnostic import reached 130,725/130,725 parsed events with zero active or
@@ -243,3 +245,8 @@ The redacted public result is
 [`benchmarks/2026-09-20-long-horizon-task-progress-linux-x86_64.json`](../benchmarks/2026-09-20-long-horizon-task-progress-linux-x86_64.json).
 Prompts, responses, pcap, TLS secrets, plaintext bundles and browser screenshots
 remain private.
+
+September 21 follow-up: the [agent / Token comparison](agent-token-comparison.html)
+adds Pi and GLM trials, usage coverage, cache accounting and tool-trajectory
+analysis. Statements above about further-run authorization describe the September
+20 publication cutoff, not the later experiment history.

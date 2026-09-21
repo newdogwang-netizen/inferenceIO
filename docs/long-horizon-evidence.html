@@ -73,6 +73,7 @@
           <p>Published September 20, 2026</p>
           <h2>One qualified baseline. One honest diagnostic.</h2>
           <p>The declared test used the unchanged <code>make-mips-interpreter</code> task. A long trajectory required at least 26 model calls and 20 uniquely observed tool results. Duration, benchmark reward and transport proof were independent gates.</p>
+          <p><strong>September 21 update:</strong> the <a href="agent-token-comparison.html">new Chinese experiment review</a> adds Pi, GLM failures, per-call Token analysis and cache accounting. The Hermes drop count below is corrected to distinguish 3,560 dropped packets from 13 missing response-body chunks; the frozen September 20 artifact is unchanged.</p>
         </header>
 
         <section id="result" class="verdict-grid" aria-label="Trial verdicts">
@@ -99,9 +100,9 @@
               <div><dt>Agent time</dt><dd>1,661.27 s</dd></div>
               <div><dt>Calls / tools</dt><dd>61 / 67</dd></div>
               <div><dt>SSE events</dt><dd>88,843</dd></div>
-              <div><dt>Pcap drops</dt><dd>3,573</dd></div>
+              <div><dt>Capture drops</dt><dd>3,573</dd></div>
             </dl>
-            <p>The task passed and the progress chain is useful, but 28 eligible attempts were missing from decoded wire evidence. The capture stays unqualified.</p>
+            <p>The task passed and the progress chain is useful, but 28 eligible attempts were missing from decoded wire evidence. Capture drops comprise 3,560 pcap packets and 13 response-body chunks. The capture stays unqualified.</p>
           </article>
         </section>
 
@@ -133,7 +134,7 @@
           <div class="boundary-mark" aria-hidden="true">bounded</div>
           <div>
             <h2>What this does not claim</h2>
-            <p>The pcap repair passed automated stress tests, but no extra paid provider trial was authorized. The original Hermes capture therefore remains incomplete. A reward of 1 proves task success, not recording completeness. Approximate Harbor costs are not provider invoices.</p>
+            <p>At publication on September 20, the pcap repair had passed automated stress tests but no extra paid provider trial was authorized. Later trials are documented in the September 21 review; they do not repair the original Hermes capture. A reward of 1 proves task success, not recording completeness. Approximate Harbor costs are not provider invoices.</p>
             <p>No prompts, responses, pcap, TLS keys, plaintext bundles or private screenshots are published.</p>
             <a class="text-link" href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/task-progress-plan.md">Read the full method</a>
           </div>

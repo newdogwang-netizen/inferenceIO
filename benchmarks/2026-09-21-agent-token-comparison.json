@@ -1,0 +1,3478 @@
+{
+  "schema_version": 1,
+  "published_on": "2026-09-21",
+  "observed_at": "2026-09-21T08:50:07.326Z",
+  "title": "Same terminal task: Codex, Hermes and Pi model-call and Token comparison",
+  "scope": "one_fixed_task_one_successful_sample_per_successful_combination_not_a_leaderboard_or_model_ranking",
+  "data_collection": "read_only_review_of_existing_local_platform_and_Harbor_artifacts_no_new_model_calls",
+  "privacy": "only_whitelisted_metadata_aggregate_and_per_call_counts_no_prompts_responses_solutions_packet_payloads_TLS_secrets_or_credentials",
+  "common_inputs": {
+    "task": "terminal-bench/make-mips-interpreter",
+    "task_tree_sha256": "e3127fed0d7a62ae35aedfc76be6d7f4aba3ee038153339c72fe7aa4c19bd1f1",
+    "harbor_task_checksum": "f7e68fab72321eeaf465b53a98a4c3aaf7b66d57a3d3465708a15ed2c9f55f70",
+    "image": "alexgshaw/make-mips-interpreter@sha256:082fc8821b317f30fdfbf8d08d528874ce331c03e8083aef0406d48cdd7132a2",
+    "harbor_version": "0.22.0",
+    "harbor_package_sha256": "23db9a0f6bde46ee416b8fea8ad7e232d986ce5f7fac91f95e311c9e0a88f945",
+    "declared_task_resources": {
+      "cpus": 1,
+      "memory_mib": 2048,
+      "storage_mib": 10240
+    },
+    "timeouts_seconds": {
+      "setup": 600,
+      "agent": 1800,
+      "verifier": 1800
+    },
+    "harbor_max_retries": 0,
+    "local_audit_profile": "privileged_outer_container_non_root_agent_task_network_namespace_restricted_egress_not_canonical_leaderboard",
+    "transport_proof_boundary": "target_network_namespace_task_to_recorder_proxy_not_proxy_to_provider_upstream"
+  },
+  "counting_notes": {
+    "model_requests": "recorded_model_endpoint_requests_excluding_WS_parent_connections_hooks_and_discovery; Codex_request_1_generate_false_is_included",
+    "tokens": "provider_reported_usage_on_recorded_model_calls_excludes_hooks_ws_parents_discovery",
+    "missing_usage": "null_or_absent_is_unknown_not_zero_no_imputation",
+    "input": "sum_of_reported_input_per_request_including_recounted_history_not_unique_text_or_peak_context",
+    "cached_input": "provider_reported_subset_of_input_tokens_not_a_discount_applied_to_total_counts",
+    "reasoning": "provider_reported_subset_of_output_tokens_not_additive_to_output",
+    "tools": "normalized_requested_tool_IDs_and_correlated_result_observations_not_shell_commands_or_successful_steps",
+    "native_hooks": "pre_and_post_tool_hooks_are_independent_execution_evidence_and_can_exceed_normalized_response_tool_counts",
+    "cost": "heterogeneous_Harbor_or_agent_reported_approximation_not_provider_invoice_or_a_common_pricing_recalculation",
+    "wire_matching": "eligible_transport_attempts_use_protocol_specific_granularity_one_WS_parent_can_contain_many_model_requests"
+  },
+  "trials": [
+    {
+      "label": "codex-sol",
+      "run_id": "run-01a0be8e-ba36-72f9-ac36-2d1ed31bcf16",
+      "recording_id": "run-01a0be8e-ba36-72f9-ac36-2d1ed31bcf16#0000",
+      "benchmark": {
+        "agent": "codex",
+        "artifact_sha256": "0df930ef8feac4a90c408cc2d21af4af7767c11c8dd08b551dac841732dcc7e4",
+        "framework": "harbor",
+        "model": "openai/gpt-5.6-sol",
+        "reward": 1,
+        "status": "completed",
+        "task": "terminal-bench/make-mips-interpreter",
+        "trial": "make-mips-interpreter__WdRcvRy"
+      },
+      "benchmark_provenance": "operator_reported_not_recomputed",
+      "summary": {
+        "observed_model_requests": 27,
+        "usage_covered_calls": 27,
+        "input_tokens": 1690213,
+        "output_tokens": 14823,
+        "cached_input_tokens": 1588427,
+        "cached_input_coverage_calls": 27,
+        "cached_input_ratio": 0.9397791875935163,
+        "mean_input_per_covered_call": 62600.48148148148,
+        "max_input_per_covered_call": 94254,
+        "min_input_per_covered_call": 7457,
+        "output_reasoning_tokens": 4479,
+        "tool_requests": 25,
+        "input_cumulative_sum_is_context_recounted": true
+      },
+      "thirds": [
+        {
+          "segment": "early",
+          "ordinal_from": 1,
+          "ordinal_to": 9,
+          "observed_model_requests": 9,
+          "usage_covered_calls": 9,
+          "input_tokens": 217588,
+          "output_tokens": 2289,
+          "cached_input_tokens": 160634,
+          "cached_input_coverage_calls": 9,
+          "cached_input_ratio": 0.7382484328179862,
+          "mean_input_per_covered_call": 24176.444444444445,
+          "max_input_per_covered_call": 49476,
+          "min_input_per_covered_call": 7457,
+          "output_reasoning_tokens": 808,
+          "tool_requests": 8,
+          "input_cumulative_sum_is_context_recounted": true
+        },
+        {
+          "segment": "middle",
+          "ordinal_from": 10,
+          "ordinal_to": 18,
+          "observed_model_requests": 9,
+          "usage_covered_calls": 9,
+          "input_tokens": 673984,
+          "output_tokens": 9726,
+          "cached_input_tokens": 637552,
+          "cached_input_coverage_calls": 9,
+          "cached_input_ratio": 0.9459453043395689,
+          "mean_input_per_covered_call": 74887.11111111111,
+          "max_input_per_covered_call": 85881,
+          "min_input_per_covered_call": 54865,
+          "output_reasoning_tokens": 1855,
+          "tool_requests": 9,
+          "input_cumulative_sum_is_context_recounted": true
+        },
+        {
+          "segment": "late",
+          "ordinal_from": 19,
+          "ordinal_to": 27,
+          "observed_model_requests": 9,
+          "usage_covered_calls": 9,
+          "input_tokens": 798641,
+          "output_tokens": 2808,
+          "cached_input_tokens": 790241,
+          "cached_input_coverage_calls": 9,
+          "cached_input_ratio": 0.9894821327730482,
+          "mean_input_per_covered_call": 88737.88888888889,
+          "max_input_per_covered_call": 94254,
+          "min_input_per_covered_call": 86091,
+          "output_reasoning_tokens": 1816,
+          "tool_requests": 8,
+          "input_cumulative_sum_is_context_recounted": true
+        }
+      ],
+      "missing_usage": [],
+      "transport": {
+        "manifest_capture_drops": 0,
+        "verified": true,
+        "payload_diff_passed": true,
+        "boundary": "target-network-namespace-ip-transport",
+        "eligible_attempts": 1,
+        "matched_attempts": 1,
+        "missing_from_wire": 0,
+        "extra_on_wire": 0,
+        "gaps": []
+      },
+      "native_tool_hook_summary": [],
+      "non_generating_request": {
+        "ordinal": 1,
+        "generate": false,
+        "input_tokens": 7457,
+        "output_tokens": 0
+      },
+      "pcap_drop_evidence": [
+        {
+          "seq": 10592,
+          "event": "pcap_capture_finished",
+          "packets_dropped": 0,
+          "packets_captured": 21432
+        }
+      ],
+      "response_chunk_gaps": [],
+      "calls": [
+        {
+          "ordinal": 1,
+          "first_seq": 25,
+          "last_seq": 28,
+          "terminal": "completed",
+          "input_tokens": 7457,
+          "output_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 0
+        },
+        {
+          "ordinal": 2,
+          "first_seq": 29,
+          "last_seq": 184,
+          "terminal": "completed",
+          "input_tokens": 8845,
+          "output_tokens": 186,
+          "cached_input_tokens": 0,
+          "output_reasoning_tokens": 25,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 3,
+          "first_seq": 186,
+          "last_seq": 298,
+          "terminal": "completed",
+          "input_tokens": 9082,
+          "output_tokens": 136,
+          "cached_input_tokens": 8842,
+          "output_reasoning_tokens": 20,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 4,
+          "first_seq": 301,
+          "last_seq": 422,
+          "terminal": "completed",
+          "input_tokens": 10972,
+          "output_tokens": 154,
+          "cached_input_tokens": 9079,
+          "output_reasoning_tokens": 31,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 5,
+          "first_seq": 423,
+          "last_seq": 639,
+          "terminal": "completed",
+          "input_tokens": 21489,
+          "output_tokens": 249,
+          "cached_input_tokens": 10969,
+          "output_reasoning_tokens": 30,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 6,
+          "first_seq": 640,
+          "last_seq": 997,
+          "terminal": "completed",
+          "input_tokens": 31344,
+          "output_tokens": 387,
+          "cached_input_tokens": 21486,
+          "output_reasoning_tokens": 25,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 7,
+          "first_seq": 998,
+          "last_seq": 1196,
+          "terminal": "completed",
+          "input_tokens": 35975,
+          "output_tokens": 224,
+          "cached_input_tokens": 31341,
+          "output_reasoning_tokens": 25,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 8,
+          "first_seq": 1199,
+          "last_seq": 1385,
+          "terminal": "completed",
+          "input_tokens": 42948,
+          "output_tokens": 819,
+          "cached_input_tokens": 35972,
+          "output_reasoning_tokens": 633,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 9,
+          "first_seq": 1386,
+          "last_seq": 1497,
+          "terminal": "completed",
+          "input_tokens": 49476,
+          "output_tokens": 134,
+          "cached_input_tokens": 42945,
+          "output_reasoning_tokens": 19,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 10,
+          "first_seq": 1501,
+          "last_seq": 1688,
+          "terminal": "completed",
+          "input_tokens": 54865,
+          "output_tokens": 432,
+          "cached_input_tokens": 49473,
+          "output_reasoning_tokens": 244,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 11,
+          "first_seq": 1689,
+          "last_seq": 1865,
+          "terminal": "completed",
+          "input_tokens": 62466,
+          "output_tokens": 722,
+          "cached_input_tokens": 54862,
+          "output_reasoning_tokens": 546,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 12,
+          "first_seq": 1870,
+          "last_seq": 8419,
+          "terminal": "completed",
+          "input_tokens": 64633,
+          "output_tokens": 6996,
+          "cached_input_tokens": 62463,
+          "output_reasoning_tokens": 456,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 13,
+          "first_seq": 8420,
+          "last_seq": 8486,
+          "terminal": "completed",
+          "input_tokens": 71653,
+          "output_tokens": 85,
+          "cached_input_tokens": 64630,
+          "output_reasoning_tokens": 15,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 14,
+          "first_seq": 8492,
+          "last_seq": 8615,
+          "terminal": "completed",
+          "input_tokens": 79051,
+          "output_tokens": 406,
+          "cached_input_tokens": 71650,
+          "output_reasoning_tokens": 282,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 15,
+          "first_seq": 8616,
+          "last_seq": 8671,
+          "terminal": "completed",
+          "input_tokens": 84829,
+          "output_tokens": 134,
+          "cached_input_tokens": 79048,
+          "output_reasoning_tokens": 75,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 16,
+          "first_seq": 8672,
+          "last_seq": 9020,
+          "terminal": "completed",
+          "input_tokens": 85007,
+          "output_tokens": 568,
+          "cached_input_tokens": 84826,
+          "output_reasoning_tokens": 218,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 17,
+          "first_seq": 9021,
+          "last_seq": 9265,
+          "terminal": "completed",
+          "input_tokens": 85599,
+          "output_tokens": 258,
+          "cached_input_tokens": 85004,
+          "output_reasoning_tokens": 10,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 18,
+          "first_seq": 9266,
+          "last_seq": 9376,
+          "terminal": "completed",
+          "input_tokens": 85881,
+          "output_tokens": 125,
+          "cached_input_tokens": 85596,
+          "output_reasoning_tokens": 9,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 19,
+          "first_seq": 9377,
+          "last_seq": 9431,
+          "terminal": "completed",
+          "input_tokens": 86091,
+          "output_tokens": 71,
+          "cached_input_tokens": 85878,
+          "output_reasoning_tokens": 13,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 20,
+          "first_seq": 9433,
+          "last_seq": 9504,
+          "terminal": "completed",
+          "input_tokens": 86479,
+          "output_tokens": 127,
+          "cached_input_tokens": 86088,
+          "output_reasoning_tokens": 55,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 21,
+          "first_seq": 9505,
+          "last_seq": 9664,
+          "terminal": "completed",
+          "input_tokens": 87134,
+          "output_tokens": 188,
+          "cached_input_tokens": 86476,
+          "output_reasoning_tokens": 26,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 22,
+          "first_seq": 9665,
+          "last_seq": 9768,
+          "terminal": "completed",
+          "input_tokens": 87541,
+          "output_tokens": 129,
+          "cached_input_tokens": 87131,
+          "output_reasoning_tokens": 24,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 23,
+          "first_seq": 9769,
+          "last_seq": 9905,
+          "terminal": "completed",
+          "input_tokens": 87899,
+          "output_tokens": 231,
+          "cached_input_tokens": 87538,
+          "output_reasoning_tokens": 91,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 24,
+          "first_seq": 9908,
+          "last_seq": 9941,
+          "terminal": "completed",
+          "input_tokens": 88238,
+          "output_tokens": 35,
+          "cached_input_tokens": 87896,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 25,
+          "first_seq": 9942,
+          "last_seq": 10059,
+          "terminal": "completed",
+          "input_tokens": 88609,
+          "output_tokens": 194,
+          "cached_input_tokens": 88235,
+          "output_reasoning_tokens": 73,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 26,
+          "first_seq": 10061,
+          "last_seq": 10282,
+          "terminal": "completed",
+          "input_tokens": 92396,
+          "output_tokens": 1269,
+          "cached_input_tokens": 88606,
+          "output_reasoning_tokens": 1053,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 27,
+          "first_seq": 10285,
+          "last_seq": 10374,
+          "terminal": "completed",
+          "input_tokens": 94254,
+          "output_tokens": 564,
+          "cached_input_tokens": 92393,
+          "output_reasoning_tokens": 481,
+          "tool_requests": 0
+        }
+      ],
+      "agent_version": "0.154.0",
+      "measurement": {
+        "wall_seconds": 193.9765805369243,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "measurement_status": "completed",
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "result_sha256": "16cc47d26f6665719690b83f4c0b4de66f9f52994329376864008e7cc5a65e5e"
+      },
+      "reported_cost_usd": 1.4033978000000003,
+      "artifacts": {
+        "workflow_report_sha256": "857e89f6a8d5885eaf74259fc2ff4ae727e13510f78961592d18d47aee965453",
+        "workflow_status": "completed",
+        "recorder_sha256": [
+          "59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee"
+        ],
+        "manifest_sha256": "74b0f050ded98582a333de5763f97c3f2be295351e1791dd09a11d3a6f2d2382",
+        "events_sha256": "f5559c48e98d19d6c7699420a792f768062bd6cabb827c18df2cbbb65ea42909",
+        "harbor_trial_result_sha256": "0df930ef8feac4a90c408cc2d21af4af7767c11c8dd08b551dac841732dcc7e4"
+      }
+    },
+    {
+      "label": "hermes-deepseek",
+      "run_id": "run-01a0be9f-dd96-71c1-ab28-fcb7907261d5",
+      "recording_id": "run-01a0be9f-dd96-71c1-ab28-fcb7907261d5#0000",
+      "benchmark": {
+        "agent": "hermes",
+        "artifact_sha256": "0ec91606a0e81c144bd2d5398ae9433371d4c555c300ca675d1ca98cb7d88242",
+        "framework": "harbor",
+        "model": "openai/accounts/fireworks/models/deepseek-v4-pro-0813",
+        "reward": 1,
+        "status": "completed",
+        "task": "terminal-bench/make-mips-interpreter",
+        "trial": "make-mips-interpreter__qtE2ZR2"
+      },
+      "benchmark_provenance": "operator_reported_not_recomputed",
+      "summary": {
+        "observed_model_requests": 61,
+        "usage_covered_calls": 56,
+        "input_tokens": 5748541,
+        "output_tokens": 85968,
+        "cached_input_tokens": 5418099,
+        "cached_input_coverage_calls": 56,
+        "cached_input_ratio": 0.9425172404615363,
+        "mean_input_per_covered_call": 102652.51785714286,
+        "max_input_per_covered_call": 175690,
+        "min_input_per_covered_call": 13381,
+        "output_reasoning_tokens": 65958,
+        "tool_requests": 67,
+        "input_cumulative_sum_is_context_recounted": true
+      },
+      "thirds": [
+        {
+          "segment": "early",
+          "ordinal_from": 1,
+          "ordinal_to": 20,
+          "observed_model_requests": 20,
+          "usage_covered_calls": 19,
+          "input_tokens": 711356,
+          "output_tokens": 16453,
+          "cached_input_tokens": 649365,
+          "cached_input_coverage_calls": 19,
+          "cached_input_ratio": 0.9128551667519498,
+          "mean_input_per_covered_call": 37439.78947368421,
+          "max_input_per_covered_call": 63455,
+          "min_input_per_covered_call": 13381,
+          "output_reasoning_tokens": 13423,
+          "tool_requests": 29,
+          "input_cumulative_sum_is_context_recounted": true
+        },
+        {
+          "segment": "middle",
+          "ordinal_from": 21,
+          "ordinal_to": 40,
+          "observed_model_requests": 20,
+          "usage_covered_calls": 18,
+          "input_tokens": 1849308,
+          "output_tokens": 54145,
+          "cached_input_tokens": 1765082,
+          "cached_input_coverage_calls": 18,
+          "cached_input_ratio": 0.954455396288774,
+          "mean_input_per_covered_call": 102739.33333333333,
+          "max_input_per_covered_call": 156028,
+          "min_input_per_covered_call": 68533,
+          "output_reasoning_tokens": 41241,
+          "tool_requests": 20,
+          "input_cumulative_sum_is_context_recounted": true
+        },
+        {
+          "segment": "late",
+          "ordinal_from": 41,
+          "ordinal_to": 61,
+          "observed_model_requests": 21,
+          "usage_covered_calls": 19,
+          "input_tokens": 3187877,
+          "output_tokens": 15370,
+          "cached_input_tokens": 3003652,
+          "cached_input_coverage_calls": 19,
+          "cached_input_ratio": 0.9422107565630669,
+          "mean_input_per_covered_call": 167783,
+          "max_input_per_covered_call": 175690,
+          "min_input_per_covered_call": 156285,
+          "output_reasoning_tokens": 11294,
+          "tool_requests": 18,
+          "input_cumulative_sum_is_context_recounted": true
+        }
+      ],
+      "missing_usage": [
+        {
+          "ordinal": 16,
+          "attempt_id": "run-01a0be9f-dd96-71c1-ab28-fcb7907261d5~01a0bea2-5776-708c-8e32-8599d8242655",
+          "terminal": "truncated",
+          "status_code": 200,
+          "error_class": null,
+          "category": "recording_response_chunk_sequence_gaps",
+          "started_at": "2026-09-20T11:45:05.398877Z",
+          "ended_at": "2026-09-20T11:47:10.433422Z",
+          "first_seq": 12579,
+          "last_seq": 19368
+        },
+        {
+          "ordinal": 31,
+          "attempt_id": "run-01a0be9f-dd96-71c1-ab28-fcb7907261d5~01a0bea7-eaa8-724f-b2d8-3e58185bf3f8",
+          "terminal": "truncated",
+          "status_code": 200,
+          "error_class": null,
+          "category": "recording_response_chunk_sequence_gaps",
+          "started_at": "2026-09-20T11:51:10.760506Z",
+          "ended_at": "2026-09-20T11:55:15.690005Z",
+          "first_seq": 40638,
+          "last_seq": 48571
+        },
+        {
+          "ordinal": 35,
+          "attempt_id": "run-01a0be9f-dd96-71c1-ab28-fcb7907261d5~01a0beae-488e-73f1-945c-f248d63b5d49",
+          "terminal": "truncated",
+          "status_code": 200,
+          "error_class": null,
+          "category": "recording_response_chunk_sequence_gaps",
+          "started_at": "2026-09-20T11:58:08.014577Z",
+          "ended_at": "2026-09-20T11:58:34.428617Z",
+          "first_seq": 66790,
+          "last_seq": 68522
+        },
+        {
+          "ordinal": 54,
+          "attempt_id": "run-01a0be9f-dd96-71c1-ab28-fcb7907261d5~01a0beb7-d290-7557-9c07-f9887b64d24f",
+          "terminal": "error",
+          "status_code": 400,
+          "error_class": "http_400",
+          "category": "model_does_not_support_image_inputs",
+          "started_at": "2026-09-20T12:08:33.168063Z",
+          "ended_at": "2026-09-20T12:08:33.486698Z",
+          "first_seq": 126244,
+          "last_seq": 126263
+        },
+        {
+          "ordinal": 61,
+          "attempt_id": "run-01a0be9f-dd96-71c1-ab28-fcb7907261d5~01a0beb8-f3a5-7642-8caa-b31bc9718292",
+          "terminal": "unknown",
+          "status_code": null,
+          "error_class": null,
+          "category": "no_response_observed_before_run_close",
+          "started_at": "2026-09-20T12:09:47.173928Z",
+          "ended_at": null,
+          "first_seq": 130609,
+          "last_seq": 130625
+        }
+      ],
+      "transport": {
+        "manifest_capture_drops": 3573,
+        "verified": false,
+        "payload_diff_passed": false,
+        "boundary": "target-network-namespace-ip-transport",
+        "eligible_attempts": 57,
+        "matched_attempts": 29,
+        "missing_from_wire": 28,
+        "extra_on_wire": 1,
+        "gaps": [
+          {
+            "occurrences": 1,
+            "reason": "decoded_wire_stream_without_proxy_match"
+          },
+          {
+            "occurrences": 1,
+            "reason": "packet_capture_not_complete"
+          },
+          {
+            "occurrences": 1,
+            "reason": "proxy_attempt_finish_not_unique"
+          },
+          {
+            "occurrences": 4,
+            "reason": "proxy_attempt_ineligible_for_diff"
+          },
+          {
+            "occurrences": 28,
+            "reason": "proxy_attempt_missing_from_wire"
+          },
+          {
+            "occurrences": 3,
+            "reason": "proxy_body_sequence_gap"
+          },
+          {
+            "occurrences": 3,
+            "reason": "proxy_response_incomplete"
+          },
+          {
+            "occurrences": 1,
+            "reason": "proxy_response_start_not_unique"
+          },
+          {
+            "occurrences": 8,
+            "reason": "stream_client_direction_unknown"
+          },
+          {
+            "occurrences": 8,
+            "reason": "stream_method_missing"
+          },
+          {
+            "occurrences": 20,
+            "reason": "stream_status_missing"
+          },
+          {
+            "occurrences": 8,
+            "reason": "stream_target_missing"
+          }
+        ]
+      },
+      "native_tool_hook_summary": [
+        {
+          "event": "post_tool_call",
+          "events": 70,
+          "unique_tool_call_ids": 70
+        },
+        {
+          "event": "pre_tool_call",
+          "events": 70,
+          "unique_tool_call_ids": 70
+        }
+      ],
+      "non_generating_request": null,
+      "pcap_drop_evidence": [
+        {
+          "seq": 130635,
+          "event": "pcap_capture_finished",
+          "packets_dropped": 3560,
+          "packets_captured": 111205
+        }
+      ],
+      "response_chunk_gaps": [
+        {
+          "native_attempt_id": "01a0bea2-5776-708c-8e32-8599d8242655",
+          "first_chunk_sequence": 1,
+          "last_chunk_sequence": 3266,
+          "recorded_chunks": 3263,
+          "missing_chunks": 3
+        },
+        {
+          "native_attempt_id": "01a0bea7-eaa8-724f-b2d8-3e58185bf3f8",
+          "first_chunk_sequence": 1,
+          "last_chunk_sequence": 6914,
+          "recorded_chunks": 6913,
+          "missing_chunks": 1
+        },
+        {
+          "native_attempt_id": "01a0beae-488e-73f1-945c-f248d63b5d49",
+          "first_chunk_sequence": 1,
+          "last_chunk_sequence": 637,
+          "recorded_chunks": 628,
+          "missing_chunks": 9
+        }
+      ],
+      "calls": [
+        {
+          "ordinal": 1,
+          "first_seq": 69,
+          "last_seq": 252,
+          "terminal": "completed",
+          "input_tokens": 13381,
+          "output_tokens": 215,
+          "cached_input_tokens": 0,
+          "output_reasoning_tokens": 40,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 2,
+          "first_seq": 268,
+          "last_seq": 569,
+          "terminal": "completed",
+          "input_tokens": 15859,
+          "output_tokens": 260,
+          "cached_input_tokens": 13380,
+          "output_reasoning_tokens": 65,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 3,
+          "first_seq": 576,
+          "last_seq": 1473,
+          "terminal": "completed",
+          "input_tokens": 17536,
+          "output_tokens": 668,
+          "cached_input_tokens": 15858,
+          "output_reasoning_tokens": 492,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 4,
+          "first_seq": 1479,
+          "last_seq": 2820,
+          "terminal": "completed",
+          "input_tokens": 19681,
+          "output_tokens": 1031,
+          "cached_input_tokens": 17535,
+          "output_reasoning_tokens": 845,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 5,
+          "first_seq": 2836,
+          "last_seq": 3967,
+          "terminal": "completed",
+          "input_tokens": 22888,
+          "output_tokens": 866,
+          "cached_input_tokens": 19680,
+          "output_reasoning_tokens": 666,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 6,
+          "first_seq": 3980,
+          "last_seq": 4232,
+          "terminal": "completed",
+          "input_tokens": 25011,
+          "output_tokens": 198,
+          "cached_input_tokens": 22887,
+          "output_reasoning_tokens": 138,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 7,
+          "first_seq": 4237,
+          "last_seq": 5531,
+          "terminal": "completed",
+          "input_tokens": 28043,
+          "output_tokens": 985,
+          "cached_input_tokens": 25010,
+          "output_reasoning_tokens": 895,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 8,
+          "first_seq": 5536,
+          "last_seq": 5922,
+          "terminal": "completed",
+          "input_tokens": 33482,
+          "output_tokens": 295,
+          "cached_input_tokens": 28042,
+          "output_reasoning_tokens": 152,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 9,
+          "first_seq": 5927,
+          "last_seq": 6262,
+          "terminal": "completed",
+          "input_tokens": 35951,
+          "output_tokens": 341,
+          "cached_input_tokens": 33481,
+          "output_reasoning_tokens": 174,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 10,
+          "first_seq": 6271,
+          "last_seq": 7186,
+          "terminal": "completed",
+          "input_tokens": 38791,
+          "output_tokens": 757,
+          "cached_input_tokens": 35950,
+          "output_reasoning_tokens": 624,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 11,
+          "first_seq": 7193,
+          "last_seq": 7710,
+          "terminal": "completed",
+          "input_tokens": 40635,
+          "output_tokens": 457,
+          "cached_input_tokens": 38790,
+          "output_reasoning_tokens": 237,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 12,
+          "first_seq": 7717,
+          "last_seq": 7820,
+          "terminal": "completed",
+          "input_tokens": 41628,
+          "output_tokens": 119,
+          "cached_input_tokens": 40634,
+          "output_reasoning_tokens": 28,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 13,
+          "first_seq": 7826,
+          "last_seq": 9996,
+          "terminal": "completed",
+          "input_tokens": 42293,
+          "output_tokens": 1646,
+          "cached_input_tokens": 41627,
+          "output_reasoning_tokens": 1467,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 14,
+          "first_seq": 10003,
+          "last_seq": 11223,
+          "terminal": "completed",
+          "input_tokens": 44988,
+          "output_tokens": 911,
+          "cached_input_tokens": 42292,
+          "output_reasoning_tokens": 719,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 15,
+          "first_seq": 11230,
+          "last_seq": 12566,
+          "terminal": "completed",
+          "input_tokens": 48473,
+          "output_tokens": 1002,
+          "cached_input_tokens": 44987,
+          "output_reasoning_tokens": 817,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 16,
+          "first_seq": 12579,
+          "last_seq": 19368,
+          "terminal": "truncated",
+          "input_tokens": null,
+          "output_tokens": null,
+          "cached_input_tokens": null,
+          "output_reasoning_tokens": null,
+          "tool_requests": 0
+        },
+        {
+          "ordinal": 17,
+          "first_seq": 19374,
+          "last_seq": 19537,
+          "terminal": "completed",
+          "input_tokens": 58901,
+          "output_tokens": 136,
+          "cached_input_tokens": 49954,
+          "output_reasoning_tokens": 10,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 18,
+          "first_seq": 19555,
+          "last_seq": 20337,
+          "terminal": "completed",
+          "input_tokens": 59468,
+          "output_tokens": 589,
+          "cached_input_tokens": 58900,
+          "output_reasoning_tokens": 363,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 19,
+          "first_seq": 20346,
+          "last_seq": 21697,
+          "terminal": "completed",
+          "input_tokens": 60892,
+          "output_tokens": 990,
+          "cached_input_tokens": 59467,
+          "output_reasoning_tokens": 867,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 20,
+          "first_seq": 21711,
+          "last_seq": 28348,
+          "terminal": "completed",
+          "input_tokens": 63455,
+          "output_tokens": 4987,
+          "cached_input_tokens": 60891,
+          "output_reasoning_tokens": 4824,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 21,
+          "first_seq": 28353,
+          "last_seq": 28869,
+          "terminal": "completed",
+          "input_tokens": 68533,
+          "output_tokens": 394,
+          "cached_input_tokens": 63454,
+          "output_reasoning_tokens": 269,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 22,
+          "first_seq": 28874,
+          "last_seq": 38148,
+          "terminal": "completed",
+          "input_tokens": 69076,
+          "output_tokens": 6711,
+          "cached_input_tokens": 68532,
+          "output_reasoning_tokens": 6652,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 23,
+          "first_seq": 38154,
+          "last_seq": 38470,
+          "terminal": "completed",
+          "input_tokens": 76069,
+          "output_tokens": 255,
+          "cached_input_tokens": 69075,
+          "output_reasoning_tokens": 79,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 24,
+          "first_seq": 38477,
+          "last_seq": 38625,
+          "terminal": "completed",
+          "input_tokens": 77695,
+          "output_tokens": 207,
+          "cached_input_tokens": 76068,
+          "output_reasoning_tokens": 42,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 25,
+          "first_seq": 38636,
+          "last_seq": 38802,
+          "terminal": "completed",
+          "input_tokens": 79733,
+          "output_tokens": 160,
+          "cached_input_tokens": 77694,
+          "output_reasoning_tokens": 69,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 26,
+          "first_seq": 38805,
+          "last_seq": 39072,
+          "terminal": "completed",
+          "input_tokens": 81184,
+          "output_tokens": 196,
+          "cached_input_tokens": 79732,
+          "output_reasoning_tokens": 71,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 27,
+          "first_seq": 39076,
+          "last_seq": 39136,
+          "terminal": "completed",
+          "input_tokens": 81939,
+          "output_tokens": 91,
+          "cached_input_tokens": 81183,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 28,
+          "first_seq": 39142,
+          "last_seq": 39515,
+          "terminal": "completed",
+          "input_tokens": 83222,
+          "output_tokens": 279,
+          "cached_input_tokens": 81938,
+          "output_reasoning_tokens": 172,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 29,
+          "first_seq": 39518,
+          "last_seq": 40037,
+          "terminal": "completed",
+          "input_tokens": 83868,
+          "output_tokens": 387,
+          "cached_input_tokens": 83221,
+          "output_reasoning_tokens": 271,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 30,
+          "first_seq": 40041,
+          "last_seq": 40627,
+          "terminal": "completed",
+          "input_tokens": 84753,
+          "output_tokens": 448,
+          "cached_input_tokens": 83867,
+          "output_reasoning_tokens": 287,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 31,
+          "first_seq": 40638,
+          "last_seq": 48571,
+          "terminal": "truncated",
+          "input_tokens": null,
+          "output_tokens": null,
+          "cached_input_tokens": null,
+          "output_reasoning_tokens": null,
+          "tool_requests": 0
+        },
+        {
+          "ordinal": 32,
+          "first_seq": 48599,
+          "last_seq": 54006,
+          "terminal": "completed",
+          "input_tokens": 106875,
+          "output_tokens": 4034,
+          "cached_input_tokens": 85358,
+          "output_reasoning_tokens": 3842,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 33,
+          "first_seq": 54017,
+          "last_seq": 56188,
+          "terminal": "completed",
+          "input_tokens": 111440,
+          "output_tokens": 1583,
+          "cached_input_tokens": 106874,
+          "output_reasoning_tokens": 1465,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 34,
+          "first_seq": 56196,
+          "last_seq": 66762,
+          "terminal": "completed",
+          "input_tokens": 113415,
+          "output_tokens": 7723,
+          "cached_input_tokens": 111439,
+          "output_reasoning_tokens": 7471,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 35,
+          "first_seq": 66790,
+          "last_seq": 68522,
+          "terminal": "truncated",
+          "input_tokens": null,
+          "output_tokens": null,
+          "cached_input_tokens": null,
+          "output_reasoning_tokens": null,
+          "tool_requests": 0
+        },
+        {
+          "ordinal": 36,
+          "first_seq": 68528,
+          "last_seq": 99738,
+          "terminal": "completed",
+          "input_tokens": 124064,
+          "output_tokens": 23791,
+          "cached_input_tokens": 121173,
+          "output_reasoning_tokens": 13054,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 37,
+          "first_seq": 99761,
+          "last_seq": 103051,
+          "terminal": "completed",
+          "input_tokens": 147920,
+          "output_tokens": 2446,
+          "cached_input_tokens": 124063,
+          "output_reasoning_tokens": 2332,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 38,
+          "first_seq": 103058,
+          "last_seq": 105649,
+          "terminal": "completed",
+          "input_tokens": 150715,
+          "output_tokens": 2013,
+          "cached_input_tokens": 147919,
+          "output_reasoning_tokens": 1932,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 39,
+          "first_seq": 105657,
+          "last_seq": 109898,
+          "terminal": "completed",
+          "input_tokens": 152779,
+          "output_tokens": 3212,
+          "cached_input_tokens": 150714,
+          "output_reasoning_tokens": 3122,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 40,
+          "first_seq": 109905,
+          "last_seq": 110192,
+          "terminal": "completed",
+          "input_tokens": 156028,
+          "output_tokens": 215,
+          "cached_input_tokens": 152778,
+          "output_reasoning_tokens": 111,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 41,
+          "first_seq": 110202,
+          "last_seq": 110369,
+          "terminal": "completed",
+          "input_tokens": 156285,
+          "output_tokens": 128,
+          "cached_input_tokens": 156027,
+          "output_reasoning_tokens": 47,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 42,
+          "first_seq": 110374,
+          "last_seq": 115489,
+          "terminal": "completed",
+          "input_tokens": 156578,
+          "output_tokens": 3989,
+          "cached_input_tokens": 156284,
+          "output_reasoning_tokens": 3203,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 43,
+          "first_seq": 115501,
+          "last_seq": 115928,
+          "terminal": "completed",
+          "input_tokens": 161288,
+          "output_tokens": 391,
+          "cached_input_tokens": 156577,
+          "output_reasoning_tokens": 47,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 44,
+          "first_seq": 115938,
+          "last_seq": 116295,
+          "terminal": "completed",
+          "input_tokens": 162170,
+          "output_tokens": 263,
+          "cached_input_tokens": 161287,
+          "output_reasoning_tokens": 185,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 45,
+          "first_seq": 116307,
+          "last_seq": 117535,
+          "terminal": "completed",
+          "input_tokens": 162947,
+          "output_tokens": 931,
+          "cached_input_tokens": 162169,
+          "output_reasoning_tokens": 781,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 46,
+          "first_seq": 117540,
+          "last_seq": 118391,
+          "terminal": "completed",
+          "input_tokens": 164545,
+          "output_tokens": 649,
+          "cached_input_tokens": 162946,
+          "output_reasoning_tokens": 558,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 47,
+          "first_seq": 118402,
+          "last_seq": 119051,
+          "terminal": "completed",
+          "input_tokens": 165402,
+          "output_tokens": 486,
+          "cached_input_tokens": 0,
+          "output_reasoning_tokens": 382,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 48,
+          "first_seq": 119066,
+          "last_seq": 120048,
+          "terminal": "completed",
+          "input_tokens": 166143,
+          "output_tokens": 753,
+          "cached_input_tokens": 165401,
+          "output_reasoning_tokens": 369,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 49,
+          "first_seq": 120059,
+          "last_seq": 122493,
+          "terminal": "completed",
+          "input_tokens": 167043,
+          "output_tokens": 1788,
+          "cached_input_tokens": 166142,
+          "output_reasoning_tokens": 1605,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 50,
+          "first_seq": 122513,
+          "last_seq": 122925,
+          "terminal": "completed",
+          "input_tokens": 168911,
+          "output_tokens": 328,
+          "cached_input_tokens": 167042,
+          "output_reasoning_tokens": 124,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 51,
+          "first_seq": 122937,
+          "last_seq": 125551,
+          "terminal": "completed",
+          "input_tokens": 169409,
+          "output_tokens": 1981,
+          "cached_input_tokens": 168910,
+          "output_reasoning_tokens": 1746,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 52,
+          "first_seq": 125572,
+          "last_seq": 126089,
+          "terminal": "completed",
+          "input_tokens": 171667,
+          "output_tokens": 405,
+          "cached_input_tokens": 169408,
+          "output_reasoning_tokens": 306,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 53,
+          "first_seq": 126098,
+          "last_seq": 126169,
+          "terminal": "completed",
+          "input_tokens": 172106,
+          "output_tokens": 82,
+          "cached_input_tokens": 171666,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 54,
+          "first_seq": 126244,
+          "last_seq": 126263,
+          "terminal": "error",
+          "input_tokens": null,
+          "output_tokens": null,
+          "cached_input_tokens": null,
+          "output_reasoning_tokens": null,
+          "tool_requests": 0
+        },
+        {
+          "ordinal": 55,
+          "first_seq": 126266,
+          "last_seq": 127531,
+          "terminal": "completed",
+          "input_tokens": 172328,
+          "output_tokens": 931,
+          "cached_input_tokens": 172105,
+          "output_reasoning_tokens": 658,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 56,
+          "first_seq": 127536,
+          "last_seq": 127646,
+          "terminal": "completed",
+          "input_tokens": 173324,
+          "output_tokens": 106,
+          "cached_input_tokens": 172327,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 57,
+          "first_seq": 127651,
+          "last_seq": 127739,
+          "terminal": "completed",
+          "input_tokens": 173611,
+          "output_tokens": 80,
+          "cached_input_tokens": 173323,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 58,
+          "first_seq": 127749,
+          "last_seq": 127917,
+          "terminal": "completed",
+          "input_tokens": 174104,
+          "output_tokens": 140,
+          "cached_input_tokens": 173610,
+          "output_reasoning_tokens": 69,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 59,
+          "first_seq": 127924,
+          "last_seq": 129693,
+          "terminal": "completed",
+          "input_tokens": 174326,
+          "output_tokens": 1308,
+          "cached_input_tokens": 174103,
+          "output_reasoning_tokens": 1214,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 60,
+          "first_seq": 129700,
+          "last_seq": 130602,
+          "terminal": "completed",
+          "input_tokens": 175690,
+          "output_tokens": 631,
+          "cached_input_tokens": 174325,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 0
+        },
+        {
+          "ordinal": 61,
+          "first_seq": 130609,
+          "last_seq": 130625,
+          "terminal": "unknown",
+          "input_tokens": null,
+          "output_tokens": null,
+          "cached_input_tokens": null,
+          "output_reasoning_tokens": null,
+          "tool_requests": 0
+        }
+      ],
+      "agent_version": "0.19.0",
+      "measurement": {
+        "wall_seconds": 1661.2665456738323,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "measurement_status": "completed",
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "result_sha256": "538d38c9c7afead10cb8dad64244a208a345fae096705bed440a4c172a9e0bbb",
+        "started_sha256": "eb70b7a103c0d8414bb9a4065198af7d4f863741ce4342cfa7a21995f4ece9f9",
+        "separately_recovered_from_original_trial_measurement": true
+      },
+      "reported_cost_usd": 1.159544188,
+      "artifacts": {
+        "workflow_report_sha256": "9a2b02261562ef81259fb1b11642298c010ede38cc078a63723723db2ddde681",
+        "workflow_status": "incomplete",
+        "recorder_sha256": [
+          "59a10e9fcd944b8961dbf8458a4fe572241f9beac76419ab2139b190a8f8eaee"
+        ],
+        "manifest_sha256": "e7b9eed3be8cb07ce6f5284bccdf53bdd967807b575014fc45a00669b92848a6",
+        "events_sha256": "218fbaca73fcd99ff99a8eea349826900a5bc2beae0a624ee86f03c986504f47",
+        "harbor_trial_result_sha256": "0ec91606a0e81c144bd2d5398ae9433371d4c555c300ca675d1ca98cb7d88242"
+      }
+    },
+    {
+      "label": "pi-deepseek",
+      "run_id": "run-01a0c206-6d92-72d9-80de-2fc4f9c7e8ab",
+      "recording_id": "run-01a0c206-6d92-72d9-80de-2fc4f9c7e8ab#0000",
+      "benchmark": {
+        "agent": "pi",
+        "artifact_sha256": "3895af960fb5c8df996084f62a6505c32a2c4b068994b896191f17f0523bc5dc",
+        "framework": "harbor",
+        "model": "openai/accounts/fireworks/models/deepseek-v4-pro-0813",
+        "reward": 1,
+        "status": "completed",
+        "task": "terminal-bench/make-mips-interpreter",
+        "trial": "make-mips-interpreter__vUZGAAU"
+      },
+      "benchmark_provenance": "operator_reported_not_recomputed",
+      "summary": {
+        "observed_model_requests": 75,
+        "usage_covered_calls": 75,
+        "input_tokens": 6465285,
+        "output_tokens": 113083,
+        "cached_input_tokens": 6293272,
+        "cached_input_coverage_calls": 75,
+        "cached_input_ratio": 0.9733943669923291,
+        "mean_input_per_covered_call": 86203.8,
+        "max_input_per_covered_call": 171939,
+        "min_input_per_covered_call": 1700,
+        "output_reasoning_tokens": 87394,
+        "tool_requests": 81,
+        "input_cumulative_sum_is_context_recounted": true
+      },
+      "thirds": [
+        {
+          "segment": "early",
+          "ordinal_from": 1,
+          "ordinal_to": 25,
+          "observed_model_requests": 25,
+          "usage_covered_calls": 25,
+          "input_tokens": 742201,
+          "output_tokens": 9503,
+          "cached_input_tokens": 693509,
+          "cached_input_coverage_calls": 25,
+          "cached_input_ratio": 0.9343951301601587,
+          "mean_input_per_covered_call": 29688.04,
+          "max_input_per_covered_call": 48668,
+          "min_input_per_covered_call": 1700,
+          "output_reasoning_tokens": 6495,
+          "tool_requests": 32,
+          "input_cumulative_sum_is_context_recounted": true
+        },
+        {
+          "segment": "middle",
+          "ordinal_from": 26,
+          "ordinal_to": 50,
+          "observed_model_requests": 25,
+          "usage_covered_calls": 25,
+          "input_tokens": 1890036,
+          "output_tokens": 49949,
+          "cached_input_tokens": 1831812,
+          "cached_input_coverage_calls": 25,
+          "cached_input_ratio": 0.969194237570078,
+          "mean_input_per_covered_call": 75601.44,
+          "max_input_per_covered_call": 106867,
+          "min_input_per_covered_call": 49852,
+          "output_reasoning_tokens": 44015,
+          "tool_requests": 25,
+          "input_cumulative_sum_is_context_recounted": true
+        },
+        {
+          "segment": "late",
+          "ordinal_from": 51,
+          "ordinal_to": 75,
+          "observed_model_requests": 25,
+          "usage_covered_calls": 25,
+          "input_tokens": 3833048,
+          "output_tokens": 53631,
+          "cached_input_tokens": 3767951,
+          "cached_input_coverage_calls": 25,
+          "cached_input_ratio": 0.983016909780415,
+          "mean_input_per_covered_call": 153321.92,
+          "max_input_per_covered_call": 171939,
+          "min_input_per_covered_call": 112773,
+          "output_reasoning_tokens": 36884,
+          "tool_requests": 24,
+          "input_cumulative_sum_is_context_recounted": true
+        }
+      ],
+      "missing_usage": [],
+      "transport": {
+        "manifest_capture_drops": 2246,
+        "verified": false,
+        "payload_diff_passed": false,
+        "boundary": "target-network-namespace-ip-transport",
+        "eligible_attempts": 75,
+        "matched_attempts": 34,
+        "missing_from_wire": 41,
+        "extra_on_wire": 0,
+        "gaps": [
+          {
+            "occurrences": 1,
+            "reason": "packet_capture_not_complete"
+          },
+          {
+            "occurrences": 41,
+            "reason": "proxy_attempt_missing_from_wire"
+          },
+          {
+            "occurrences": 41,
+            "reason": "stream_method_missing"
+          },
+          {
+            "occurrences": 41,
+            "reason": "stream_target_missing"
+          }
+        ]
+      },
+      "native_tool_hook_summary": [],
+      "non_generating_request": null,
+      "pcap_drop_evidence": [
+        {
+          "seq": 145649,
+          "event": "pcap_capture_finished",
+          "packets_dropped": 2246,
+          "packets_captured": 104490
+        }
+      ],
+      "response_chunk_gaps": [],
+      "calls": [
+        {
+          "ordinal": 1,
+          "first_seq": 16,
+          "last_seq": 134,
+          "terminal": "completed",
+          "input_tokens": 1700,
+          "output_tokens": 117,
+          "cached_input_tokens": 0,
+          "output_reasoning_tokens": 16,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 2,
+          "first_seq": 135,
+          "last_seq": 258,
+          "terminal": "completed",
+          "input_tokens": 1979,
+          "output_tokens": 167,
+          "cached_input_tokens": 1699,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 3,
+          "first_seq": 256,
+          "last_seq": 311,
+          "terminal": "completed",
+          "input_tokens": 3388,
+          "output_tokens": 81,
+          "cached_input_tokens": 1978,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 4,
+          "first_seq": 309,
+          "last_seq": 386,
+          "terminal": "completed",
+          "input_tokens": 3723,
+          "output_tokens": 139,
+          "cached_input_tokens": 3387,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 5,
+          "first_seq": 382,
+          "last_seq": 818,
+          "terminal": "completed",
+          "input_tokens": 5178,
+          "output_tokens": 379,
+          "cached_input_tokens": 3722,
+          "output_reasoning_tokens": 210,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 6,
+          "first_seq": 812,
+          "last_seq": 1091,
+          "terminal": "completed",
+          "input_tokens": 7640,
+          "output_tokens": 292,
+          "cached_input_tokens": 5177,
+          "output_reasoning_tokens": 127,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 7,
+          "first_seq": 1090,
+          "last_seq": 1164,
+          "terminal": "completed",
+          "input_tokens": 8716,
+          "output_tokens": 137,
+          "cached_input_tokens": 7639,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 8,
+          "first_seq": 1165,
+          "last_seq": 1464,
+          "terminal": "completed",
+          "input_tokens": 22087,
+          "output_tokens": 266,
+          "cached_input_tokens": 8715,
+          "output_reasoning_tokens": 139,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 9,
+          "first_seq": 1465,
+          "last_seq": 2079,
+          "terminal": "completed",
+          "input_tokens": 25298,
+          "output_tokens": 498,
+          "cached_input_tokens": 22086,
+          "output_reasoning_tokens": 333,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 10,
+          "first_seq": 2076,
+          "last_seq": 2760,
+          "terminal": "completed",
+          "input_tokens": 30943,
+          "output_tokens": 546,
+          "cached_input_tokens": 25297,
+          "output_reasoning_tokens": 436,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 11,
+          "first_seq": 2754,
+          "last_seq": 2816,
+          "terminal": "completed",
+          "input_tokens": 33122,
+          "output_tokens": 84,
+          "cached_input_tokens": 30942,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 12,
+          "first_seq": 2815,
+          "last_seq": 4169,
+          "terminal": "completed",
+          "input_tokens": 34189,
+          "output_tokens": 1076,
+          "cached_input_tokens": 33121,
+          "output_reasoning_tokens": 992,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 13,
+          "first_seq": 4163,
+          "last_seq": 4436,
+          "terminal": "completed",
+          "input_tokens": 36872,
+          "output_tokens": 241,
+          "cached_input_tokens": 34188,
+          "output_reasoning_tokens": 151,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 14,
+          "first_seq": 4433,
+          "last_seq": 6559,
+          "terminal": "completed",
+          "input_tokens": 37176,
+          "output_tokens": 1687,
+          "cached_input_tokens": 36871,
+          "output_reasoning_tokens": 1558,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 15,
+          "first_seq": 6560,
+          "last_seq": 6624,
+          "terminal": "completed",
+          "input_tokens": 39456,
+          "output_tokens": 88,
+          "cached_input_tokens": 37175,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 16,
+          "first_seq": 6621,
+          "last_seq": 7927,
+          "terminal": "completed",
+          "input_tokens": 41711,
+          "output_tokens": 1049,
+          "cached_input_tokens": 39455,
+          "output_reasoning_tokens": 872,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 17,
+          "first_seq": 7923,
+          "last_seq": 7988,
+          "terminal": "completed",
+          "input_tokens": 42997,
+          "output_tokens": 84,
+          "cached_input_tokens": 41710,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 18,
+          "first_seq": 7982,
+          "last_seq": 8126,
+          "terminal": "completed",
+          "input_tokens": 43653,
+          "output_tokens": 124,
+          "cached_input_tokens": 42996,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 19,
+          "first_seq": 8121,
+          "last_seq": 8189,
+          "terminal": "completed",
+          "input_tokens": 44588,
+          "output_tokens": 83,
+          "cached_input_tokens": 43652,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 20,
+          "first_seq": 8188,
+          "last_seq": 8248,
+          "terminal": "completed",
+          "input_tokens": 44737,
+          "output_tokens": 84,
+          "cached_input_tokens": 44587,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 21,
+          "first_seq": 8245,
+          "last_seq": 8315,
+          "terminal": "completed",
+          "input_tokens": 45019,
+          "output_tokens": 95,
+          "cached_input_tokens": 44736,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 22,
+          "first_seq": 8310,
+          "last_seq": 8769,
+          "terminal": "completed",
+          "input_tokens": 45216,
+          "output_tokens": 420,
+          "cached_input_tokens": 45018,
+          "output_reasoning_tokens": 218,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 23,
+          "first_seq": 8773,
+          "last_seq": 10326,
+          "terminal": "completed",
+          "input_tokens": 46256,
+          "output_tokens": 1230,
+          "cached_input_tokens": 45215,
+          "output_reasoning_tokens": 1091,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 24,
+          "first_seq": 10327,
+          "last_seq": 10670,
+          "terminal": "completed",
+          "input_tokens": 47889,
+          "output_tokens": 289,
+          "cached_input_tokens": 46255,
+          "output_reasoning_tokens": 205,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 25,
+          "first_seq": 10665,
+          "last_seq": 10948,
+          "terminal": "completed",
+          "input_tokens": 48668,
+          "output_tokens": 247,
+          "cached_input_tokens": 47888,
+          "output_reasoning_tokens": 147,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 26,
+          "first_seq": 10943,
+          "last_seq": 13513,
+          "terminal": "completed",
+          "input_tokens": 49852,
+          "output_tokens": 1946,
+          "cached_input_tokens": 48667,
+          "output_reasoning_tokens": 1833,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 27,
+          "first_seq": 13514,
+          "last_seq": 13581,
+          "terminal": "completed",
+          "input_tokens": 51936,
+          "output_tokens": 92,
+          "cached_input_tokens": 49851,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 28,
+          "first_seq": 13582,
+          "last_seq": 13725,
+          "terminal": "completed",
+          "input_tokens": 52114,
+          "output_tokens": 146,
+          "cached_input_tokens": 51935,
+          "output_reasoning_tokens": 42,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 29,
+          "first_seq": 13719,
+          "last_seq": 14142,
+          "terminal": "completed",
+          "input_tokens": 54997,
+          "output_tokens": 359,
+          "cached_input_tokens": 52113,
+          "output_reasoning_tokens": 155,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 30,
+          "first_seq": 14145,
+          "last_seq": 17699,
+          "terminal": "completed",
+          "input_tokens": 55624,
+          "output_tokens": 2703,
+          "cached_input_tokens": 54996,
+          "output_reasoning_tokens": 2550,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 31,
+          "first_seq": 17702,
+          "last_seq": 18089,
+          "terminal": "completed",
+          "input_tokens": 58507,
+          "output_tokens": 335,
+          "cached_input_tokens": 55623,
+          "output_reasoning_tokens": 191,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 32,
+          "first_seq": 18097,
+          "last_seq": 22958,
+          "terminal": "completed",
+          "input_tokens": 59310,
+          "output_tokens": 3689,
+          "cached_input_tokens": 58506,
+          "output_reasoning_tokens": 3518,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 33,
+          "first_seq": 22963,
+          "last_seq": 25465,
+          "terminal": "completed",
+          "input_tokens": 63854,
+          "output_tokens": 2007,
+          "cached_input_tokens": 59309,
+          "output_reasoning_tokens": 1736,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 34,
+          "first_seq": 25467,
+          "last_seq": 29027,
+          "terminal": "completed",
+          "input_tokens": 66160,
+          "output_tokens": 2753,
+          "cached_input_tokens": 63853,
+          "output_reasoning_tokens": 2491,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 35,
+          "first_seq": 29028,
+          "last_seq": 33798,
+          "terminal": "completed",
+          "input_tokens": 69133,
+          "output_tokens": 3679,
+          "cached_input_tokens": 66159,
+          "output_reasoning_tokens": 3356,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 36,
+          "first_seq": 33800,
+          "last_seq": 36058,
+          "terminal": "completed",
+          "input_tokens": 73182,
+          "output_tokens": 1801,
+          "cached_input_tokens": 69132,
+          "output_reasoning_tokens": 1614,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 37,
+          "first_seq": 36059,
+          "last_seq": 37762,
+          "terminal": "completed",
+          "input_tokens": 75039,
+          "output_tokens": 1359,
+          "cached_input_tokens": 73181,
+          "output_reasoning_tokens": 1202,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 38,
+          "first_seq": 37763,
+          "last_seq": 38432,
+          "terminal": "completed",
+          "input_tokens": 77221,
+          "output_tokens": 535,
+          "cached_input_tokens": 75038,
+          "output_reasoning_tokens": 397,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 39,
+          "first_seq": 38434,
+          "last_seq": 38609,
+          "terminal": "completed",
+          "input_tokens": 78580,
+          "output_tokens": 164,
+          "cached_input_tokens": 77220,
+          "output_reasoning_tokens": 18,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 40,
+          "first_seq": 38610,
+          "last_seq": 39797,
+          "terminal": "completed",
+          "input_tokens": 79686,
+          "output_tokens": 974,
+          "cached_input_tokens": 78579,
+          "output_reasoning_tokens": 609,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 41,
+          "first_seq": 39799,
+          "last_seq": 42651,
+          "terminal": "completed",
+          "input_tokens": 81255,
+          "output_tokens": 2253,
+          "cached_input_tokens": 79685,
+          "output_reasoning_tokens": 1997,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 42,
+          "first_seq": 42652,
+          "last_seq": 43887,
+          "terminal": "completed",
+          "input_tokens": 83727,
+          "output_tokens": 985,
+          "cached_input_tokens": 81254,
+          "output_reasoning_tokens": 888,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 43,
+          "first_seq": 43888,
+          "last_seq": 44118,
+          "terminal": "completed",
+          "input_tokens": 84748,
+          "output_tokens": 225,
+          "cached_input_tokens": 83726,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 44,
+          "first_seq": 44119,
+          "last_seq": 45967,
+          "terminal": "completed",
+          "input_tokens": 85056,
+          "output_tokens": 1457,
+          "cached_input_tokens": 84747,
+          "output_reasoning_tokens": 1194,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 45,
+          "first_seq": 45970,
+          "last_seq": 49001,
+          "terminal": "completed",
+          "input_tokens": 86699,
+          "output_tokens": 2300,
+          "cached_input_tokens": 85055,
+          "output_reasoning_tokens": 2186,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 46,
+          "first_seq": 49002,
+          "last_seq": 57678,
+          "terminal": "completed",
+          "input_tokens": 90581,
+          "output_tokens": 6537,
+          "cached_input_tokens": 86698,
+          "output_reasoning_tokens": 6403,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 47,
+          "first_seq": 57681,
+          "last_seq": 63486,
+          "terminal": "completed",
+          "input_tokens": 98441,
+          "output_tokens": 4463,
+          "cached_input_tokens": 90580,
+          "output_reasoning_tokens": 3819,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 48,
+          "first_seq": 63488,
+          "last_seq": 65399,
+          "terminal": "completed",
+          "input_tokens": 102949,
+          "output_tokens": 1524,
+          "cached_input_tokens": 98440,
+          "output_reasoning_tokens": 911,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 49,
+          "first_seq": 65401,
+          "last_seq": 68379,
+          "terminal": "completed",
+          "input_tokens": 104518,
+          "output_tokens": 2334,
+          "cached_input_tokens": 102948,
+          "output_reasoning_tokens": 1676,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 50,
+          "first_seq": 68381,
+          "last_seq": 75629,
+          "terminal": "completed",
+          "input_tokens": 106867,
+          "output_tokens": 5329,
+          "cached_input_tokens": 104517,
+          "output_reasoning_tokens": 5229,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 51,
+          "first_seq": 75630,
+          "last_seq": 112086,
+          "terminal": "completed",
+          "input_tokens": 112773,
+          "output_tokens": 27899,
+          "cached_input_tokens": 106866,
+          "output_reasoning_tokens": 17676,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 52,
+          "first_seq": 112084,
+          "last_seq": 113780,
+          "terminal": "completed",
+          "input_tokens": 140692,
+          "output_tokens": 1313,
+          "cached_input_tokens": 112772,
+          "output_reasoning_tokens": 990,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 53,
+          "first_seq": 113781,
+          "last_seq": 114425,
+          "terminal": "completed",
+          "input_tokens": 142030,
+          "output_tokens": 521,
+          "cached_input_tokens": 140691,
+          "output_reasoning_tokens": 440,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 54,
+          "first_seq": 114428,
+          "last_seq": 114531,
+          "terminal": "completed",
+          "input_tokens": 142573,
+          "output_tokens": 109,
+          "cached_input_tokens": 142029,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 55,
+          "first_seq": 114536,
+          "last_seq": 116161,
+          "terminal": "completed",
+          "input_tokens": 143305,
+          "output_tokens": 1264,
+          "cached_input_tokens": 142572,
+          "output_reasoning_tokens": 855,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 56,
+          "first_seq": 116156,
+          "last_seq": 116544,
+          "terminal": "completed",
+          "input_tokens": 144594,
+          "output_tokens": 321,
+          "cached_input_tokens": 143304,
+          "output_reasoning_tokens": 199,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 57,
+          "first_seq": 116549,
+          "last_seq": 117347,
+          "terminal": "completed",
+          "input_tokens": 145041,
+          "output_tokens": 629,
+          "cached_input_tokens": 144593,
+          "output_reasoning_tokens": 173,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 58,
+          "first_seq": 117349,
+          "last_seq": 118287,
+          "terminal": "completed",
+          "input_tokens": 145811,
+          "output_tokens": 779,
+          "cached_input_tokens": 145040,
+          "output_reasoning_tokens": 104,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 59,
+          "first_seq": 118289,
+          "last_seq": 118337,
+          "terminal": "completed",
+          "input_tokens": 146612,
+          "output_tokens": 82,
+          "cached_input_tokens": 145810,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 60,
+          "first_seq": 118338,
+          "last_seq": 119499,
+          "terminal": "completed",
+          "input_tokens": 146740,
+          "output_tokens": 883,
+          "cached_input_tokens": 146611,
+          "output_reasoning_tokens": 413,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 61,
+          "first_seq": 119501,
+          "last_seq": 121181,
+          "terminal": "completed",
+          "input_tokens": 147770,
+          "output_tokens": 1278,
+          "cached_input_tokens": 146739,
+          "output_reasoning_tokens": 1074,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 62,
+          "first_seq": 121183,
+          "last_seq": 122181,
+          "terminal": "completed",
+          "input_tokens": 149112,
+          "output_tokens": 756,
+          "cached_input_tokens": 147769,
+          "output_reasoning_tokens": 620,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 63,
+          "first_seq": 122182,
+          "last_seq": 122283,
+          "terminal": "completed",
+          "input_tokens": 149893,
+          "output_tokens": 112,
+          "cached_input_tokens": 149111,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 64,
+          "first_seq": 122285,
+          "last_seq": 129168,
+          "terminal": "completed",
+          "input_tokens": 151389,
+          "output_tokens": 5032,
+          "cached_input_tokens": 149892,
+          "output_reasoning_tokens": 4885,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 65,
+          "first_seq": 129169,
+          "last_seq": 129483,
+          "terminal": "completed",
+          "input_tokens": 156434,
+          "output_tokens": 266,
+          "cached_input_tokens": 151388,
+          "output_reasoning_tokens": 42,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 66,
+          "first_seq": 129479,
+          "last_seq": 138504,
+          "terminal": "completed",
+          "input_tokens": 156725,
+          "output_tokens": 6928,
+          "cached_input_tokens": 156433,
+          "output_reasoning_tokens": 5991,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 67,
+          "first_seq": 138503,
+          "last_seq": 139205,
+          "terminal": "completed",
+          "input_tokens": 163678,
+          "output_tokens": 563,
+          "cached_input_tokens": 156724,
+          "output_reasoning_tokens": 435,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 68,
+          "first_seq": 139210,
+          "last_seq": 139985,
+          "terminal": "completed",
+          "input_tokens": 164421,
+          "output_tokens": 604,
+          "cached_input_tokens": 163677,
+          "output_reasoning_tokens": 362,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 69,
+          "first_seq": 139989,
+          "last_seq": 140737,
+          "terminal": "completed",
+          "input_tokens": 165043,
+          "output_tokens": 568,
+          "cached_input_tokens": 164420,
+          "output_reasoning_tokens": 217,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 70,
+          "first_seq": 140740,
+          "last_seq": 141708,
+          "terminal": "completed",
+          "input_tokens": 166925,
+          "output_tokens": 735,
+          "cached_input_tokens": 165042,
+          "output_reasoning_tokens": 579,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 71,
+          "first_seq": 141714,
+          "last_seq": 142262,
+          "terminal": "completed",
+          "input_tokens": 167914,
+          "output_tokens": 423,
+          "cached_input_tokens": 166924,
+          "output_reasoning_tokens": 343,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 72,
+          "first_seq": 142263,
+          "last_seq": 143546,
+          "terminal": "completed",
+          "input_tokens": 169707,
+          "output_tokens": 990,
+          "cached_input_tokens": 167913,
+          "output_reasoning_tokens": 875,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 73,
+          "first_seq": 143543,
+          "last_seq": 143737,
+          "terminal": "completed",
+          "input_tokens": 170722,
+          "output_tokens": 187,
+          "cached_input_tokens": 169706,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 74,
+          "first_seq": 143745,
+          "last_seq": 144682,
+          "terminal": "completed",
+          "input_tokens": 171205,
+          "output_tokens": 707,
+          "cached_input_tokens": 170721,
+          "output_reasoning_tokens": 611,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 75,
+          "first_seq": 144683,
+          "last_seq": 145639,
+          "terminal": "completed",
+          "input_tokens": 171939,
+          "output_tokens": 682,
+          "cached_input_tokens": 171204,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 0
+        }
+      ],
+      "agent_version": "0.86.1",
+      "measurement": {
+        "wall_seconds": 1568.141016408801,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "measurement_status": "completed",
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "result_sha256": "509fe75f0fe67ed70c799b04765e291aaaa4b14f8a54b1f7f24d1b53dc31aa0b"
+      },
+      "reported_cost_usd": 0.951769808,
+      "artifacts": {
+        "workflow_report_sha256": "25b1f3c022986e1cb1b3a2e75d03279be2594464ba03048a5004ef234c1dc939",
+        "workflow_status": "incomplete",
+        "recorder_sha256": [
+          "b3039e76c35ba9e12dc12315d756120d1f1ac1b383dfe60a63d75af7909e56b2"
+        ],
+        "manifest_sha256": "140c0e75ba9481a32ce6a71a42918d188319ea8f4df42961c4a8d8a38ea3532e",
+        "events_sha256": "c2968dd4d2b263389fb7df93a9f8ab9ec094bc7c6abc2461867dd1fdb341fc20",
+        "harbor_trial_result_sha256": "3895af960fb5c8df996084f62a6505c32a2c4b068994b896191f17f0523bc5dc"
+      }
+    },
+    {
+      "label": "pi-glm-auth-failure",
+      "run_id": "run-01a0c2c6-ee02-7296-abde-3d687a4d4128",
+      "recording_id": "run-01a0c2c6-ee02-7296-abde-3d687a4d4128#0000",
+      "benchmark": {
+        "agent": "pi",
+        "artifact_sha256": "dca92f07cba759c943bf0f1ae805024498b73b72a6f95526eeebcbfe795c7b54",
+        "framework": "harbor",
+        "model": "openai/accounts/fireworks/models/glm-5p3-flash",
+        "reward": 0,
+        "status": "completed",
+        "task": "terminal-bench/make-mips-interpreter",
+        "trial": "make-mips-interpreter__ciZkjZT"
+      },
+      "benchmark_provenance": "operator_reported_not_recomputed",
+      "summary": {
+        "observed_model_requests": 1,
+        "usage_covered_calls": 0,
+        "input_tokens": null,
+        "output_tokens": null,
+        "cached_input_tokens": null,
+        "cached_input_coverage_calls": 0,
+        "cached_input_ratio": null,
+        "mean_input_per_covered_call": null,
+        "max_input_per_covered_call": null,
+        "min_input_per_covered_call": null,
+        "output_reasoning_tokens": null,
+        "tool_requests": 0,
+        "input_cumulative_sum_is_context_recounted": true
+      },
+      "thirds": [],
+      "missing_usage": [
+        {
+          "ordinal": 1,
+          "attempt_id": "run-01a0c2c6-ee02-7296-abde-3d687a4d4128~01a0c2c6-efce-7395-b61e-0cccdb2af5a2",
+          "terminal": "error",
+          "status_code": 401,
+          "error_class": "http_401",
+          "category": "http_authentication_failure",
+          "started_at": "2026-09-21T07:03:32.558542Z",
+          "ended_at": "2026-09-21T07:03:32.649705Z",
+          "first_seq": 16,
+          "last_seq": 33
+        }
+      ],
+      "transport": {
+        "manifest_capture_drops": 0,
+        "verified": true,
+        "payload_diff_passed": true,
+        "boundary": "target-network-namespace-ip-transport",
+        "eligible_attempts": 1,
+        "matched_attempts": 1,
+        "missing_from_wire": 0,
+        "extra_on_wire": 0,
+        "gaps": []
+      },
+      "native_tool_hook_summary": [],
+      "non_generating_request": null,
+      "pcap_drop_evidence": [
+        {
+          "seq": 43,
+          "event": "pcap_capture_finished",
+          "packets_dropped": 0,
+          "packets_captured": 31
+        }
+      ],
+      "response_chunk_gaps": [],
+      "calls": [
+        {
+          "ordinal": 1,
+          "first_seq": 16,
+          "last_seq": 33,
+          "terminal": "error",
+          "input_tokens": null,
+          "output_tokens": null,
+          "cached_input_tokens": null,
+          "output_reasoning_tokens": null,
+          "tool_requests": 0
+        }
+      ],
+      "agent_version": "0.86.1",
+      "measurement": {
+        "wall_seconds": 0.706626589410007,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "measurement_status": "completed",
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "result_sha256": "75d0b6d7baf076eac290872727f7164312763a99453822d144bbd906b5f115f9"
+      },
+      "reported_cost_usd": null,
+      "artifacts": {
+        "workflow_report_sha256": "dfab36aa4c543e7a8afa1656d4d344827a41e0db07dbabfd4d232872aaa2f190",
+        "workflow_status": "completed",
+        "recorder_sha256": [
+          "0ffb9e8d281f38d817350acf1a3b4d928bf3fbdd3a4e126fae0ca914529b725d"
+        ],
+        "manifest_sha256": "61b468c02ebd90b315d21a4c6679de7e0b26b62baa35086b082f2b907cef4127",
+        "events_sha256": "b410ec89686fddbe383ad0351b3ba2a35886223176944bf2fcac0bac68acc408",
+        "harbor_trial_result_sha256": "dca92f07cba759c943bf0f1ae805024498b73b72a6f95526eeebcbfe795c7b54"
+      }
+    },
+    {
+      "label": "hermes-glm",
+      "run_id": "run-01a0c2ca-2ff3-7639-b4c6-102a4b23d018",
+      "recording_id": "run-01a0c2ca-2ff3-7639-b4c6-102a4b23d018#0000",
+      "benchmark": {
+        "agent": "hermes",
+        "artifact_sha256": "5282cb7797e5b80daa9407c7f21037da17343680fcc78be6179c5188f34059bf",
+        "framework": "harbor",
+        "model": "openai/accounts/fireworks/models/glm-5p3-flash",
+        "reward": 0,
+        "status": "completed",
+        "task": "terminal-bench/make-mips-interpreter",
+        "trial": "make-mips-interpreter__6qo2bZ4"
+      },
+      "benchmark_provenance": "operator_reported_not_recomputed",
+      "summary": {
+        "observed_model_requests": 62,
+        "usage_covered_calls": 61,
+        "input_tokens": 5151448,
+        "output_tokens": 50877,
+        "cached_input_tokens": 4835328,
+        "cached_input_coverage_calls": 61,
+        "cached_input_ratio": 0.9386347294974151,
+        "mean_input_per_covered_call": 84449.96721311475,
+        "max_input_per_covered_call": 131835,
+        "min_input_per_covered_call": 12951,
+        "output_reasoning_tokens": 28625,
+        "tool_requests": 79,
+        "input_cumulative_sum_is_context_recounted": true
+      },
+      "thirds": [
+        {
+          "segment": "early",
+          "ordinal_from": 1,
+          "ordinal_to": 20,
+          "observed_model_requests": 20,
+          "usage_covered_calls": 20,
+          "input_tokens": 1000394,
+          "output_tokens": 4246,
+          "cached_input_tokens": 905216,
+          "cached_input_coverage_calls": 20,
+          "cached_input_ratio": 0.9048594853627671,
+          "mean_input_per_covered_call": 50019.7,
+          "max_input_per_covered_call": 73017,
+          "min_input_per_covered_call": 12951,
+          "output_reasoning_tokens": 2889,
+          "tool_requests": 30,
+          "input_cumulative_sum_is_context_recounted": true
+        },
+        {
+          "segment": "middle",
+          "ordinal_from": 21,
+          "ordinal_to": 41,
+          "observed_model_requests": 21,
+          "usage_covered_calls": 21,
+          "input_tokens": 1778864,
+          "output_tokens": 20284,
+          "cached_input_tokens": 1736704,
+          "cached_input_coverage_calls": 21,
+          "cached_input_ratio": 0.9762994810170985,
+          "mean_input_per_covered_call": 84707.80952380953,
+          "max_input_per_covered_call": 93809,
+          "min_input_per_covered_call": 74036,
+          "output_reasoning_tokens": 18305,
+          "tool_requests": 26,
+          "input_cumulative_sum_is_context_recounted": true
+        },
+        {
+          "segment": "late",
+          "ordinal_from": 42,
+          "ordinal_to": 62,
+          "observed_model_requests": 21,
+          "usage_covered_calls": 20,
+          "input_tokens": 2372190,
+          "output_tokens": 26347,
+          "cached_input_tokens": 2193408,
+          "cached_input_coverage_calls": 20,
+          "cached_input_ratio": 0.9246341987783441,
+          "mean_input_per_covered_call": 118609.5,
+          "max_input_per_covered_call": 131835,
+          "min_input_per_covered_call": 94020,
+          "output_reasoning_tokens": 7431,
+          "tool_requests": 23,
+          "input_cumulative_sum_is_context_recounted": true
+        }
+      ],
+      "missing_usage": [
+        {
+          "ordinal": 62,
+          "attempt_id": "run-01a0c2ca-2ff3-7639-b4c6-102a4b23d018~01a0c2d3-7463-7431-8071-ab01ac3e4fd9",
+          "terminal": "cancelled",
+          "status_code": 200,
+          "error_class": null,
+          "category": "downstream_cancelled_before_usage",
+          "started_at": "2026-09-21T07:17:12.931546Z",
+          "ended_at": "2026-09-21T07:17:14.080253Z",
+          "first_seq": 65565,
+          "last_seq": 65603
+        }
+      ],
+      "transport": {
+        "manifest_capture_drops": 0,
+        "verified": false,
+        "payload_diff_passed": false,
+        "boundary": "target-network-namespace-ip-transport",
+        "eligible_attempts": 61,
+        "matched_attempts": 58,
+        "missing_from_wire": 3,
+        "extra_on_wire": 0,
+        "gaps": [
+          {
+            "occurrences": 1,
+            "reason": "proxy_attempt_ineligible_for_diff"
+          },
+          {
+            "occurrences": 3,
+            "reason": "proxy_attempt_missing_from_wire"
+          },
+          {
+            "occurrences": 1,
+            "reason": "proxy_response_incomplete"
+          },
+          {
+            "occurrences": 4,
+            "reason": "stream_status_missing"
+          }
+        ]
+      },
+      "native_tool_hook_summary": [
+        {
+          "event": "post_tool_call",
+          "events": 78,
+          "unique_tool_call_ids": 78
+        },
+        {
+          "event": "pre_tool_call",
+          "events": 78,
+          "unique_tool_call_ids": 78
+        }
+      ],
+      "non_generating_request": null,
+      "pcap_drop_evidence": [
+        {
+          "seq": 65607,
+          "event": "pcap_capture_finished",
+          "packets_dropped": 0,
+          "packets_captured": 57257
+        }
+      ],
+      "response_chunk_gaps": [],
+      "calls": [
+        {
+          "ordinal": 1,
+          "first_seq": 66,
+          "last_seq": 290,
+          "terminal": "completed",
+          "input_tokens": 12951,
+          "output_tokens": 158,
+          "cached_input_tokens": 0,
+          "output_reasoning_tokens": 84,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 2,
+          "first_seq": 305,
+          "last_seq": 386,
+          "terminal": "completed",
+          "input_tokens": 13542,
+          "output_tokens": 50,
+          "cached_input_tokens": 12288,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 3,
+          "first_seq": 389,
+          "last_seq": 784,
+          "terminal": "completed",
+          "input_tokens": 20357,
+          "output_tokens": 303,
+          "cached_input_tokens": 12288,
+          "output_reasoning_tokens": 164,
+          "tool_requests": 4
+        },
+        {
+          "ordinal": 4,
+          "first_seq": 796,
+          "last_seq": 839,
+          "terminal": "completed",
+          "input_tokens": 24730,
+          "output_tokens": 22,
+          "cached_input_tokens": 18432,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 5,
+          "first_seq": 842,
+          "last_seq": 908,
+          "terminal": "completed",
+          "input_tokens": 30478,
+          "output_tokens": 55,
+          "cached_input_tokens": 24576,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 6,
+          "first_seq": 913,
+          "last_seq": 983,
+          "terminal": "completed",
+          "input_tokens": 37635,
+          "output_tokens": 57,
+          "cached_input_tokens": 28672,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 7,
+          "first_seq": 987,
+          "last_seq": 1038,
+          "terminal": "completed",
+          "input_tokens": 40872,
+          "output_tokens": 34,
+          "cached_input_tokens": 36864,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 8,
+          "first_seq": 1034,
+          "last_seq": 1083,
+          "terminal": "completed",
+          "input_tokens": 46236,
+          "output_tokens": 35,
+          "cached_input_tokens": 38912,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 9,
+          "first_seq": 1087,
+          "last_seq": 1250,
+          "terminal": "completed",
+          "input_tokens": 54334,
+          "output_tokens": 127,
+          "cached_input_tokens": 45056,
+          "output_reasoning_tokens": 52,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 10,
+          "first_seq": 1253,
+          "last_seq": 1325,
+          "terminal": "completed",
+          "input_tokens": 54436,
+          "output_tokens": 59,
+          "cached_input_tokens": 53248,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 11,
+          "first_seq": 1328,
+          "last_seq": 1412,
+          "terminal": "completed",
+          "input_tokens": 54506,
+          "output_tokens": 42,
+          "cached_input_tokens": 53248,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 12,
+          "first_seq": 1388,
+          "last_seq": 1445,
+          "terminal": "completed",
+          "input_tokens": 55394,
+          "output_tokens": 35,
+          "cached_input_tokens": 53248,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 13,
+          "first_seq": 1449,
+          "last_seq": 1496,
+          "terminal": "completed",
+          "input_tokens": 60992,
+          "output_tokens": 37,
+          "cached_input_tokens": 55296,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 14,
+          "first_seq": 1501,
+          "last_seq": 5252,
+          "terminal": "completed",
+          "input_tokens": 68324,
+          "output_tokens": 2738,
+          "cached_input_tokens": 59392,
+          "output_reasoning_tokens": 2589,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 15,
+          "first_seq": 5259,
+          "last_seq": 5393,
+          "terminal": "completed",
+          "input_tokens": 69095,
+          "output_tokens": 95,
+          "cached_input_tokens": 67584,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 16,
+          "first_seq": 5399,
+          "last_seq": 5548,
+          "terminal": "completed",
+          "input_tokens": 70229,
+          "output_tokens": 105,
+          "cached_input_tokens": 67584,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 17,
+          "first_seq": 5554,
+          "last_seq": 5683,
+          "terminal": "completed",
+          "input_tokens": 70777,
+          "output_tokens": 91,
+          "cached_input_tokens": 69632,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 18,
+          "first_seq": 5689,
+          "last_seq": 5813,
+          "terminal": "completed",
+          "input_tokens": 71130,
+          "output_tokens": 84,
+          "cached_input_tokens": 69632,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 19,
+          "first_seq": 5816,
+          "last_seq": 5937,
+          "terminal": "completed",
+          "input_tokens": 71359,
+          "output_tokens": 83,
+          "cached_input_tokens": 69632,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 20,
+          "first_seq": 5940,
+          "last_seq": 5989,
+          "terminal": "completed",
+          "input_tokens": 73017,
+          "output_tokens": 36,
+          "cached_input_tokens": 69632,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 21,
+          "first_seq": 5993,
+          "last_seq": 6084,
+          "terminal": "completed",
+          "input_tokens": 74036,
+          "output_tokens": 58,
+          "cached_input_tokens": 71680,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 22,
+          "first_seq": 6089,
+          "last_seq": 6115,
+          "terminal": "completed",
+          "input_tokens": 74667,
+          "output_tokens": 27,
+          "cached_input_tokens": 73728,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 23,
+          "first_seq": 6118,
+          "last_seq": 6164,
+          "terminal": "completed",
+          "input_tokens": 74786,
+          "output_tokens": 35,
+          "cached_input_tokens": 73728,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 24,
+          "first_seq": 6167,
+          "last_seq": 7398,
+          "terminal": "completed",
+          "input_tokens": 75575,
+          "output_tokens": 879,
+          "cached_input_tokens": 73728,
+          "output_reasoning_tokens": 749,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 25,
+          "first_seq": 7408,
+          "last_seq": 7661,
+          "terminal": "completed",
+          "input_tokens": 79575,
+          "output_tokens": 182,
+          "cached_input_tokens": 73728,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 26,
+          "first_seq": 7682,
+          "last_seq": 7755,
+          "terminal": "completed",
+          "input_tokens": 81452,
+          "output_tokens": 45,
+          "cached_input_tokens": 77824,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 27,
+          "first_seq": 7760,
+          "last_seq": 7890,
+          "terminal": "completed",
+          "input_tokens": 82137,
+          "output_tokens": 88,
+          "cached_input_tokens": 79872,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 28,
+          "first_seq": 7899,
+          "last_seq": 8079,
+          "terminal": "completed",
+          "input_tokens": 82904,
+          "output_tokens": 128,
+          "cached_input_tokens": 81920,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 29,
+          "first_seq": 8083,
+          "last_seq": 8159,
+          "terminal": "completed",
+          "input_tokens": 83509,
+          "output_tokens": 47,
+          "cached_input_tokens": 81920,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 30,
+          "first_seq": 8160,
+          "last_seq": 30738,
+          "terminal": "completed",
+          "input_tokens": 84266,
+          "output_tokens": 16324,
+          "cached_input_tokens": 81920,
+          "output_reasoning_tokens": 16148,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 31,
+          "first_seq": 30744,
+          "last_seq": 30873,
+          "terminal": "completed",
+          "input_tokens": 84978,
+          "output_tokens": 80,
+          "cached_input_tokens": 83968,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 32,
+          "first_seq": 30877,
+          "last_seq": 31000,
+          "terminal": "completed",
+          "input_tokens": 85121,
+          "output_tokens": 81,
+          "cached_input_tokens": 83968,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 33,
+          "first_seq": 31005,
+          "last_seq": 31056,
+          "terminal": "completed",
+          "input_tokens": 85562,
+          "output_tokens": 27,
+          "cached_input_tokens": 83968,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 34,
+          "first_seq": 31061,
+          "last_seq": 31437,
+          "terminal": "completed",
+          "input_tokens": 88651,
+          "output_tokens": 277,
+          "cached_input_tokens": 83968,
+          "output_reasoning_tokens": 109,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 35,
+          "first_seq": 31441,
+          "last_seq": 31573,
+          "terminal": "completed",
+          "input_tokens": 89656,
+          "output_tokens": 90,
+          "cached_input_tokens": 88064,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 36,
+          "first_seq": 31577,
+          "last_seq": 31655,
+          "terminal": "completed",
+          "input_tokens": 90491,
+          "output_tokens": 48,
+          "cached_input_tokens": 88064,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 37,
+          "first_seq": 31658,
+          "last_seq": 31863,
+          "terminal": "completed",
+          "input_tokens": 90867,
+          "output_tokens": 142,
+          "cached_input_tokens": 90112,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 38,
+          "first_seq": 31875,
+          "last_seq": 31980,
+          "terminal": "completed",
+          "input_tokens": 91280,
+          "output_tokens": 67,
+          "cached_input_tokens": 90112,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 39,
+          "first_seq": 31982,
+          "last_seq": 32033,
+          "terminal": "completed",
+          "input_tokens": 92184,
+          "output_tokens": 27,
+          "cached_input_tokens": 90112,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 40,
+          "first_seq": 32037,
+          "last_seq": 32901,
+          "terminal": "completed",
+          "input_tokens": 93358,
+          "output_tokens": 601,
+          "cached_input_tokens": 92160,
+          "output_reasoning_tokens": 393,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 41,
+          "first_seq": 32906,
+          "last_seq": 34383,
+          "terminal": "completed",
+          "input_tokens": 93809,
+          "output_tokens": 1031,
+          "cached_input_tokens": 92160,
+          "output_reasoning_tokens": 906,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 42,
+          "first_seq": 34398,
+          "last_seq": 47462,
+          "terminal": "completed",
+          "input_tokens": 94020,
+          "output_tokens": 10135,
+          "cached_input_tokens": 92160,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 43,
+          "first_seq": 47470,
+          "last_seq": 48008,
+          "terminal": "completed",
+          "input_tokens": 104345,
+          "output_tokens": 441,
+          "cached_input_tokens": 92160,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 2
+        },
+        {
+          "ordinal": 44,
+          "first_seq": 48027,
+          "last_seq": 48125,
+          "terminal": "completed",
+          "input_tokens": 105420,
+          "output_tokens": 64,
+          "cached_input_tokens": 102400,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 45,
+          "first_seq": 48142,
+          "last_seq": 52169,
+          "terminal": "completed",
+          "input_tokens": 105549,
+          "output_tokens": 2981,
+          "cached_input_tokens": 104448,
+          "output_reasoning_tokens": 2368,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 46,
+          "first_seq": 52183,
+          "last_seq": 52395,
+          "terminal": "completed",
+          "input_tokens": 106512,
+          "output_tokens": 165,
+          "cached_input_tokens": 104448,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 47,
+          "first_seq": 52408,
+          "last_seq": 54089,
+          "terminal": "completed",
+          "input_tokens": 107024,
+          "output_tokens": 1359,
+          "cached_input_tokens": 106496,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 48,
+          "first_seq": 54099,
+          "last_seq": 54679,
+          "terminal": "completed",
+          "input_tokens": 109715,
+          "output_tokens": 459,
+          "cached_input_tokens": 106496,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 49,
+          "first_seq": 54689,
+          "last_seq": 58713,
+          "terminal": "completed",
+          "input_tokens": 110741,
+          "output_tokens": 3182,
+          "cached_input_tokens": 108544,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 50,
+          "first_seq": 58726,
+          "last_seq": 60451,
+          "terminal": "completed",
+          "input_tokens": 117328,
+          "output_tokens": 1378,
+          "cached_input_tokens": 110592,
+          "output_reasoning_tokens": 543,
+          "tool_requests": 4
+        },
+        {
+          "ordinal": 51,
+          "first_seq": 60485,
+          "last_seq": 60549,
+          "terminal": "completed",
+          "input_tokens": 119278,
+          "output_tokens": 41,
+          "cached_input_tokens": 116736,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 52,
+          "first_seq": 60566,
+          "last_seq": 62370,
+          "terminal": "completed",
+          "input_tokens": 128498,
+          "output_tokens": 1292,
+          "cached_input_tokens": 118784,
+          "output_reasoning_tokens": 1201,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 53,
+          "first_seq": 62375,
+          "last_seq": 62474,
+          "terminal": "completed",
+          "input_tokens": 128869,
+          "output_tokens": 63,
+          "cached_input_tokens": 126976,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 54,
+          "first_seq": 62479,
+          "last_seq": 62574,
+          "terminal": "completed",
+          "input_tokens": 128983,
+          "output_tokens": 60,
+          "cached_input_tokens": 126976,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 55,
+          "first_seq": 62578,
+          "last_seq": 62659,
+          "terminal": "completed",
+          "input_tokens": 129653,
+          "output_tokens": 51,
+          "cached_input_tokens": 126976,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 56,
+          "first_seq": 62664,
+          "last_seq": 62750,
+          "terminal": "completed",
+          "input_tokens": 130184,
+          "output_tokens": 54,
+          "cached_input_tokens": 129024,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 57,
+          "first_seq": 62755,
+          "last_seq": 62803,
+          "terminal": "completed",
+          "input_tokens": 130488,
+          "output_tokens": 33,
+          "cached_input_tokens": 129024,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 58,
+          "first_seq": 62807,
+          "last_seq": 65360,
+          "terminal": "completed",
+          "input_tokens": 131225,
+          "output_tokens": 1821,
+          "cached_input_tokens": 129024,
+          "output_reasoning_tokens": 1659,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 59,
+          "first_seq": 65365,
+          "last_seq": 65467,
+          "terminal": "completed",
+          "input_tokens": 131635,
+          "output_tokens": 67,
+          "cached_input_tokens": 131072,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 60,
+          "first_seq": 65472,
+          "last_seq": 65536,
+          "terminal": "completed",
+          "input_tokens": 131835,
+          "output_tokens": 35,
+          "cached_input_tokens": 131072,
+          "output_reasoning_tokens": 0,
+          "tool_requests": 1
+        },
+        {
+          "ordinal": 61,
+          "first_seq": 65539,
+          "last_seq": 65559,
+          "terminal": "completed",
+          "input_tokens": 120888,
+          "output_tokens": 2666,
+          "cached_input_tokens": 0,
+          "output_reasoning_tokens": 1660,
+          "tool_requests": 0
+        },
+        {
+          "ordinal": 62,
+          "first_seq": 65565,
+          "last_seq": 65603,
+          "terminal": "cancelled",
+          "input_tokens": null,
+          "output_tokens": null,
+          "cached_input_tokens": null,
+          "output_reasoning_tokens": null,
+          "tool_requests": 0
+        }
+      ],
+      "agent_version": "0.19.0",
+      "measurement": {
+        "wall_seconds": 623.1648409506306,
+        "wall_scope": "command_launch_through_reap_including_recorder_startup_flush_not_install_or_verifier",
+        "measurement_status": "completed",
+        "provenance": "target_owned_observer_output_not_independent_attestation",
+        "result_sha256": "7a7b4fe5ddd426c8caf13d3ae3ba791513697c88d59ab3a45adeae6d5cf8c8b1"
+      },
+      "reported_cost_usd": 0.19845014,
+      "artifacts": {
+        "workflow_report_sha256": "837bc9a81fcc0664c533f1b9259ad93f6c06c04403950adaf4c11d2a8b489178",
+        "workflow_status": "incomplete",
+        "recorder_sha256": [
+          "0ffb9e8d281f38d817350acf1a3b4d928bf3fbdd3a4e126fae0ca914529b725d"
+        ],
+        "manifest_sha256": "151a9c602530b23319939c60b84742f1b72f8a283969d92b010959d2bb109958",
+        "events_sha256": "e7e8884f63ded31cc7668f5bdfdf83560dd77187a2ddd00edf5282612f531088",
+        "harbor_trial_result_sha256": "5282cb7797e5b80daa9407c7f21037da17343680fcc78be6179c5188f34059bf"
+      }
+    }
+  ],
+  "additional_incomplete_trials": [
+    {
+      "label": "pi-glm-killed",
+      "run_id": "run-01a0c2c9-d9f1-73b6-a673-cb5a54721645",
+      "agent_version": "0.86.1",
+      "benchmark": {
+        "agent": "pi",
+        "artifact_sha256": "c400a2fc577bf1e6585ff48039c073d03250dc865a8bb47c2b3a39976e1e7d81",
+        "framework": "harbor",
+        "model": "openai/accounts/fireworks/models/glm-5p3-flash",
+        "reward": null,
+        "status": "error",
+        "task": "terminal-bench/make-mips-interpreter",
+        "trial": "make-mips-interpreter__TKLBZTq"
+      },
+      "recording_state": "unsealed_not_imported_into_platform_comparison",
+      "model_request_statistics": null,
+      "agent_exit_code": 137,
+      "oom_proven": false,
+      "raw_verifier": {
+        "reward": 0,
+        "tests_passed": 2,
+        "tests_total": 3,
+        "frame_similarity": 0.7581,
+        "required_similarity": 0.95
+      },
+      "measurement": {
+        "wall_seconds": 881.96,
+        "wall_scope": "Harbor_agent_execution_stage_not_observer_command_lifetime"
+      },
+      "workflow_report_sha256": "37b7f0eeffac98ceb30a372fa2b12579f4ddd61fa41fd9ace21a86ab0f76abb8",
+      "recorder_sha256": [
+        "0ffb9e8d281f38d817350acf1a3b4d928bf3fbdd3a4e126fae0ca914529b725d"
+      ]
+    }
+  ],
+  "trajectory_observations": [
+    {
+      "label": "codex-sol",
+      "first_vm_js_write_model_request": 12,
+      "reconstructed_tool_requests_before_write": 10,
+      "context_continuation": "explicit_previous_response_id_on_requests_2_through_27",
+      "reasoning_setting": "high"
+    },
+    {
+      "label": "hermes-deepseek",
+      "first_vm_js_write_model_request": 36,
+      "reconstructed_tool_requests_before_write": 44,
+      "historical_tool_requests_before_write_including_3_missing_responses": 47,
+      "missing_response_historical_tools_cross_checked_as_investigation_only": [
+        16,
+        31,
+        35
+      ],
+      "max_turns": 60,
+      "large_history_result": {
+        "originating_model_request": 7,
+        "characters": 14101,
+        "subsequent_input_observations_same_tool_id_and_content_hash": 53
+      }
+    },
+    {
+      "label": "pi-deepseek",
+      "first_vm_js_write_model_request": 51,
+      "reconstructed_tool_requests_before_write": 57,
+      "thinking_setting": "off_but_provider_reported_reasoning_tokens",
+      "extensions_skills_prompt_templates_and_context_files_disabled": true,
+      "large_history_result": {
+        "originating_model_request": 7,
+        "characters": 51245,
+        "subsequent_input_observations_same_tool_id_and_content_hash": 68
+      },
+      "multiplication_random_test_observations": [
+        {
+          "model_request": 47,
+          "result": "fail"
+        },
+        {
+          "model_request": 48,
+          "result": "fail"
+        },
+        {
+          "model_request": 49,
+          "result": "pass"
+        }
+      ]
+    },
+    {
+      "label": "hermes-glm",
+      "first_vm_js_write_model_request": 42,
+      "reconstructed_tool_requests_before_write": 56,
+      "first_runtime_error_model_request": 44,
+      "first_runtime_error_category": "COP1_decode_error_not_proof_of_missing_instruction_support",
+      "max_turns": 60
+    }
+  ],
+  "retained_launch_failures": [
+    {
+      "combination": "codex-sol",
+      "failure": "Docker_network_address_pool_exhaustion_before_agent",
+      "replacement": "separately_authorized_trial"
+    },
+    {
+      "combination": "pi-deepseek",
+      "failure": "recorder_GLIBC_2_38_and_2_39_runtime_incompatibility_before_agent",
+      "replacement": "separate_fixed_runtime_trial"
+    },
+    {
+      "combination": "hermes-glm",
+      "failure": "recorder_runtime_GLIBC_incompatibility_before_agent",
+      "replacement": "separate_fixed_runtime_trial"
+    }
+  ],
+  "historical_correction": {
+    "recording": "hermes-deepseek",
+    "manifest_capture_drops": 3573,
+    "pcap_packets_dropped": 3560,
+    "response_chunks_missing": 13,
+    "older_frozen_artifact_unchanged": true
+  },
+  "limitations": [
+    "single_task_and_single_successful_sample_per_combination",
+    "model_agent_prompt_tool_granularity_reasoning_protocol_cache_and_recorder_builds_not_all_controlled",
+    "Hermes_DeepSeek_usage_only_56_of_61_requests",
+    "DeepSeek_combinations_failed_independent_transport_qualification",
+    "raw_private_artifacts_are_not_published_hashes_identify_sources_but_do_not_enable_public_byte_level_reproduction"
+  ]
+}
