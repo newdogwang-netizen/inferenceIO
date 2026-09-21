@@ -37,7 +37,7 @@ export function Sev({ s }: { s: string }) {
 
 export function RecLink({ id }: { id: string }) {
   return (
-    <Link to={`/recordings/${enc(id)}`} className="mono">
+    <Link to={`/recordings/${enc(id)}`} className="mono recording-link" title={id}>
       {id}
     </Link>
   );
@@ -76,7 +76,7 @@ export function TokenUsageStat({ value, observedCalls, modelCalls, label }: {
 }
 
 export function Loading({ q }: { q: { isLoading: boolean; error: any } }) {
-  if (q.isLoading) return <div className="muted">加载中…</div>;
-  if (q.error) return <div className="error">{String((q.error as any).message ?? q.error)}</div>;
+  if (q.isLoading) return <div className="loading-state" role="status"><span className="loading-indicator" aria-hidden="true" />正在载入数据…</div>;
+  if (q.error) return <div className="feedback error-feedback" role="alert"><strong>数据载入失败</strong><span>{String((q.error as any).message ?? q.error)}</span></div>;
   return null;
 }

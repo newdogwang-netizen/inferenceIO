@@ -148,13 +148,21 @@ try {
     await writeFile(join(report.screenshot_directory,'desktop.png'),Buffer.from(shot.data,'base64'),{mode:0o600});
   }
   assert(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),'desktop overflow');
-  await command('Emulation.setDeviceMetricsOverride', {width:390,height:844,deviceScaleFactor:1,mobile:true});
+  for (const width of [1024, 768]) {
+    await command('Emulation.setDeviceMetricsOverride', {width,height:900,deviceScaleFactor:1,mobile:false});
+    assert(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),`${width}px overflow`);
+  }
+  report.checks.tablet_no_horizontal_overflow = [768,1024];
+  await command('Emulation.setDeviceMetricsOverride', {width:375,height:844,deviceScaleFactor:1,mobile:true});
   assert(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),'mobile overflow');
   report.checks.mobile_no_horizontal_overflow = true;
   if (captureScreenshots) {
     const shot = await command('Page.captureScreenshot', {format:'png'});
     await writeFile(join(report.screenshot_directory,'mobile.png'),Buffer.from(shot.data,'base64'),{mode:0o600});
   }
+  await command('Emulation.setDeviceMetricsOverride', {width:844,height:375,deviceScaleFactor:1,mobile:true});
+  assert(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),'mobile landscape overflow');
+  report.checks.mobile_landscape_no_horizontal_overflow = true;
   await command('Emulation.setDeviceMetricsOverride', {width:1440,height:1000,deviceScaleFactor:1,mobile:false});
   await evaluate("location.href="+JSON.stringify(new URL('/recordings',origin).href));
   await waitFor("document.querySelectorAll('tbody tr').length>0");
@@ -164,6 +172,30 @@ try {
   report.checks.recording_list_separate_columns = true;
   assert.equal(await evaluate("document.querySelectorAll('tbody tr:first-child .token-stat').length"), 2);
   report.checks.recording_list_token_columns = true;
+  if (captureScreenshots) {
+    let shot = await command('Page.captureScreenshot', {format:'png'});
+    await writeFile(join(report.screenshot_directory,'recordings-desktop.png'),Buffer.from(shot.data,'base64'),{mode:0o600});
+    await evaluate("[...document.querySelectorAll('.nav-link')].find(a=>a.textContent==='总览').click()");
+    await waitFor("document.querySelectorAll('.metrics-grid .stat').length===8");
+    await waitFor("document.activeElement?.id==='main-content'");
+    assert.equal(await evaluate("document.activeElement?.id"), 'main-content', 'route change did not move focus to main content');
+    shot = await command('Page.captureScreenshot', {format:'png'});
+    await writeFile(join(report.screenshot_directory,'overview-desktop.png'),Buffer.from(shot.data,'base64'),{mode:0o600});
+    report.checks.route_change_focus = true;
+    await command('Emulation.setDeviceMetricsOverride', {width:375,height:844,deviceScaleFactor:1,mobile:true});
+    await evaluate("location.href="+JSON.stringify(new URL('/recordings',origin).href));
+    await waitFor("document.querySelectorAll('.recordings-table tbody tr').length>0");
+    assert(await evaluate("document.documentElement.scrollWidth<=window.innerWidth"),'recordings mobile page overflow');
+    assert(await evaluate("document.querySelector('.nav-toggle') && getComputedStyle(document.querySelector('.nav-toggle')).display!=='none'"));
+    await click('菜单');
+    await waitFor("document.querySelector('.side').classList.contains('nav-open')");
+    shot = await command('Page.captureScreenshot', {format:'png'});
+    await writeFile(join(report.screenshot_directory,'recordings-mobile-menu.png'),Buffer.from(shot.data,'base64'),{mode:0o600});
+    report.checks.dashboard_responsive_navigation = true;
+  }
+  await command('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+  assert(await evaluate("parseFloat(getComputedStyle(document.querySelector('.nav-link')).transitionDuration)<0.001"));
+  report.checks.reduced_motion = true;
   assert.equal(runtimeErrors, 0, 'browser runtime error');
   report.checks.runtime_errors = runtimeErrors;
   report.passed = true;
