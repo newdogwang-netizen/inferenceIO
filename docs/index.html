@@ -90,15 +90,15 @@
         <section id="agent-comparison" class="long-trial-section" aria-labelledby="agent-comparison-title" lang="zh-CN">
           <div>
             <p class="eyebrow">September 21 · 实验复盘</p>
-            <h2 id="agent-comparison-title">同一个终端任务，27、61、75 次模型调用</h2>
-            <p>Codex、Hermes 与 Pi 的三个通过样本：为什么后两组累计输入达到 3.40 倍、3.83 倍？从真实工具轨迹、上下文与缓存出发，分清 Token、费用和录制完整性。</p>
+            <h2 id="agent-comparison-title">Agent 的问题，还是模型的问题？</h2>
+            <p>同一任务换用 GPT-5.6-Sol：Pi 调用减少 75% 且保持通过；Hermes 明显变快，却在最终像素正确性上失败。</p>
             <a class="text-link" href="agent-token-comparison.html">阅读中文实验博客</a>
           </div>
-          <dl aria-label="三个通过样本的模型接口请求数">
-            <div><dt>Codex＋GPT</dt><dd>27</dd></div>
-            <div><dt>Hermes＋DeepSeek</dt><dd>61</dd></div>
-            <div><dt>Pi＋DeepSeek</dt><dd>75</dd></div>
-            <div><dt>Benchmark reward</dt><dd>3 × 1.0</dd></div>
+          <dl aria-label="同模型控制实验的结果">
+            <div><dt>Pi＋Sol</dt><dd>19 · PASS</dd></div>
+            <div><dt>Hermes＋Sol</dt><dd>20 · FAIL</dd></div>
+            <div><dt>Pi 调用减少</dt><dd>75%</dd></div>
+            <div><dt>Pi 用时减少</dt><dd>83%</dd></div>
           </dl>
         </section>
 
@@ -199,7 +199,7 @@ iorec run \
           </header>
           <nav aria-label="Project resources">
             <ul class="directory-grid">
-              <li><a href="agent-token-comparison.html" lang="zh-CN"><span>复盘</span><strong>同任务，为什么 Token 差这么多？</strong><small>Codex、Hermes、Pi 的实验过程、缓存用量与录制边界。</small></a></li>
+              <li><a href="agent-token-comparison.html" lang="zh-CN"><span>复盘</span><strong>Agent 的问题，还是模型的问题？</strong><small>同模型控制实验：效率差距与 Hermes 失败原因。</small></a></li>
               <li><a href="#quickstart"><span>Run</span><strong>Quickstart</strong><small>Create a key and record the first encrypted run.</small></a></li>
               <li><a href="long-horizon-evidence.html"><span>Observe</span><strong>Long-horizon report</strong><small>Follow the real model and tool chain with separate evidence verdicts.</small></a></li>
               <li><a href="https://github.com/newdogwang-netizen/inferenceIO#readme"><span>Learn</span><strong>README</strong><small>Understand the recorder, platform, and operating model.</small></a></li>

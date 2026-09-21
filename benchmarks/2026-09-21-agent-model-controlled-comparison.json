@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "published_on": "2026-09-21",
+  "title": "Same Terminal-Bench task: agent and model controlled comparison",
+  "scope": "one_fixed_task_one_trial_per_combination_not_a_leaderboard_or_stability_ranking",
+  "conclusion": "model_choice_explains_much_of_the_efficiency_gap_while_agent_model_interaction_affects_correctness",
+  "common_inputs": {
+    "task": "terminal-bench/make-mips-interpreter",
+    "task_tree_sha256": "e3127fed0d7a62ae35aedfc76be6d7f4aba3ee038153339c72fe7aa4c19bd1f1",
+    "harbor_task_checksum": "f7e68fab72321eeaf465b53a98a4c3aaf7b66d57a3d3465708a15ed2c9f55f70",
+    "image": "alexgshaw/make-mips-interpreter@sha256:082fc8821b317f30fdfbf8d08d528874ce331c03e8083aef0406d48cdd7132a2",
+    "resources": { "cpus": 1, "memory_mib": 2048, "storage_mib": 10240 },
+    "agent_timeout_seconds": 1800,
+    "verifier_timeout_seconds": 1800,
+    "harbor_max_retries": 0
+  },
+  "counting_notes": {
+    "input_bucket_total": "ordinary_input_plus_cache_read_plus_cache_write_summed_across_calls",
+    "reasoning": "provider_reported_subset_of_output_not_additive",
+    "new_sol_call_count": "native_agent_completed_api_calls; Hermes proxy also observed 22 attempts",
+    "deepseek_hermes_usage": "five_of_61_calls_missing_usage_so_input_and_observed_cost_are_lower_bounds",
+    "cost": "price_snapshot_recalculation_not_provider_invoice"
+  },
+  "trials": [
+    {
+      "label": "codex-sol",
+      "agent": "codex",
+      "agent_version": "0.154.0",
+      "model": "openai/gpt-5.6-sol",
+      "reward": 1,
+      "model_calls": 27,
+      "input_bucket_total": 1690213,
+      "output_tokens": 14823,
+      "wall_seconds": 193.98,
+      "estimated_cost_usd": 1.4033978,
+      "recording_id": "run-01a0be8e-ba36-72f9-ac36-2d1ed31bcf16#0000",
+      "transport_verified": true
+    },
+    {
+      "label": "hermes-deepseek",
+      "agent": "hermes",
+      "agent_version": "0.19.0",
+      "model": "accounts/fireworks/models/deepseek-v4-pro-0813",
+      "reward": 1,
+      "model_calls": 61,
+      "usage_covered_calls": 56,
+      "input_bucket_total_observed": 5748541,
+      "output_tokens_observed": 85968,
+      "wall_seconds": 1661.27,
+      "estimated_cost_usd_observed": 1.0150,
+      "native_session_estimated_cost_usd": 1.1595,
+      "recording_id": "run-01a0be9f-dd96-71c1-ab28-fcb7907261d5#0000",
+      "transport_verified": false
+    },
+    {
+      "label": "hermes-sol",
+      "agent": "hermes",
+      "agent_version": "0.19.0",
+      "model": "openai/gpt-5.6-sol",
+      "api": "responses",
+      "reasoning_effort": "high",
+      "reward": 0,
+      "model_calls": 20,
+      "proxy_attempts": 22,
+      "ordinary_input_tokens": 105989,
+      "cache_read_tokens": 1530193,
+      "cache_write_tokens": 0,
+      "input_bucket_total": 1636182,
+      "output_tokens": 14709,
+      "output_reasoning_tokens": 4444,
+      "wall_seconds": 424.3809,
+      "estimated_cost_usd": 1.3302132,
+      "verifier": {
+        "tests": 3,
+        "passed": 2,
+        "failed": 1,
+        "failed_test": "frame_bmp_similar_to_reference",
+        "observed_similarity": 0.8065109426062091,
+        "required_similarity": 0.95
+      },
+      "recording_id": "run-01a0c3dc-4cda-7661-8702-295b6c872154#0000",
+      "transport": {
+        "verified": false,
+        "eligible_attempts": 21,
+        "matched_attempts": 4,
+        "missing_from_wire": 17,
+        "extra_on_wire": 1,
+        "manifest_capture_drops": 4
+      }
+    },
+    {
+      "label": "pi-deepseek",
+      "agent": "pi",
+      "agent_version": "0.86.1",
+      "model": "accounts/fireworks/models/deepseek-v4-pro-0813",
+      "reward": 1,
+      "model_calls": 75,
+      "input_bucket_total": 6465285,
+      "output_tokens": 113083,
+      "wall_seconds": 1568.14,
+      "estimated_cost_usd": 0.95177,
+      "recording_id": "run-01a0c206-6d92-72d9-80de-2fc4f9c7e8ab#0000",
+      "transport_verified": false
+    },
+    {
+      "label": "pi-sol",
+      "agent": "pi",
+      "agent_version": "0.86.1",
+      "model": "openai/gpt-5.6-sol",
+      "api": "responses",
+      "reasoning_effort": "high",
+      "reward": 1,
+      "model_calls": 19,
+      "ordinary_input_tokens": 57,
+      "cache_read_tokens": 1131807,
+      "cache_write_tokens": 84994,
+      "input_bucket_total": 1216858,
+      "output_tokens": 12338,
+      "output_reasoning_tokens": 3133,
+      "wall_seconds": 260.3060,
+      "estimated_cost_usd": 1.1246808,
+      "recording_id": "run-01a0c3e4-4669-7529-a888-53729b16f4c2#0000",
+      "transport": {
+        "verified": true,
+        "eligible_attempts": 19,
+        "matched_attempts": 19,
+        "missing_from_wire": 0,
+        "extra_on_wire": 0,
+        "manifest_capture_drops": 0
+      }
+    }
+  ],
+  "comparisons": {
+    "pi_sol_vs_pi_deepseek": {
+      "reward_preserved": true,
+      "model_calls_reduction_ratio": 0.7466666667,
+      "input_bucket_reduction_ratio": 0.8117858687,
+      "output_reduction_ratio": 0.8908942989,
+      "wall_time_reduction_ratio": 0.8340033415
+    },
+    "hermes_sol_vs_hermes_deepseek": {
+      "reward_preserved": false,
+      "model_calls_reduction_ratio": 0.6721311475,
+      "observed_input_bucket_reduction_ratio_at_least": 0.7153743880,
+      "observed_output_reduction_ratio": 0.8289014517,
+      "wall_time_reduction_ratio": 0.7445442944
+    }
+  },
+  "limitations": [
+    "one_trial_per_combination",
+    "stochastic_model_output",
+    "historical_deepseek_transport_proofs_are_incomplete",
+    "call_count_provenance_differs_for_historical_platform_and_new_native_agent_summaries"
+  ]
+}

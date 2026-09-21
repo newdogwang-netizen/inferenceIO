@@ -4,17 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
-    <meta name="description" content="复盘同一 Terminal-Bench 2 MIPS 解释器任务：Codex、Hermes 与 Pi 的真实调用链、Token 用量、任务结果与录制缺口。">
+    <meta name="description" content="同一 Terminal-Bench 任务的控制变量实验：Hermes、Pi 换用 GPT-5.6-Sol 后，效率与正确率发生了什么变化。">
     <meta property="og:type" content="article">
-    <meta property="og:title" content="同一个终端任务，27、61、75 次模型调用 | iorec">
-    <meta property="og:description" content="三个通过样本的真实录制复盘：探索过程如何影响 Token，缓存为何改变费用，以及独立传输证据的边界。">
+    <meta property="og:title" content="Agent 的问题，还是模型的问题？ | iorec">
+    <meta property="og:description" content="Pi 换模型后调用减少 75% 且保持通过；Hermes 更快了，却在像素正确性上失败。">
     <meta property="og:url" content="https://newdogwang-netizen.github.io/inferenceIO/agent-token-comparison.html">
     <meta name="twitter:card" content="summary">
     <link rel="canonical" href="https://newdogwang-netizen.github.io/inferenceIO/agent-token-comparison.html">
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="agent-token-comparison.css">
-    <title>同一个终端任务，27、61、75 次模型调用 | iorec</title>
+    <title>Agent 的问题，还是模型的问题？ | iorec</title>
   </head>
   <body class="comparison-blog">
     <a class="skip-link" href="#article">跳到正文</a>
@@ -22,173 +22,97 @@
       <nav class="nav-shell" aria-label="主导航">
         <a class="brand" href="./" aria-label="iorec 首页">io<span>rec</span></a>
         <div class="nav-links">
-          <a href="#results">实验结果</a><a href="#trajectory">调用链复盘</a><a href="#evidence">录制边界</a>
+          <a href="#results">结果</a><a href="#diagnosis">判断</a><a href="#evidence">证据</a>
           <a class="nav-source" href="https://github.com/newdogwang-netizen/inferenceIO">GitHub</a>
         </div>
       </nav>
     </header>
     <main id="article" class="comparison-main">
       <header class="comparison-header">
-        <p class="eyebrow">Terminal-Bench 2 本机实验复盘</p>
-        <h1>同一个终端任务，27、61、75 次模型调用</h1>
-        <p class="comparison-deck">Codex、Hermes 与 Pi 都跑了同一道 MIPS 解释器任务。三个通过样本中，后两组累计输入 Token 分别达到 Codex 的 3.40 倍和 3.83 倍。录制让我们看见：差距从哪里开始，又有哪些数字需要放在一起读。</p>
-        <div class="comparison-meta"><time datetime="2026-09-21">2026 年 9 月 21 日</time><span>实验日期：9 月 20-21 日（UTC）</span><span>单任务案例研究</span></div>
+        <p class="eyebrow">Terminal-Bench 2 · 控制变量实验</p>
+        <h1>Agent 的问题，还是模型的问题？</h1>
+        <p class="comparison-deck">Pi 换成 GPT-5.6-Sol 后，模型调用减少 75%，仍然通过。Hermes 也明显变快，却在最终像素正确性上失败。结论不是二选一：模型决定了大部分效率差距，Agent 与模型的配合决定能否稳定收尾。</p>
+        <div class="comparison-meta"><time datetime="2026-09-21">2026 年 9 月 21 日</time><span>同一任务、镜像与资源</span><span>每组一个样本</span></div>
       </header>
       <nav class="comparison-toc" aria-label="文章目录">
-        <a href="#method">任务与方法</a><a href="#results">真实结果</a><a href="#trajectory">过程差异</a><a href="#tokens">Token 与费用</a><a href="#evidence">录制可信度</a><a href="#next">下一步</a>
+        <a href="#setup">实验条件</a><a href="#results">结果</a><a href="#diagnosis">判断</a><a href="#failure">失败原因</a><a href="#evidence">录制证据</a>
       </nav>
       <article class="comparison-article">
-        <section id="method" aria-labelledby="method-title">
-          <h2 id="method-title">让 JavaScript 运行一个 MIPS 程序</h2>
-          <p>任务是 <code>make-mips-interpreter</code>。环境提供一个 MIPS ELF 可执行文件及相关源码，Agent 要实现 <code>vm.js</code>，处理指令执行、内存和系统调用，让程序启动 Doom 并把渲染帧保存下来。验证器检查实际产物。它同时考验读代码、理解二进制格式、实现和调试，适合观察较长的工具调用链。<a href="https://huggingface.co/datasets/harborframework/terminal-bench-2.0/blob/main/make-mips-interpreter/instruction.md">任务来源</a></p>
-          <p>本批实验使用 Harbor 0.22.0，在相同任务内容和相同固定镜像上分别启动 Agent。任务资源配置为 1 CPU、2 GiB 内存、10 GiB 存储；Agent 与验证器的时间上限均为 1,800 秒。每次 trial 的 Harbor 自动重试为 0，另行启动的修复实验单独保留记录。</p>
-          <p>三个通过样本分别是 Codex 0.154.0＋GPT-5.6-Sol、Hermes 0.19.0＋DeepSeek-V4-Pro-0813、Pi 0.86.1＋同一个 DeepSeek 服务端模型。DeepSeek 使用 Fireworks 托管接口，模型标识为 <code>accounts/fireworks/models/deepseek-v4-pro-0813</code>；官方权重页标注 MIT 许可。本文测量的是这些具体的 Agent、模型与服务组合。<a href="https://fireworks.ai/models/deepseek-ai/deepseek-v4-pro-0813">服务端模型</a> / <a href="https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro-0813">官方权重与许可</a></p>
-          <ol>
-            <li><strong>冻结输入。</strong>登记任务树、镜像 digest、Agent 版本和运行参数；Harbor 为每个 trial 启动独立任务环境。</li>
-            <li><strong>包住实际 Agent 进程。</strong>Harbor 调用本地审计适配器，适配器把固定运行时放进容器，通过 iorec 启动 Agent。录制中常见的 <code>/opt/iorec-agent/</code> 就是容器内运行时与包装器路径。</li>
-            <li><strong>保留两条观测链。</strong>代理侧记录请求、响应与流事件；任务网络命名空间的 pcap 和 TLS key log 独立核对任务进程到 recorder proxy 这一跳，不覆盖 proxy 到 Provider 的上游连接。原始证据加密保存。</li>
-            <li><strong>分别出结论。</strong>Harbor 验证器判任务，iorec 检查完整性和传输一致性，Platform 展示模型调用、工具请求及结果证据。一次通过不会替代另一项检查。</li>
-          </ol>
-          <p class="note">这是本机审计 profile，使用专门的 namespace、非 root 运行和受限出口配置，未作为官方排行榜成绩提交。Codex 使用 high reasoning；Hermes 的 max_turns 为 60；Pi 设置 thinking off，并关闭扩展、skills 与 context files。这些条件不同，结果不能单独归因于模型或 Agent 框架。方法见<a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/harbor-terminal-bench-audit.md">审计运行手册</a>。</p>
+        <section id="setup" aria-labelledby="setup-title">
+          <h2 id="setup-title">实验条件</h2>
+          <p>任务固定为 <code>make-mips-interpreter</code>：实现 JavaScript MIPS 解释器，运行 Doom 并输出正确画面。五组实验使用相同任务树、固定镜像、1 CPU、2 GiB 内存和 1,800 秒上限；Harbor 自动重试为 0。</p>
+          <p>新增两组均使用 GPT-5.6-Sol、Responses API 和 high reasoning：Hermes 0.19.0 与 Pi 0.86.1。Hermes 最初的 Chat Completions 请求被服务端拒绝，修正为 Responses API 后重新启动独立 trial；失败记录保留，不计入下表。</p>
         </section>
+
         <section id="results" aria-labelledby="results-title">
-          <h2 id="results-title">先看三个通过的样本</h2>
-          <p>这三次 Harbor 验证器 reward 都是 1。下面的“模型调用”是录制中的模型接口请求数；“工具结果 / 请求”是平台能重建并按工具 ID 关联的证据。一次工具调用可以批量执行多条 shell 命令，返回结果也可能是错误，不能直接当作等粒度的成功工作步数。</p>
-          <p class="note table-scroll-hint">窄屏下可左右滑动表格，或聚焦表格后使用方向键查看完整数据。</p>
-          <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="三个通过样本的精确统计，可横向滚动">
-            <table class="comparison-table" id="success-table">
-              <caption>已通过任务的三组组合：平台录制统计</caption>
-              <thead><tr><th scope="col">Agent＋模型</th><th scope="col" class="num">模型调用</th><th scope="col" class="num">工具结果 / 请求</th><th scope="col" class="num">输入 Token</th><th scope="col" class="num">输出 Token</th><th scope="col" class="num">usage 覆盖</th><th scope="col" class="num">运行用时</th></tr></thead>
-              <tbody>
-                <tr data-run="codex-sol"><th scope="row">Codex<small>GPT-5.6-Sol</small></th><td class="num">27</td><td class="num">25 / 25</td><td class="num">1,690,213</td><td class="num">14,823</td><td class="num">27 / 27</td><td class="num">3 分 14 秒</td></tr>
-                <tr data-run="hermes-deepseek"><th scope="row">Hermes<small>DeepSeek-V4-Pro-0813</small></th><td class="num">61</td><td class="num">67 / 67</td><td class="num">5,748,541</td><td class="num">85,968</td><td class="num">56 / 61</td><td class="num">27 分 41 秒</td></tr>
-                <tr data-run="pi-deepseek"><th scope="row">Pi<small>DeepSeek-V4-Pro-0813</small></th><td class="num">75</td><td class="num">81 / 81</td><td class="num">6,465,285</td><td class="num">113,083</td><td class="num">75 / 75</td><td class="num">26 分 8 秒</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="note">Token 为 Provider 上报值之和。Hermes 缺少 5 次 usage，未按零补齐。用时分别为 193.98、1,661.27、1,568.14 秒，来自进程观察器，包含录制器启动、收尾、工具执行和等待，不含安装及 verifier。</p>
-          <p class="note">计数细节：Codex 第 1 次请求是 <code>generate=false</code>，输入 7,457、输出 0，实际生成请求为 26。Hermes 的原生 pre/post tool hook 各有 70 个唯一 ID，但三条响应的录制缺块使规范化视图只能重建 67 个。因此，27 和 67 都应连同各自口径阅读。</p>
-          <figure class="ratio-figure" aria-labelledby="ratio-caption">
-            <figcaption id="ratio-caption">累计输入 Token，以 Codex 为 1</figcaption>
-            <div class="ratio-row baseline"><span>Codex＋GPT</span><div class="ratio-track" aria-hidden="true"><span class="ratio-bar" style="width:26.143%"></span></div><span>1.00×</span></div>
-            <div class="ratio-row"><span>Hermes＋DeepSeek</span><div class="ratio-track" aria-hidden="true"><span class="ratio-bar" style="width:88.914%"></span></div><span>3.40×</span></div>
-            <div class="ratio-row"><span>Pi＋DeepSeek</span><div class="ratio-track" aria-hidden="true"><span class="ratio-bar" style="width:100%"></span></div><span>3.83×</span></div>
-            <p class="note">Hermes 仅统计有 usage 的 56 次。精确计数见上表，比例按观测值计算。</p>
-          </figure>
-          <p>模型接口请求数量的差距为 2.26 倍、2.78 倍；输入用量的差距更大。输出用量分别是 Codex 的 5.80 倍和 7.63 倍。要解释这些数字，需要继续看每次请求的上下文、工具行为及 Provider 上报细分。</p>
-        </section>
-        <section id="trajectory" aria-labelledby="trajectory-title">
-          <h2 id="trajectory-title">差距在第一次写实现前就形成了</h2>
-          <p>相同任务固定的是目标、初始环境和验收条件。Agent 自己决定读哪些文件、何时开始实现、做多少验证，因此不会产生固定步数。把调用链按工具行为展开，一个容易复核的里程碑是首次写入目标文件 <code>/app/vm.js</code>。在此之前的源码阅读和小程序测试也可能是有效工作。</p>
-          <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="首次写入 vm.js 的调用链里程碑，可横向滚动">
+          <h2 id="results-title">核心结果</h2>
+          <p class="note table-scroll-hint">窄屏下可左右滑动表格。</p>
+          <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="五组 Agent 与模型实验结果，可横向滚动">
             <table class="comparison-table">
-              <caption>按已记录工具操作定位实现起点</caption>
-              <thead><tr><th scope="col">组合</th><th scope="col">首次写入 vm.js</th><th scope="col">此前可重建工具请求</th><th scope="col">可观察的工作方式</th></tr></thead>
+              <caption>同一任务的五个有效 trial</caption>
+              <thead><tr><th scope="col">Agent＋模型</th><th scope="col">结果</th><th scope="col" class="num">模型调用</th><th scope="col" class="num">输入桶总量</th><th scope="col" class="num">输出</th><th scope="col" class="num">用时</th><th scope="col" class="num">估算费用</th></tr></thead>
               <tbody>
-                <tr><th scope="row">Codex＋GPT</th><td>第 12 次模型调用</td><td>10</td><td>前期调查后较早进入整体实现；exec 包装器可以批量执行命令。</td></tr>
-                <tr><th scope="row">Hermes＋DeepSeek</th><td>第 36 次模型调用</td><td>44</td><td>先分段读代码、查二进制和指令行为，再写实现。</td></tr>
-                <tr><th scope="row">Pi＋DeepSeek</th><td>第 51 次模型调用</td><td>57</td><td>较长的前置调查与小测试；第 31-50 次持续检查指令和数值行为。</td></tr>
+                <tr><th scope="row">Codex<small>GPT-5.6-Sol</small></th><td><strong class="status-pass">通过</strong></td><td class="num">27</td><td class="num">1.690M</td><td class="num">14,823</td><td class="num">3:14</td><td class="num">$1.4034</td></tr>
+                <tr><th scope="row">Hermes<small>DeepSeek-V4-Pro</small></th><td><strong class="status-pass">通过</strong></td><td class="num">61</td><td class="num">≥5.749M</td><td class="num">85,968</td><td class="num">27:41</td><td class="num">$1.0150*</td></tr>
+                <tr><th scope="row">Hermes<small>GPT-5.6-Sol</small></th><td><strong class="status-fail">未通过</strong></td><td class="num">20</td><td class="num">1.636M</td><td class="num">14,709</td><td class="num">7:04</td><td class="num">$1.3302</td></tr>
+                <tr><th scope="row">Pi<small>DeepSeek-V4-Pro</small></th><td><strong class="status-pass">通过</strong></td><td class="num">75</td><td class="num">6.465M</td><td class="num">113,083</td><td class="num">26:08</td><td class="num">$0.9518</td></tr>
+                <tr><th scope="row">Pi<small>GPT-5.6-Sol</small></th><td><strong class="status-pass">通过</strong></td><td class="num">19</td><td class="num">1.217M</td><td class="num">12,338</td><td class="num">4:20</td><td class="num">$1.1247</td></tr>
               </tbody>
             </table>
           </div>
-          <p>Pi 的第 47、48 次调用中，乘法随机测试返回失败；第 49 次测试返回通过，随后第 51 次写入整体实现。这些调用有实际验证价值，也延长了模型与工具往返。Codex 写实现后同样经历了定位、修补、重跑和帧产物检查，差别在于这一次完成整个闭环的轨迹更短。</p>
-          <h3>大输出会跟着历史进入后续请求</h3>
-          <p>Pi 第 7 次调用读取 <code>my_stdlib.c</code>，工具返回 51,245 个字符。平台在后续模型输入里观察到同一工具 ID、同一内容哈希 68 次。Hermes＋DeepSeek 的一条 14,101 字符读取结果也出现 53 次。这记录的是同一结果被重新携带，不代表文件被重新读取几十遍。</p>
-          <p>Codex 此次使用 Responses WebSocket，第 2-27 次调用通过 <code>previous_response_id</code> 延续上下文；另外两组使用 Chat Completions SSE。增量传输让工具文本不必每次重新出现在网络请求里，但服务端上下文和用量仍应看 usage。线上文本重复次数不能直接换算成三组的模型计算量。</p>
-          <div class="comparison-callout"><p>本次证据支持的解释是：较长的前期探索增加了请求数量，较大的历史内容又随着后续调用累计进入输入统计。模型能力、Agent 提示与工具策略、缓存和服务速度各自贡献了多少，还需要控制变量实验。</p></div>
+          <p class="note">输入桶总量为普通输入、cache read 与 cache write 之和。Hermes＋DeepSeek 有 5 次 usage 缺失，因此是下界；其 $1.0150 只覆盖已录 usage，Agent 原生全会话估算为 $1.1595。reasoning 是输出子集，未重复相加。</p>
         </section>
-        <section id="tokens" aria-labelledby="tokens-title">
-          <h2 id="tokens-title">几百万输入 Token 是怎样累加的</h2>
-          <p>dashboard 的输入总数是每次有上报的 <code>input_tokens / prompt_tokens</code> 之和。历史上下文会在多个请求里计入，因此累计值不等于原始任务长度或单次上下文窗口。Pi 的单次最大输入只有 171,939，累计输入却达到 6,465,285。</p>
-          <p>75 次有 usage 的 Pi 调用，平均输入约 86,204 Token；Codex 是 62,600；Hermes 已观测的 56 次是 102,653。Pi 的输入差距可以直接拆成 <code>2.78 倍请求数量 × 1.38 倍平均输入 ≈ 3.83 倍</code>。Hermes 只能对已有 usage 的请求做同类计算，不能把 56/61 当成完整覆盖。</p>
-          <p>按各自调用序号将轨迹分为前、中、后三段，Pi 每次平均输入从约 2.97 万升到 7.56 万、15.33 万；Codex 为 2.42 万、7.49 万、8.87 万。两者都在累积上下文，Pi 的较长尾段让总和继续增加。</p>
-          <h3>大部分输入命中了缓存</h3>
-          <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="缓存与输出 Token 细分，可横向滚动">
-            <table class="comparison-table" id="token-detail-table">
-              <caption>Provider usage 的进一步拆分，只统计已上报调用</caption>
-              <thead><tr><th scope="col">组合</th><th scope="col" class="num">Cached input</th><th scope="col" class="num">占输入比例</th><th scope="col" class="num">输入减缓存</th><th scope="col" class="num">输出中的 reasoning</th></tr></thead>
-              <tbody>
-                <tr><th scope="row">Codex＋GPT</th><td class="num">1,588,427</td><td class="num">93.98%</td><td class="num">101,786</td><td class="num">4,479</td></tr>
-                <tr><th scope="row">Hermes＋DeepSeek</th><td class="num">5,418,099</td><td class="num">94.25%</td><td class="num">330,442</td><td class="num">65,958</td></tr>
-                <tr><th scope="row">Pi＋DeepSeek</th><td class="num">6,293,272</td><td class="num">97.34%</td><td class="num">172,013</td><td class="num">87,394</td></tr>
-              </tbody>
-            </table>
+
+        <section id="diagnosis" aria-labelledby="diagnosis-title">
+          <h2 id="diagnosis-title">判断：模型影响效率，组合影响正确率</h2>
+          <div class="verdict-grid">
+            <div class="verdict-card">
+              <h3>模型影响很大</h3>
+              <p>Pi 从 DeepSeek 换到 5.6 Sol 后仍然通过：调用从 75 降到 19，输入减少约 81%，输出减少约 89%，用时减少约 83%。此前 Pi 的高消耗不能归因于 Pi Agent 本身。</p>
+            </div>
+            <div class="verdict-card">
+              <h3>不是单纯的模型排名</h3>
+              <p>Hermes 换到同一模型后，调用、Token 和时间同样大幅下降，但 reward 从 1 变成 0。Hermes＋DeepSeek 能通过，说明不能简单判定“Hermes 不行”；这是 Agent、提示、工具与模型共同形成的结果。</p>
+            </div>
           </div>
-          <p>Pi 总输入是 Codex 的 3.83 倍，但“输入减 cached input”只有约 1.69 倍。输出也并非全是最终答案或代码：usage 中分别有 4,479、65,958、87,394 个 reasoning tokens。Pi 的客户端虽然设为 thinking off，Provider 仍上报了 reasoning 用量，说明客户端开关不能直接当成服务端计量事实。不同模型的分词和上报语义有差异，这些数字不能换算成等量的有效推理。</p>
-          <h3>按同一价格快照重算</h3>
-          <p>这里采用你提供的价格：DeepSeek-V4-Pro-0813 Standard 每百万 Token 的未缓存输入、缓存输入、输出分别为 <strong>$1.32</strong>、<wbr><strong>$0.044</strong>、<wbr><strong>$3.96</strong>；GPT-5.6-Sol 还单列 cache write。价格只是本次复盘快照，后续可能变化。</p>
-          <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="模型计费单价，每百万 Token，可横向滚动">
-            <table class="comparison-table">
-              <caption>本次估算采用的单价，单位：美元 / 百万 Token</caption>
-              <thead><tr><th scope="col">模型与计费档</th><th scope="col" class="num">Input</th><th scope="col" class="num">Cached input</th><th scope="col" class="num">Cache write</th><th scope="col" class="num">Output</th></tr></thead>
-              <tbody>
-                <tr><th scope="row">GPT-5.6-Sol<small>Short context，本次使用</small></th><td class="num">$4.00</td><td class="num">$0.40</td><td class="num">$5.00</td><td class="num">$20.00</td></tr>
-                <tr><th scope="row">GPT-5.6-Sol<small>Long context，本次未触发</small></th><td class="num">$8.00</td><td class="num">$0.80</td><td class="num">$10.00</td><td class="num">$30.00</td></tr>
-                <tr><th scope="row">DeepSeek-V4-Pro-0813<small>Fireworks Standard</small></th><td class="num">$1.32</td><td class="num">$0.044</td><td class="num">—</td><td class="num">$3.96</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="note">OpenAI 的 GPT-5.6-Sol 规则是单次请求输入超过 272K 时，整条请求按 2 倍输入和 1.5 倍输出费率计价；cache write 是普通未缓存输入的 1.25 倍。本次最大单次输入为 94,254，26 次实际生成调用均属于 short context。<a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">OpenAI 官方计价说明</a>；<a href="https://fireworks.ai/models/deepseek-ai/deepseek-v4-pro-0813">DeepSeek 服务价格</a>。</p>
-          <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="三组成功样本按价格快照重算的费用，可横向滚动">
-            <table class="comparison-table" id="cost-table">
-              <caption>按录制 usage 与 Agent 原生计量重算，单位：美元</caption>
-              <thead><tr><th scope="col">组合</th><th scope="col">可计价 Token</th><th scope="col" class="num">重算费用</th><th scope="col">覆盖与限制</th></tr></thead>
-              <tbody>
-                <tr><th scope="row">Codex＋GPT</th><td>普通输入 78<br>cache write 94,251<br>cached input 1,588,427<br>输出 14,823</td><td class="num"><strong>$1.4034</strong></td><td>26 / 26 次实际生成调用；另有一次 <code>generate=false</code> 请求未进入 Agent 原生费用汇总。</td></tr>
-                <tr><th scope="row">Hermes＋DeepSeek</th><td>未缓存输入 330,442<br>cached input 5,418,099<br>输出 85,968</td><td class="num"><strong>$1.0150</strong><small>已录 usage 小计</small></td><td>只覆盖 56 / 61 次；Agent 原生全会话估算为 $1.1595，缺失调用无法从公开 Token 独立拆算。</td></tr>
-                <tr><th scope="row">Pi＋DeepSeek</th><td>未缓存输入 172,013<br>cached input 6,293,272<br>输出 113,083</td><td class="num"><strong>$0.9518</strong></td><td>75 / 75 次 usage 完整；重算值与 Agent 原生估算一致。</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p>计算后，Pi 虽然累计输入是 Codex 的 3.83 倍，估算费用却更低。原因是模型单价不同，而且 Pi 的缓存输入占比达到 97.34%。所以 Token 规模适合解释轨迹负担，不能直接当作美元费用排名。</p>
-          <p class="note">Codex 的计费桶来自 Agent 原生 trajectory：26 次生成调用共有 1,682,756 个 prompt tokens；其中 1,588,427 个为 cached input、94,251 个为 cache write、78 个为普通 input。平台表里的 1,690,213 还包含一次 <code>generate=false</code> 请求的 7,457 个输入 Token，Agent 原生费用汇总未纳入这次请求。所有金额都是根据用量与价格快照重算的估算，不是 Provider 账单。</p>
+          <div class="comparison-callout"><p><strong>这轮最重要的修正：</strong>Pi＋5.6 Sol 比原 Codex＋5.6 Sol 样本还少 8 次调用、约 47 万输入 Token。旧实验中“Codex 明显更省”的现象，主要来自模型与协议没有控制一致。</p></div>
         </section>
+
+        <section id="failure" aria-labelledby="failure-title">
+          <h2 id="failure-title">Hermes 为什么失败</h2>
+          <p>不是 API、录制器或 Harbor 误判。Hermes 正常完成 Agent 执行并生成 BMP，验证器三项检查通过两项：</p>
+          <ul>
+            <li>VM 能运行：通过。</li>
+            <li><code>/tmp/frame.bmp</code> 存在：通过。</li>
+            <li>图像与参考帧相似度：<strong>0.8065</strong>，低于要求的 <strong>0.95</strong>。</li>
+          </ul>
+          <p>Hermes 检查了 BMP 尺寸、格式与运行日志，还调用视觉分析判断“画面正常”，但没有发现像素结果错误。它完成了功能闭环，却没有完成验证闭环。</p>
+        </section>
+
         <section id="evidence" aria-labelledby="evidence-title">
-          <h2 id="evidence-title">能读出 Token，不代表每个字节都录全了</h2>
-          <p>Token 覆盖回答“多少次调用上报了用量”；独立传输核对回答“线上消息与代理证据是否一致”。Pi 的 75/75 usage 与不完整 pcap 可以同时成立。</p>
-          <div class="comparison-table-wrap" tabindex="0" role="region" aria-label="独立传输核对结果，可横向滚动">
-            <table class="comparison-table">
-              <caption>录制质量与任务结果分别判断</caption>
-              <thead><tr><th scope="col">录制</th><th scope="col">独立传输核对</th><th scope="col">主要缺口</th><th scope="col">使用范围</th></tr></thead>
-              <tbody>
-                <tr><th scope="row">Codex＋GPT</th><td>通过；capture drops 0</td><td>符合核对条件的 WebSocket 连接匹配，无 missing / extra。</td><td>本次任务网络命名空间的传输合格样本。</td></tr>
-                <tr><th scope="row">Hermes＋DeepSeek</th><td>未通过；29/57 eligible attempts 匹配</td><td>pcap 丢包 3,560；响应正文 chunk 缺 13；另有协议 / 关联缺口。</td><td>可分析已保留轨迹和 usage，不能宣称完整捕获。</td></tr>
-                <tr><th scope="row">Pi＋DeepSeek</th><td>未通过；34/75 eligible attempts 匹配</td><td>pcap 丢包 2,246；41 个 eligible attempts 缺少独立 wire 匹配。</td><td>75/75 usage 可统计；41 个 wire 缺口不等于 41 份代理响应正文丢失。</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <p>matched attempt 的粒度不能跨协议当作模型调用比较：Codex 一个 WebSocket 连接承载了 27 次模型接口请求，而 HTTP/SSE 样本通常按请求形成 attempt。当前表格使用平台核对快照，历史离线报告可能保留不同版本的 gap 分类。</p>
-          <h3>Hermes 56/61 的五个缺口</h3>
-          <p>第 16、31、35 次调用均为 HTTP 200，但响应录制分别缺少 3、1、9 个正文 chunk，规范化无法可靠给出 usage；第 54 次是图像输入不受支持的 HTTP 400；第 61 次在关闭前没有观察到响应。HTTP 200、完整正文、usage 可用是三个不同条件。缺失部分保留为未知。</p>
-          <p>后续请求保留的历史工具信息显示，第 16、31、35 次对应的都是调查操作，不影响首次写入发生在第 36 次的判断。这种交叉核对能补充部分工具轨迹，却无法补回缺失的响应字节与 usage。</p>
-          <p class="note">更正此前长任务文章：旧 Hermes manifest 的 3,573 是汇总 capture drops，其中 pcap packets_dropped 为 3,560，另有 13 个响应正文 chunk 缺口。把 3,573 全称为“pcap 丢包”不准确。本次按事件拆分；旧证据保留，后续修复不能自动把它升级为完整录制。</p>
-        </section>
-        <section id="next" aria-labelledby="next-title">
-          <h2 id="next-title">这批实验给出的判断</h2>
-          <p>在这个固定任务和这组配置下，Codex＋GPT-5.6-Sol 的一次成功运行使用了更少的模型请求、可重建工具交互、上报 Token 和墙钟时间。Hermes 与 Pi 搭配 DeepSeek 也通过了任务，前置调查更长，历史内容在更多调用中累加，形成了更大的累计输入；缓存显著改变了理解费用的方式。</p>
-          <p>这仍然是一个任务、每个组合一个通过样本。Agent、模型、思考配置、API 协议、工具粒度、缓存状态及录制器版本同时存在差异，两份 DeepSeek 组合的独立传输核对也未通过。因此不能据此给模型家族或 Agent 框架排出普遍优劣，也不能把约 8 倍墙钟时间全解释为服务端推理慢。</p>
-          <p>下一轮可在本次 Hermes / Pi 同模型对比的基础上，进一步统一配置并重复多次，再在同一个 Agent 内比较模型；报告通过率、调用次数、缓存与非缓存输入、输出和用时分位数。大工具输出截断与摘要策略可以单独作为变量。补齐录制缺口后，再观察这些改动是否同时降低 Token 并保持正确率。</p>
-          <p class="note">本文仅复盘现存证据，没有新增付费模型试验。</p>
-        </section>
-        <section id="sources" aria-labelledby="sources-title">
-          <h2 id="sources-title">数据与溯源</h2>
-          <p>正文数字来自本机 Platform 的录制、progress、逐调用 usage 与原始事件；任务判分和版本来自 Harbor trial / workflow 报告。公开附件保留聚合指标、调用序号和来源哈希。原始提示、响应、任务解答、pcap、TLS 密钥及私有截图不随文章发布。</p>
-          <p><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-21-agent-token-comparison.json">机器可读实验摘要、逐调用数值与费用重算</a>。Pi 运行使用本机冻结的审计适配器快照；附件中的版本和哈希标识本次实验，不能假定仓库任意后续版本会产生同样轨迹。</p>
+          <h2 id="evidence-title">录制证据</h2>
+          <ul>
+            <li><strong>Pi＋5.6 Sol：</strong>reward 1；19/19 调用完成独立传输核对，录制状态 verified。</li>
+            <li><strong>Hermes＋5.6 Sol：</strong>reward 0；Agent 原生会话与代理事件可分析，但 pcap 有 4 个 capture drops，独立传输核对未通过，不能宣称完整捕获。</li>
+            <li><strong>任务判分与录制完整性分开：</strong>Hermes 的像素失败来自 Harbor verifier，不依赖 pcap 是否完整。</li>
+          </ul>
           <details class="evidence-ledger">
-            <summary>展开录制 ID 与共同输入指纹</summary>
+            <summary>录制 ID 与计费桶</summary>
             <dl>
-              <dt>Codex＋GPT-5.6-Sol</dt><dd><code>run-01a0be8e-ba36-72f9-ac36-2d1ed31bcf16#0000</code></dd>
-              <dt>Hermes＋DeepSeek-V4-Pro-0813</dt><dd><code>run-01a0be9f-dd96-71c1-ab28-fcb7907261d5#0000</code></dd>
-              <dt>Pi＋DeepSeek-V4-Pro-0813</dt><dd><code>run-01a0c206-6d92-72d9-80de-2fc4f9c7e8ab#0000</code></dd>
+              <dt>Pi＋GPT-5.6-Sol</dt><dd><code>run-01a0c3e4-4669-7529-a888-53729b16f4c2#0000</code></dd>
+              <dt>Pi 计费桶</dt><dd>普通输入 57；cache read 1,131,807；cache write 84,994；输出 12,338</dd>
+              <dt>Hermes＋GPT-5.6-Sol</dt><dd><code>run-01a0c3dc-4cda-7661-8702-295b6c872154#0000</code></dd>
+              <dt>Hermes 计费桶</dt><dd>普通输入 105,989；cache read 1,530,193；cache write 0；输出 14,709</dd>
               <dt>共同任务树 SHA-256</dt><dd><code>e3127fed0d7a62ae35aedfc76be6d7f4aba3ee038153339c72fe7aa4c19bd1f1</code></dd>
-              <dt>共同镜像</dt><dd><code>alexgshaw/make-mips-interpreter@sha256:082fc8821b317f30fdfbf8d08d528874ce331c03e8083aef0406d48cdd7132a2</code></dd>
             </dl>
           </details>
-          <ul class="comparison-sources">
-            <li><a href="long-horizon-evidence.html">9 月 20 日长任务录制报告</a>及<a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-20-long-horizon-task-progress-linux-x86_64.json">当时冻结的统计</a>。</li>
-            <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/task-progress-plan.md">长任务选择、失败记录与验收过程</a>。</li>
-            <li><a href="https://www.harborframework.com/docs/tasks">Harbor 的任务与验证器约定</a>。</li>
-          </ul>
+          <p class="note">费用按实验时的价格快照重算，不是 Provider 账单。GPT-5.6-Sol 单次输入均未超过 272K，使用 short-context 价格。<a href="https://developers.openai.com/api/docs/models/gpt-5.6-sol">OpenAI 官方价格</a>；<a href="https://fireworks.ai/models/deepseek-ai/deepseek-v4-pro-0813">DeepSeek 服务价格</a>。</p>
+          <p><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-21-agent-model-controlled-comparison.json">机器可读实验摘要</a> · <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/harbor-terminal-bench-audit.md">审计运行手册</a></p>
+        </section>
+
+        <section id="limits" aria-labelledby="limits-title">
+          <h2 id="limits-title">边界</h2>
+          <p>每个组合只有一个样本。这足以说明旧差距不能全部归因于 Agent，但不足以给 Agent 或模型做稳定性排名。下一步应固定协议和参数，每组重复 3–5 次，比较通过率与分位数。</p>
         </section>
       </article>
     </main>
