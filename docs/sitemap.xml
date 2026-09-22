@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://newdogwang-netizen.github.io/inferenceIO/</loc>
-    <lastmod>2026-09-21</lastmod>
+    <lastmod>2026-09-22</lastmod>
   </url>
   <url>
     <loc>https://newdogwang-netizen.github.io/inferenceIO/long-horizon-evidence.html</loc>
@@ -11,5 +11,9 @@
   <url>
     <loc>https://newdogwang-netizen.github.io/inferenceIO/agent-token-comparison.html</loc>
     <lastmod>2026-09-21</lastmod>
+  </url>
+  <url>
+    <loc>https://newdogwang-netizen.github.io/inferenceIO/tb4-sourcemap-experiment.html</loc>
+    <lastmod>2026-09-22</lastmod>
   </url>
 </urlset>

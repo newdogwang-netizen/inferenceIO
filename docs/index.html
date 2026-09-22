@@ -24,7 +24,7 @@
         <a class="brand" href="./" aria-label="iorec home">io<span>rec</span></a>
         <div class="nav-links">
           <a href="#navigate">Navigate</a>
-          <a href="agent-token-comparison.html">Latest blog</a>
+          <a href="tb4-sourcemap-experiment.html">Latest blog</a>
           <a href="#evidence">Evidence</a>
           <a href="#architecture">Architecture</a>
           <a href="#boundaries">Boundaries</a>
@@ -86,6 +86,21 @@
           <h2>The capture problem is a boundary problem.</h2>
           <p>Agent observability often starts with application logs and ends with an assumption: if the log looks complete, the traffic must be complete. That assumption fails when agents retry, fork subprocesses, switch protocols, or bypass the expected client.</p>
         </header>
+
+        <section id="tb4-experiment" class="long-trial-section" aria-labelledby="tb4-experiment-title" lang="zh-CN">
+          <div>
+            <p class="eyebrow">September 22 · Terminal-Bench 4.0</p>
+            <h2 id="tb4-experiment-title">一道难题，三个 Agent，同一个模型</h2>
+            <p>Codex、Pi、Hermes 使用 GPT-5.6-Sol 修复 source-map 泄漏。看最终判分、Token 消耗，以及独立抓包核对的真实录制。</p>
+            <a class="text-link" href="tb4-sourcemap-experiment.html">阅读新实验</a>
+          </div>
+          <dl aria-label="实验条件">
+            <div><dt>Agent</dt><dd>3</dd></div>
+            <div><dt>同一任务</dt><dd>1</dd></div>
+            <div><dt>判分检查</dt><dd>36</dd></div>
+            <div><dt>Harbor 重试</dt><dd>0</dd></div>
+          </dl>
+        </section>
 
         <section id="agent-comparison" class="long-trial-section" aria-labelledby="agent-comparison-title" lang="zh-CN">
           <div>
@@ -199,6 +214,7 @@ iorec run \
           </header>
           <nav aria-label="Project resources">
             <ul class="directory-grid">
+              <li><a href="tb4-sourcemap-experiment.html" lang="zh-CN"><span>新实验</span><strong>一道难题，三个 Agent</strong><small>Terminal-Bench 4.0：同模型、独立判分与录制证据。</small></a></li>
               <li><a href="agent-token-comparison.html" lang="zh-CN"><span>复盘</span><strong>Agent 的问题，还是模型的问题？</strong><small>同模型控制实验：效率差距与 Hermes 失败原因。</small></a></li>
               <li><a href="#quickstart"><span>Run</span><strong>Quickstart</strong><small>Create a key and record the first encrypted run.</small></a></li>
               <li><a href="long-horizon-evidence.html"><span>Observe</span><strong>Long-horizon report</strong><small>Follow the real model and tool chain with separate evidence verdicts.</small></a></li>
