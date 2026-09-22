@@ -1,0 +1,32 @@
+.recorder-blog .comparison-main { max-width: 800px; }
+.recorder-blog .comparison-header h1 { max-width: none; }
+.recorder-blog .comparison-article p,
+.recorder-blog .comparison-article li { line-height: 1.85; }
+.recorder-blog .comparison-toc a { display: inline-flex; align-items: center; min-height: 44px; }
+.recorder-blog .nav-shell { height: auto; min-height: 70px; gap: 16px; flex-wrap: wrap; padding-block: 8px; }
+.recorder-blog .nav-links { flex-wrap: wrap; gap: 8px 20px; }
+.recorder-blog .nav-links a { display: inline-flex; align-items: center; min-height: 44px; }
+.recorder-blog .comparison-article a { overflow-wrap: anywhere; }
+.recorder-blog .comparison-article h3[id],
+.recorder-blog .comparison-article h4[id] { scroll-margin-top: 110px; }
+.recorder-blog .comparison-article h4 { margin: 28px 0 12px; font-size: 1.05em; line-height: 1.6; }
+.recorder-blog .comparison-article pre { max-width: 100%; margin: 20px 0; padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.recorder-blog .comparison-article pre code { font-size: 14px; line-height: 1.85; }
+.recorder-blog .evidence-levels { margin: 24px 0; border-block: 1px solid var(--line); }
+.recorder-blog .evidence-levels > div { display: grid; grid-template-columns: minmax(0, 10em) minmax(0, 1fr); gap: 20px; padding: 20px 0; }
+.recorder-blog .evidence-levels > div + div { border-top: 1px solid var(--line); }
+.recorder-blog .evidence-levels dt { font-weight: 650; }
+.recorder-blog .evidence-levels dd { margin: 0; line-height: 1.85; }
+@media (max-width: 640px) {
+  .recorder-blog .evidence-levels > div { grid-template-columns: 1fr; gap: 8px; }
+  .recorder-blog .nav-links { display: flex; }
+}
+@media print {
+  .recorder-blog { color: #000; background: #fff; }
+  .recorder-blog .site-header, .recorder-blog .comparison-toc, .recorder-blog .site-footer { display: none; }
+  .recorder-blog .comparison-main { width: 100%; padding: 0; }
+  .recorder-blog .comparison-deck, .recorder-blog .comparison-meta, .recorder-blog .note { color: #333; }
+  .recorder-blog .comparison-callout { background: none; border-color: #333; }
+  .recorder-blog .comparison-article pre { color: #000; background: none; }
+  .recorder-blog h2, .recorder-blog h3 { break-after: avoid; }
+}

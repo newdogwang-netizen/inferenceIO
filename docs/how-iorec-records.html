@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="iorec 是面向不同 Agent 的统一录制工具与平台：记录模型通信，关联工具执行，保留原始证据，并明确哪些环节尚未覆盖。">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="iorec 如何录下 Agent 的一次工作">
+    <meta property="og:description" content="从模型请求到脚本执行，用一条可检查的证据链解释 Agent 做了什么。">
+    <meta property="og:url" content="https://newdogwang-netizen.github.io/inferenceIO/how-iorec-records.html">
+    <meta name="twitter:card" content="summary">
+    <link rel="canonical" href="https://newdogwang-netizen.github.io/inferenceIO/how-iorec-records.html">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="agent-token-comparison.css">
+    <link rel="stylesheet" href="how-iorec-records.css">
+    <title>iorec 如何录下 Agent 的一次工作 | iorec</title>
+  </head>
+  <body class="comparison-blog recorder-blog">
+    <a class="skip-link" href="#article">跳到正文</a>
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="主导航">
+        <a class="brand" href="./" aria-label="iorec 首页">io<span>rec</span></a>
+        <div class="nav-links">
+          <a href="how-iorec-records.md" download>下载原文</a>
+          <a class="nav-source" href="https://github.com/newdogwang-netizen/inferenceIO">GitHub</a>
+        </div>
+      </nav>
+    </header>
+    <main id="article" class="comparison-main" tabindex="-1">
+      <header class="comparison-header">
+        <p class="eyebrow">iorec · 采集端工作原理</p>
+        <h1>iorec 如何录下 Agent 的一次工作</h1>
+        <p class="comparison-deck">一个面向不同 Agent 的统一录制工具与平台：把模型通信、工具执行和任务结果放在一起，让每一步都有据可查。</p>
+        <div class="comparison-meta"><time datetime="2026-09-22">2026 年 9 月 22 日</time><span>约 7 分钟</span><span>基于当前实现</span></div>
+      </header>
+      <nav class="comparison-toc" aria-label="文章目录">
+        <a href="#purpose">解决什么</a><a href="#proxy-explicit">代理原理</a><a href="#tools">工具执行</a><a href="#audit">如何核对</a><a href="#example">真实例子</a><a href="#limits">覆盖边界</a>
+      </nav>
+      <article class="comparison-article">
+        <section id="purpose" aria-labelledby="purpose-title">
+          <h2 id="purpose-title">不只看最终回答，还要看执行过程</h2>
+          <p>Agent 说“已完成”，不代表脚本成功运行；终端里有日志，也不代表所有模型请求都被记录。排查问题时，我们需要知道：发给模型什么、返回了什么、调用了哪个工具，以及工具实际怎么结束。</p>
+          <p><strong>iorec 的目标是统一录制，不是给 Agent 排名。</strong>本机采集端保留证据，平台把证据整理成可查询的模型调用、工具执行和任务进度。不同 Agent 的日志可以进入同一个视图，但各自的覆盖范围仍单独标明。</p>
+        </section>
+        <section id="capture" aria-labelledby="capture-title">
+          <h2 id="capture-title">采集端做四件事</h2>
+          <h3>1. 包住一次 Agent 启动</h3>
+          <p>用 <code>iorec run … -- &lt;agent 命令&gt;</code> 启动任务。启用模型代理时，采集端先建立录制 ID、存储目录和本地监听端口，再把连接配置注入它启动的 Agent 子进程，记录进程生命周期和退出状态。它不默认监控整台机器，也不会把配置写进用户的全局 shell 环境。</p>
+          <h3>2. 在模型通信链路上留一份记录</h3>
+          <p>这里不是泛指“抓包”，而是两种明确的接入方式：<strong>修改 API 地址的反向代理</strong>，以及<strong>隔离实验中的透明 TLS 拦截</strong>。</p>
+          <h4 id="proxy-explicit">方式 A：修改 base URL，让 Agent 主动连本地代理</h4>
+          <p>以 OpenAI 兼容接口为例，Agent 原本请求 <code>https://api.openai.com/v1/responses</code>。iorec 启动一个本地 HTTP 服务，并向子进程注入类似下面的配置：</p>
+          <pre><code>OPENAI_BASE_URL=http://127.0.0.1:43123/v1
+IOREC_PROXY_URL=http://127.0.0.1:43123</code></pre>
+          <p><code>43123</code> 只是示例；默认监听 <code>127.0.0.1:0</code>，由操作系统分配空闲端口。Agent 随后把同一个 API 请求发到本地 <code>/v1/responses</code>；iorec 根据 <code>--upstream</code>，再向真正的服务发起请求。</p>
+          <p><strong>对 Agent，iorec 是 HTTP 服务端；对模型服务，iorec 是 HTTP 客户端。</strong>这就是反向代理的角色，而不是模型本身。实现上使用 Rust 的 Axum 接收请求、reqwest 发起上游请求，保留请求方法、正文和必要鉴权头，按新连接重建 Host 等传输字段。概念可参见 <a href="https://www.rfc-editor.org/rfc/rfc9110.html#section-3.7">HTTP 规范中的反向代理定义</a>。</p>
+          <pre><code># 接入示意：先准备 iorec 密钥及 Agent 自己的鉴权配置
+iorec run --key-file ./iorec.key \
+  --upstream https://api.openai.com \
+  --provider openai \
+  -- your-agent-command</code></pre>
+          <p>这里不是设置系统级 <code>HTTP_PROXY</code>。前提是 Agent/SDK 读取该 base URL，或有专门适配器注入 provider 配置；<strong>只包住启动命令，不能保证所有请求都经过代理。</strong>不同 Agent 的适配可能改变协议选项，例如当前 Codex 显式代理适配会关闭 WebSocket，不能假定与原始运行完全相同。</p>
+          <p><strong>HTTPS 怎么处理？</strong>这个普通模式下，Agent 到本机回环地址是 HTTP，iorec 到真实服务是 HTTPS；iorec 作为 TLS 客户端正常解密收到的响应，因此能看到正文。它没有破解 Agent 与原服务之间的 TLS，而是建立了两段独立连接。本地明文入口不能直接暴露到公网。</p>
+          <h4 id="proxy-transparent">方式 B：不改 API 地址，用隔离网络和临时 CA 接入</h4>
+          <p>受控 Linux 实验可显式启用 <code>--task-netns --transparent-proxy</code>。Agent 仍访问原来的 HTTPS 域名，采集端在它的专属 network namespace（网络命名空间）里配置 <strong>nftables DNAT</strong>：只把预先确认的模型 IPv4 地址和端口重定向到录制器入口。</p>
+          <p>HTTPS 还需要第二步：为本次运行生成临时 CA 和目标域名证书，通过 <code>SSL_CERT_FILE</code>、<code>NODE_EXTRA_CA_CERTS</code> 等把信任配置传给支持这些设置的子进程。<strong>Agent 的 TLS 在录制器终止；录制器再建立一条到真实服务、正常验证上游证书的 TLS 连接。</strong>这是授权实验里的 TLS 中间人代理，不是被动旁路抓包，也不是关闭证书校验。</p>
+          <p>这种方式不保证任意 Agent 都兼容。证书固定（certificate pinning）、不读取信任配置的客户端、自定义 DNS，或任务依赖被隔离策略阻断的其他网络地址，都可能失败。它只用于明确启用的隔离任务，不改整台机器的信任库。</p>
+          <h4 id="streaming">流式输出怎么既转发，又录制？</h4>
+          <p>HTTP/SSE 路径不等整段回答结束再返回。每收到一个正文数据块，代理把它交给两个异步路径：一份进入有界采集队列，记录序号、长度、哈希和按策略保留的字节；另一份继续转发给接收方。请求体和响应体都按这种方式流式处理。</p>
+          <p>SSE 解析器再跨数据块累积字节，按空行分隔还原 <code>event</code> / <code>data</code> 事件；<strong>网络数据块、SSE 事件、模型 Token 不是一一对应的。</strong>WebSocket 则在两端连接之间双向转发消息，另记消息方向、顺序和关闭状态，不把它当 SSE 解析。<a href="https://html.spec.whatwg.org/multipage/server-sent-events.html#parsing-an-event-stream">SSE 的事件边界见标准定义</a>。</p>
+          <p>HTTP/SSE 采集队列满时会等待容量，形成背压，因此不能承诺“零延迟、零影响”；WebSocket 采集另有消息与字节预算。写盘失败、预算溢出或流不完整都需要留下缺口，不能把“仍在转发”当成“已经录全”。</p>
+          <p>流式响应会先留下事件和正文，再由平台重组为响应文本、工具调用和服务端返回的 Token 用量。<strong>规范化视图是原始证据的解释，不是另一份模型回答。</strong></p>
+          <h3 id="tools">3. 把工具请求与实际执行接起来</h3>
+          <dl class="evidence-levels">
+            <div><dt>模型协议</dt><dd>记录模型请求了什么工具、传了哪些参数。<strong>提出调用，不等于已经执行。</strong></dd></div>
+            <div><dt>Agent 原生日志 / Hook</dt><dd>记录 Agent 报告的工具返回、错误和可用退出码。Codex、Hermes、Pi 已有相应适配。</dd></div>
+            <div><dt>实际工具后端</dt><dd>直接采集进程退出码、耗时、stdout/stderr，以及显式选定文件的前后哈希与差异。目前已验证 Pi 0.86.1 的 Linux bash 后端。</dd></div>
+          </dl>
+          <p>平台按明确的调用 ID、工具名和兼容会话关联这些来源，不靠“时间差不多”猜测匹配。同一次执行有多份证据，也不会因此重复算成多步。</p>
+          <p>具体到 Pi：通过扩展接口替换 <code>bash</code> 的底层执行 operations，保留工具参数和返回格式；Python 进程包装器启动真实命令，从独立管道读取 stdout/stderr，用 <code>waitid</code> / <code>wait</code> 取得进程状态，并采样显式选定的文件。调用 ID 和会话 ID 一起传入，方便和模型请求关联。<strong>HTTP 代理本身看不到本机脚本怎么执行，所以这层需要单独接入。</strong></p>
+          <h3>4. 先落盘，再交给平台</h3>
+          <p>核心录制按事件序号写入本机，正文以 blob 单独保存并关联 SHA-256；默认加密，并通过 <code>iorec verify</code> 检查相应完整性约束。随后可在线上传，或结束后受控导入；平台再解析、索引和展示。工具补充附件单独导入，不改写原录制。</p>
+          <p>在线上传先传正文对象，再传事件批次，以平台确认的 <code>durable_seq</code> 续传，重复提交按身份和哈希校验处理。<strong>普通在线上传不携带 pcap 和 TLS secrets</strong>；需要平台复核这些敏感证据时，走 operator 受控的 platform bundle 导入。离线导出包是明文，必须私有保存并在完成后清理；不能把本机加密误解成平台全程无需解密。</p>
+          <p>这样可以从任务进度下钻到模型请求，再查看关联的工具参数、输出和退出状态。对进程采集的原始输出，目前平台提供有限预览，完整保留的字节仍在本机。</p>
+        </section>
+        <section id="audit" aria-labelledby="audit-title">
+          <h2 id="audit-title">怎么知道代理有没有漏录？</h2>
+          <p>在受控实验中，可以另外启用 <code>--pcap --tls-keylog</code>：用 <strong>tcpdump</strong> 抓取任务网络包，同时从支持的 TLS 运行时或录制器 TLS 端点获得 NSS 格式的会话密钥日志。<code>iorec transport-audit</code> 再调用 <strong>TShark</strong> 解密、重组 HTTP/1.1、HTTP/2 或 WebSocket 应用数据，与代理记录核对。只有 pcap、没有对应 TLS 会话密钥，不能据此读出 HTTPS 正文。</p>
+          <p>这提供了一条独立于代理正文写入路径的核对来源，不是拿同一份 Agent 日志证明自己完整；但它仍依赖本机抓包和密钥采集，不是对本机操作者的远程防篡改证明。</p>
+          <p>当前这类核对针对受控的 <strong>Agent → 录制器</strong> 链路，不涵盖录制器 → 模型服务的完整端到端过程。它不是默认开启；出现丢包、解码缺口或不完整响应时，会保留失败状态。</p>
+          <div class="comparison-callout"><p><strong>任务成功、工具执行成功、录制完整，是三个不同的结论。</strong>脚本退出码为 0 不代表任务答对；页面有响应正文，也不代表完整性核对通过。</p></div>
+        </section>
+        <section id="example" aria-labelledby="example-title">
+          <h2 id="example-title">一个已经录到的真实例子</h2>
+          <p>在一次本地 Pi 实验中，模型生成 CSV 汇总脚本与测试，再通过 bash 执行，得到独立检查通过的汇总结果。平台记录了 <strong>4 次模型调用、3 次 bash 执行</strong>。</p>
+          <p>3 个模型工具请求、3 条 Agent 工具结果、3 条进程观测，最终关联成 <strong>3 条工具执行记录</strong>，不是 9 步。每条能查看模型来源、命令、stdout/stderr、退出码和选定文件变化。</p>
+          <p class="note">这是实际模型与进程的本地录制验证，不是模拟日志，也不是 Harbor benchmark。该次未做 pcap/TLS 独立核对，不能据此宣称所有流量或系统活动都已捕获。</p>
+        </section>
+        <section id="limits" aria-labelledby="limits-title">
+          <h2 id="limits-title">统一入口，不等于全量覆盖</h2>
+          <ul>
+            <li><strong>接入决定覆盖：</strong>原生日志适配不等于实际进程观测；Pi 的 bash 接入也不代表 read、write、MCP 或其他 Agent 的工具后端已覆盖。</li>
+            <li><strong>缺失不能当作成功：</strong>没有退出码、输出截断、关联不上，都应明确显示，不能补成 0 或完整。</li>
+            <li><strong>敏感数据有边界：</strong>核心模型录制默认加密；新增工具输出、报告和 diff 目前仍是本机权限受限的明文补充文件，尚未纳入原始加密链，也没有新增自动脱敏器。不要公开原始录制。</li>
+          </ul>
+          <p><strong>iorec 想做到的，是让“Agent 做了什么”可以追溯到证据，同时让“哪里没有录到”也清楚可见。</strong></p>
+        </section>
+        <section id="references" class="comparison-sources" aria-labelledby="references-title">
+          <h2 id="references-title">继续了解</h2>
+          <p><a href="https://github.com/newdogwang-netizen/inferenceIO">项目与启动说明</a> · <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/harbor-terminal-bench-audit.md">Harbor 录制手册</a> · <a href="tool-execution-evidence.md">工具执行证据与复现</a></p>
+          <p class="note">对应实现：<code>src/runner.rs</code> / <code>src/adapter.rs</code> 负责启动和配置注入，<code>src/proxy.rs</code> 负责流式转发，<code>src/transparent.rs</code> / <code>src/task_netns.rs</code> 负责临时证书和网络边界，<code>tools/tool_exec.py</code> 负责进程观测。本文描述当前工作树能力，不把单项实验验证扩展成所有环境的生产保证。</p>
+        </section>
+      </article>
+    </main>
+    <footer class="site-footer"><div><strong>iorec</strong><p>统一录制，明确边界。</p></div><div class="footer-links"><a href="./">首页</a><a href="how-iorec-records.md" download>下载 Markdown</a></div></footer>
+  </body>
+</html>
