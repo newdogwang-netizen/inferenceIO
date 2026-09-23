@@ -1,0 +1,1210 @@
+{
+  "export_format": "iorec-public-sample-v1",
+  "extracted_at": "2026-09-23T03:15:27.430847+00:00",
+  "source": "Retained tinybox smoke recording, read from Platform APIs; no new experiment",
+  "publication_policy": {
+    "identifiers": "run / recording / attempt / inference IDs are consistent aliases, not live API identifiers",
+    "kubernetes": "cluster, namespace, Pod name/UID and node replaced; container and injection version retained",
+    "network": "model host replaced with model.example; URL port and query omitted; scheme and path retained",
+    "omitted": [
+      "credentials",
+      "HTTP headers",
+      "project/user/session identifiers",
+      "local command and paths",
+      "process/network payloads",
+      "non-allowlisted API fields"
+    ],
+    "bodies": "Only exact validated synthetic fixture bodies are published; original UTF-8 bytes, sizes and SHA-256 retained",
+    "schema": "This file is a documentation export wrapper; recordings, attempts and events are selected API fields, not complete API responses"
+  },
+  "summary": {
+    "recordings": 2,
+    "model_calls": 3,
+    "events": 47,
+    "sse_events": 6,
+    "unique_body_blobs": 5,
+    "input_tokens": 36,
+    "output_tokens": 12,
+    "downloaded_body_hashes_verified": true
+  },
+  "recordings": [
+    {
+      "id": "run-demo#0000",
+      "capture_run_id": "run-demo",
+      "segment_no": 0,
+      "sequence_base": 0,
+      "state": "sealed",
+      "ui_state": "archived",
+      "schema_version": 1,
+      "durable_seq": 27,
+      "parsed_seq": 27,
+      "final_seq": 27,
+      "agent_kind": null,
+      "agent_version": null,
+      "run_started_at": "2026-09-22T15:59:36.52604Z",
+      "run_ended_at": "2026-09-22T15:59:45.886559Z",
+      "exit_code": 0,
+      "model_call_count": 2,
+      "input_token_count": 24,
+      "output_token_count": 8,
+      "input_token_call_count": 2,
+      "output_token_call_count": 2,
+      "failed_jobs": 0,
+      "active_jobs": 0,
+      "missing_blobs": [],
+      "integrity_alerts": [],
+      "benchmark_result": null,
+      "run_metadata": {
+        "runtime": "python",
+        "recorder_version": "0.1.0",
+        "kubernetes": {
+          "cluster": "cluster-demo",
+          "namespace": "agent-demo",
+          "pod_name": "agent-demo-pod",
+          "pod_uid": "00000000-0000-4000-8000-000000000001",
+          "node_name": "node-demo",
+          "container_name": "agent",
+          "injection_version": "v1"
+        }
+      },
+      "coverage": {
+        "claim": "unknown",
+        "incomplete": false,
+        "capture_sources": [
+          "process",
+          "proxy",
+          "runner"
+        ],
+        "known_gaps": [],
+        "capture_drops": 0,
+        "missing_blobs": 0,
+        "body_unavailable": 0,
+        "platform_transport_proof_status": "unavailable",
+        "platform_transport_proof_verified": false
+      },
+      "transport_proof": {
+        "status": "unavailable",
+        "verified": false,
+        "pcap_records": 0,
+        "tls_key_records": 0,
+        "decoded_streams": 0,
+        "matched_attempts": 0,
+        "payload_diff_passed": false
+      }
+    },
+    {
+      "id": "run-demo#0001",
+      "capture_run_id": "run-demo",
+      "segment_no": 1,
+      "sequence_base": 27,
+      "state": "sealed",
+      "ui_state": "archived",
+      "schema_version": 1,
+      "durable_seq": 47,
+      "parsed_seq": 47,
+      "final_seq": 47,
+      "agent_kind": null,
+      "agent_version": null,
+      "run_started_at": "2026-09-22T15:59:36.52604Z",
+      "run_ended_at": "2026-09-22T15:59:45.886559Z",
+      "exit_code": 0,
+      "model_call_count": 1,
+      "input_token_count": 12,
+      "output_token_count": 4,
+      "input_token_call_count": 1,
+      "output_token_call_count": 1,
+      "failed_jobs": 0,
+      "active_jobs": 0,
+      "missing_blobs": [],
+      "integrity_alerts": [],
+      "benchmark_result": null,
+      "run_metadata": {
+        "runtime": "python",
+        "recorder_version": "0.1.0",
+        "kubernetes": {
+          "cluster": "cluster-demo",
+          "namespace": "agent-demo",
+          "pod_name": "agent-demo-pod",
+          "pod_uid": "00000000-0000-4000-8000-000000000001",
+          "node_name": "node-demo",
+          "container_name": "agent",
+          "injection_version": "v1"
+        }
+      },
+      "coverage": {
+        "claim": "unknown",
+        "incomplete": false,
+        "capture_sources": [
+          "correlation",
+          "process",
+          "proxy",
+          "runner",
+          "adapter:generic",
+          "collector:authenticated-hook",
+          "correlator:bounded-unique"
+        ],
+        "known_gaps": [
+          "WebSocket events represent reassembled messages; original wire fragmentation is not preserved",
+          "cross-source inference links are emitted only for exact IDs or a unique bounded temporal/model candidate; ambiguous links remain unresolved",
+          "endpoint proxy is not independently cross-checked against decrypted upstream network traffic",
+          "model-bypass classification uses a launch-time upstream address snapshot; later DNS changes and unmatched provider addresses remain unknown",
+          "no agent-native lifecycle/model hook configured",
+          "pooled HTTP/2 upstream connection and stream identifiers are not exposed by the endpoint proxy",
+          "process discovery polls /proc every 100 ms and may miss very short-lived descendants",
+          "the manifest remains best-effort; transport completeness is established only by a separate successful offline transport-audit"
+        ],
+        "capture_drops": 0,
+        "missing_blobs": 0,
+        "body_unavailable": 0,
+        "platform_transport_proof_status": "unavailable",
+        "platform_transport_proof_verified": false
+      },
+      "transport_proof": {
+        "status": "unavailable",
+        "verified": false,
+        "pcap_records": 0,
+        "tls_key_records": 0,
+        "decoded_streams": 0,
+        "matched_attempts": 0,
+        "payload_diff_passed": false
+      }
+    }
+  ],
+  "attempts": [
+    {
+      "id": "run-demo~attempt-01",
+      "native_id": "attempt-01",
+      "capture_run_id": "run-demo",
+      "recording_id": "run-demo#0000",
+      "inference_id": "inf:run-demo~attempt-01",
+      "source": "proxy",
+      "entity_kind": "request",
+      "protocol": "http/1.1",
+      "method": "POST",
+      "api_mode": "chat_completions",
+      "model": "iorec-smoke",
+      "status_code": 200,
+      "terminal_state": "completed",
+      "error_class": null,
+      "first_seq": 9,
+      "last_seq": 15,
+      "started_at": "2026-09-22T15:59:36.789269Z",
+      "first_byte_at": "2026-09-22T15:59:36.796108Z",
+      "ended_at": "2026-09-22T15:59:36.821793Z",
+      "usage": {
+        "completion_tokens": 4,
+        "prompt_tokens": 12,
+        "total_tokens": 16
+      },
+      "sse_event_count": 0,
+      "response_text": "recorded in Kubernetes",
+      "request_body_ref": "0df54b8d21a12b3deefb1995d4c3e5efe8d7c29e126dc053167f5372c737c478",
+      "response_body_ref": "ff8f72307d839be58dfae8a2f012ebc3f93c49c6c488ae2e07412ce3e130a195",
+      "request_body_parts": [
+        {
+          "chunk_sequence": 1,
+          "direction": null,
+          "event": "request_body_chunk",
+          "media_type": "application/json",
+          "raw_truncated": false,
+          "recording_id": "run-demo#0000",
+          "seq": 11,
+          "sha256": "0df54b8d21a12b3deefb1995d4c3e5efe8d7c29e126dc053167f5372c737c478",
+          "size": 106
+        }
+      ],
+      "response_body_parts": [
+        {
+          "chunk_sequence": 1,
+          "direction": null,
+          "event": "response_body_chunk",
+          "media_type": "application/json",
+          "raw_truncated": false,
+          "recording_id": "run-demo#0000",
+          "seq": 13,
+          "sha256": "ff8f72307d839be58dfae8a2f012ebc3f93c49c6c488ae2e07412ce3e130a195",
+          "size": 278
+        }
+      ],
+      "body_parts_page": {
+        "has_more": false,
+        "limit": 200,
+        "next_after_seq": null,
+        "total": 2
+      },
+      "url": "http://model.example/v1/chat/completions",
+      "provider_host": "model.example",
+      "normalized": {
+        "api_mode": "chat_completions",
+        "model": "iorec-smoke",
+        "stream": false,
+        "finish_reason": "stop",
+        "response_id": "smoke-completion",
+        "response_text": "recorded in Kubernetes",
+        "stream_terminated": true,
+        "usage": {
+          "completion_tokens": 4,
+          "prompt_tokens": 12,
+          "total_tokens": 16
+        },
+        "messages": [
+          {
+            "role": "user",
+            "text": "local smoke call 0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "run-demo~attempt-02",
+      "native_id": "attempt-02",
+      "capture_run_id": "run-demo",
+      "recording_id": "run-demo#0000",
+      "inference_id": "inf:run-demo~attempt-02",
+      "source": "proxy",
+      "entity_kind": "request",
+      "protocol": "http/1.1",
+      "method": "POST",
+      "api_mode": "chat_completions",
+      "model": "iorec-smoke",
+      "status_code": 200,
+      "terminal_state": "completed",
+      "error_class": null,
+      "first_seq": 16,
+      "last_seq": 26,
+      "started_at": "2026-09-22T15:59:39.802424Z",
+      "first_byte_at": "2026-09-22T15:59:39.80984Z",
+      "ended_at": "2026-09-22T15:59:39.873021Z",
+      "usage": {
+        "completion_tokens": 4,
+        "prompt_tokens": 12,
+        "total_tokens": 16
+      },
+      "sse_event_count": 3,
+      "response_text": "recorded in Kubernetes",
+      "request_body_ref": "639d9869bac79341db095b39a46315679bda4a6b7bd06635dfedc961dd4de57c",
+      "response_body_ref": "7b1c6b643c625d767b409c4db6a5de1f7461b4378cec7d3596fa86f852edea48",
+      "request_body_parts": [
+        {
+          "chunk_sequence": 1,
+          "direction": null,
+          "event": "request_body_chunk",
+          "media_type": "application/json",
+          "raw_truncated": false,
+          "recording_id": "run-demo#0000",
+          "seq": 18,
+          "sha256": "639d9869bac79341db095b39a46315679bda4a6b7bd06635dfedc961dd4de57c",
+          "size": 105
+        }
+      ],
+      "response_body_parts": [
+        {
+          "chunk_sequence": 1,
+          "direction": null,
+          "event": "response_body_chunk",
+          "media_type": "text/event-stream",
+          "raw_truncated": false,
+          "recording_id": "run-demo#0000",
+          "seq": 21,
+          "sha256": "7b1c6b643c625d767b409c4db6a5de1f7461b4378cec7d3596fa86f852edea48",
+          "size": 439
+        }
+      ],
+      "body_parts_page": {
+        "has_more": false,
+        "limit": 200,
+        "next_after_seq": null,
+        "total": 2
+      },
+      "url": "http://model.example/v1/chat/completions",
+      "provider_host": "model.example",
+      "normalized": {
+        "api_mode": "chat_completions",
+        "model": "iorec-smoke",
+        "stream": true,
+        "finish_reason": "stop",
+        "response_id": "smoke-completion",
+        "response_text": "recorded in Kubernetes",
+        "stream_terminated": true,
+        "usage": {
+          "completion_tokens": 4,
+          "prompt_tokens": 12,
+          "total_tokens": 16
+        },
+        "messages": [
+          {
+            "role": "user",
+            "text": "local smoke call 1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "run-demo~attempt-03",
+      "native_id": "attempt-03",
+      "capture_run_id": "run-demo",
+      "recording_id": "run-demo#0001",
+      "inference_id": "inf:run-demo~attempt-03",
+      "source": "proxy",
+      "entity_kind": "request",
+      "protocol": "http/1.1",
+      "method": "POST",
+      "api_mode": "chat_completions",
+      "model": "iorec-smoke",
+      "status_code": 200,
+      "terminal_state": "completed",
+      "error_class": null,
+      "first_seq": 28,
+      "last_seq": 37,
+      "started_at": "2026-09-22T15:59:42.819812Z",
+      "first_byte_at": "2026-09-22T15:59:42.826436Z",
+      "ended_at": "2026-09-22T15:59:42.860359Z",
+      "usage": {
+        "completion_tokens": 4,
+        "prompt_tokens": 12,
+        "total_tokens": 16
+      },
+      "sse_event_count": 3,
+      "response_text": "recorded in Kubernetes",
+      "request_body_ref": "967ab46d3bcf78914d3d63622cd9ac9ff3ac2281676f69c0bbec66e4e1cbbadd",
+      "response_body_ref": "7b1c6b643c625d767b409c4db6a5de1f7461b4378cec7d3596fa86f852edea48",
+      "request_body_parts": [
+        {
+          "chunk_sequence": 1,
+          "direction": null,
+          "event": "request_body_chunk",
+          "media_type": "application/json",
+          "raw_truncated": false,
+          "recording_id": "run-demo#0001",
+          "seq": 31,
+          "sha256": "967ab46d3bcf78914d3d63622cd9ac9ff3ac2281676f69c0bbec66e4e1cbbadd",
+          "size": 105
+        }
+      ],
+      "response_body_parts": [
+        {
+          "chunk_sequence": 1,
+          "direction": null,
+          "event": "response_body_chunk",
+          "media_type": "text/event-stream",
+          "raw_truncated": false,
+          "recording_id": "run-demo#0001",
+          "seq": 30,
+          "sha256": "7b1c6b643c625d767b409c4db6a5de1f7461b4378cec7d3596fa86f852edea48",
+          "size": 439
+        }
+      ],
+      "body_parts_page": {
+        "has_more": false,
+        "limit": 200,
+        "next_after_seq": null,
+        "total": 2
+      },
+      "url": "http://model.example/v1/chat/completions",
+      "provider_host": "model.example",
+      "normalized": {
+        "api_mode": "chat_completions",
+        "model": "iorec-smoke",
+        "stream": true,
+        "finish_reason": "stop",
+        "response_id": "smoke-completion",
+        "response_text": "recorded in Kubernetes",
+        "stream_terminated": true,
+        "usage": {
+          "completion_tokens": 4,
+          "prompt_tokens": 12,
+          "total_tokens": 16
+        },
+        "messages": [
+          {
+            "role": "user",
+            "text": "local smoke call 2"
+          }
+        ]
+      }
+    }
+  ],
+  "event_counts": {
+    "run_started": 1,
+    "probe_plan_created": 1,
+    "collector_started": 1,
+    "proxy_started": 1,
+    "adapter_configured": 1,
+    "process_started": 1,
+    "process_observed": 1,
+    "process_tls_surfaces_changed": 1,
+    "transport_request_started": 3,
+    "transport_response_started": 3,
+    "request_body_chunk": 3,
+    "logical_inference_request": 3,
+    "response_body_chunk": 3,
+    "request_body_finished": 3,
+    "transport_attempt_finished": 3,
+    "network_connection_observed": 1,
+    "sse_event": 6,
+    "network_connection_closed": 1,
+    "process_exited": 1,
+    "process_tracker_stopped": 1,
+    "process_finished": 1,
+    "proxy_stopped": 1,
+    "collector_stopped": 1,
+    "inference_correlation_unresolved": 3,
+    "correlation_finished": 1,
+    "run_finished": 1
+  },
+  "events": [
+    {
+      "seq": 1,
+      "wall_time": "2026-09-22T15:59:36.562542Z",
+      "monotonic_ns": 1350,
+      "source": "runner",
+      "event": "run_started",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 2,
+      "wall_time": "2026-09-22T15:59:36.569644Z",
+      "monotonic_ns": 7102862,
+      "source": "runner",
+      "event": "probe_plan_created",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 3,
+      "wall_time": "2026-09-22T15:59:36.573366Z",
+      "monotonic_ns": 10825463,
+      "source": "runner",
+      "event": "collector_started",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 4,
+      "wall_time": "2026-09-22T15:59:36.594854Z",
+      "monotonic_ns": 32313120,
+      "source": "proxy",
+      "event": "proxy_started",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 5,
+      "wall_time": "2026-09-22T15:59:36.605517Z",
+      "monotonic_ns": 42975983,
+      "source": "runner",
+      "event": "adapter_configured",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 6,
+      "wall_time": "2026-09-22T15:59:36.609843Z",
+      "monotonic_ns": 47301772,
+      "source": "runner",
+      "event": "process_started",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 7,
+      "wall_time": "2026-09-22T15:59:36.611686Z",
+      "monotonic_ns": 49145398,
+      "source": "process",
+      "event": "process_observed",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 8,
+      "wall_time": "2026-09-22T15:59:36.71213Z",
+      "monotonic_ns": 149589207,
+      "source": "process",
+      "event": "process_tls_surfaces_changed",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 9,
+      "wall_time": "2026-09-22T15:59:36.789269Z",
+      "monotonic_ns": 226727845,
+      "source": "proxy",
+      "event": "transport_request_started",
+      "attempt_id": "attempt-01",
+      "inference_id": "native-inference-01",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "method": "POST",
+        "protocol": "http/1.1",
+        "traffic_class": "model"
+      }
+    },
+    {
+      "seq": 10,
+      "wall_time": "2026-09-22T15:59:36.796108Z",
+      "monotonic_ns": 233567508,
+      "source": "proxy",
+      "event": "transport_response_started",
+      "attempt_id": "attempt-01",
+      "inference_id": "native-inference-01",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "status": 200,
+        "sse": false,
+        "upstream_protocol": "http/1.0"
+      }
+    },
+    {
+      "seq": 11,
+      "wall_time": "2026-09-22T15:59:36.803989Z",
+      "monotonic_ns": 241448258,
+      "source": "proxy",
+      "event": "request_body_chunk",
+      "attempt_id": "attempt-01",
+      "inference_id": "native-inference-01",
+      "payload_sha256": "0df54b8d21a12b3deefb1995d4c3e5efe8d7c29e126dc053167f5372c737c478",
+      "payload_size": 106,
+      "payload": {
+        "captured_size": 106,
+        "chunk_sequence": 1,
+        "observed_size": 106,
+        "sha256": "sha256:0df54b8d21a12b3deefb1995d4c3e5efe8d7c29e126dc053167f5372c737c478"
+      }
+    },
+    {
+      "seq": 12,
+      "wall_time": "2026-09-22T15:59:36.811167Z",
+      "monotonic_ns": 248626450,
+      "source": "proxy",
+      "event": "logical_inference_request",
+      "attempt_id": "attempt-01",
+      "inference_id": "native-inference-01",
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 13,
+      "wall_time": "2026-09-22T15:59:36.814487Z",
+      "monotonic_ns": 251945842,
+      "source": "proxy",
+      "event": "response_body_chunk",
+      "attempt_id": "attempt-01",
+      "inference_id": "native-inference-01",
+      "payload_sha256": "ff8f72307d839be58dfae8a2f012ebc3f93c49c6c488ae2e07412ce3e130a195",
+      "payload_size": 278,
+      "payload": {
+        "captured_size": 278,
+        "chunk_sequence": 1,
+        "observed_size": 278,
+        "sha256": "sha256:ff8f72307d839be58dfae8a2f012ebc3f93c49c6c488ae2e07412ce3e130a195"
+      }
+    },
+    {
+      "seq": 14,
+      "wall_time": "2026-09-22T15:59:36.818266Z",
+      "monotonic_ns": 255724933,
+      "source": "proxy",
+      "event": "request_body_finished",
+      "attempt_id": "attempt-01",
+      "inference_id": "native-inference-01",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "capture_failed": false,
+        "chunks": 1,
+        "observed_bytes": 106,
+        "reason": null
+      }
+    },
+    {
+      "seq": 15,
+      "wall_time": "2026-09-22T15:59:36.821793Z",
+      "monotonic_ns": 259252094,
+      "source": "proxy",
+      "event": "transport_attempt_finished",
+      "attempt_id": "attempt-01",
+      "inference_id": "native-inference-01",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "capture_failed": false,
+        "chunks": 1,
+        "incomplete_sse_bytes": 0,
+        "observed_bytes": 278,
+        "reason": null,
+        "sse_events": 0,
+        "sse_parse_failed": false,
+        "status": 200
+      }
+    },
+    {
+      "seq": 16,
+      "wall_time": "2026-09-22T15:59:39.802424Z",
+      "monotonic_ns": 3239883254,
+      "source": "proxy",
+      "event": "transport_request_started",
+      "attempt_id": "attempt-02",
+      "inference_id": "native-inference-02",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "method": "POST",
+        "protocol": "http/1.1",
+        "traffic_class": "model"
+      }
+    },
+    {
+      "seq": 17,
+      "wall_time": "2026-09-22T15:59:39.80984Z",
+      "monotonic_ns": 3247299285,
+      "source": "proxy",
+      "event": "transport_response_started",
+      "attempt_id": "attempt-02",
+      "inference_id": "native-inference-02",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "status": 200,
+        "sse": true,
+        "upstream_protocol": "http/1.0"
+      }
+    },
+    {
+      "seq": 18,
+      "wall_time": "2026-09-22T15:59:39.814354Z",
+      "monotonic_ns": 3251812874,
+      "source": "proxy",
+      "event": "request_body_chunk",
+      "attempt_id": "attempt-02",
+      "inference_id": "native-inference-02",
+      "payload_sha256": "639d9869bac79341db095b39a46315679bda4a6b7bd06635dfedc961dd4de57c",
+      "payload_size": 105,
+      "payload": {
+        "captured_size": 105,
+        "chunk_sequence": 1,
+        "observed_size": 105,
+        "sha256": "sha256:639d9869bac79341db095b39a46315679bda4a6b7bd06635dfedc961dd4de57c"
+      }
+    },
+    {
+      "seq": 19,
+      "wall_time": "2026-09-22T15:59:39.821675Z",
+      "monotonic_ns": 3259134036,
+      "source": "proxy",
+      "event": "logical_inference_request",
+      "attempt_id": "attempt-02",
+      "inference_id": "native-inference-02",
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 20,
+      "wall_time": "2026-09-22T15:59:39.828707Z",
+      "monotonic_ns": 3266166058,
+      "source": "proxy",
+      "event": "request_body_finished",
+      "attempt_id": "attempt-02",
+      "inference_id": "native-inference-02",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "capture_failed": false,
+        "chunks": 1,
+        "observed_bytes": 105,
+        "reason": null
+      }
+    },
+    {
+      "seq": 21,
+      "wall_time": "2026-09-22T15:59:39.832102Z",
+      "monotonic_ns": 3269560550,
+      "source": "proxy",
+      "event": "response_body_chunk",
+      "attempt_id": "attempt-02",
+      "inference_id": "native-inference-02",
+      "payload_sha256": "7b1c6b643c625d767b409c4db6a5de1f7461b4378cec7d3596fa86f852edea48",
+      "payload_size": 439,
+      "payload": {
+        "captured_size": 439,
+        "chunk_sequence": 1,
+        "observed_size": 439,
+        "sha256": "sha256:7b1c6b643c625d767b409c4db6a5de1f7461b4378cec7d3596fa86f852edea48"
+      }
+    },
+    {
+      "seq": 22,
+      "wall_time": "2026-09-22T15:59:39.833721Z",
+      "monotonic_ns": 3271179856,
+      "source": "process",
+      "event": "network_connection_observed",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 23,
+      "wall_time": "2026-09-22T15:59:39.84699Z",
+      "monotonic_ns": 3284448933,
+      "source": "proxy",
+      "event": "sse_event",
+      "attempt_id": "attempt-02",
+      "inference_id": "native-inference-02",
+      "payload_sha256": "083c96ebed1716bc5afc4635b3c0f9d07796e85ba0967ca3789987535b48ed9b",
+      "payload_size": 191,
+      "payload": {
+        "data_sha256": "sha256:fbd8bef2a5885ab90d039f5e35f0e126e56c9e50543f8ae03ab9c23a7d49aea1",
+        "data_size": 183,
+        "event": null,
+        "event_sequence": 1,
+        "id": null,
+        "raw_sha256": "sha256:083c96ebed1716bc5afc4635b3c0f9d07796e85ba0967ca3789987535b48ed9b",
+        "raw_size": 191,
+        "retry_ms": null,
+        "valid_utf8": true
+      }
+    },
+    {
+      "seq": 24,
+      "wall_time": "2026-09-22T15:59:39.858135Z",
+      "monotonic_ns": 3295593985,
+      "source": "proxy",
+      "event": "sse_event",
+      "attempt_id": "attempt-02",
+      "inference_id": "native-inference-02",
+      "payload_sha256": "638afa2cfa67edbd19e9706ca811013ff9805016167dc6f95786f3ce2c99b3cf",
+      "payload_size": 234,
+      "payload": {
+        "data_sha256": "sha256:0c66f62736fda851da8194ca932cbd492b93f0dceddc6de555e0ba19d8432aed",
+        "data_size": 226,
+        "event": null,
+        "event_sequence": 2,
+        "id": null,
+        "raw_sha256": "sha256:638afa2cfa67edbd19e9706ca811013ff9805016167dc6f95786f3ce2c99b3cf",
+        "raw_size": 234,
+        "retry_ms": null,
+        "valid_utf8": true
+      }
+    },
+    {
+      "seq": 25,
+      "wall_time": "2026-09-22T15:59:39.869348Z",
+      "monotonic_ns": 3306807397,
+      "source": "proxy",
+      "event": "sse_event",
+      "attempt_id": "attempt-02",
+      "inference_id": "native-inference-02",
+      "payload_sha256": "d8d37da081f11203f2af42092a92cb35508f27db75eba643058a0a580454517d",
+      "payload_size": 14,
+      "payload": {
+        "data_sha256": "sha256:7073e6d8763d986cda350de95e9d76e781824ce759283548dfaa1d2ca32e8c81",
+        "data_size": 6,
+        "event": null,
+        "event_sequence": 3,
+        "id": null,
+        "raw_sha256": "sha256:d8d37da081f11203f2af42092a92cb35508f27db75eba643058a0a580454517d",
+        "raw_size": 14,
+        "retry_ms": null,
+        "valid_utf8": true
+      }
+    },
+    {
+      "seq": 26,
+      "wall_time": "2026-09-22T15:59:39.873021Z",
+      "monotonic_ns": 3310480058,
+      "source": "proxy",
+      "event": "transport_attempt_finished",
+      "attempt_id": "attempt-02",
+      "inference_id": "native-inference-02",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "capture_failed": false,
+        "chunks": 1,
+        "incomplete_sse_bytes": 0,
+        "observed_bytes": 439,
+        "reason": null,
+        "sse_events": 3,
+        "sse_parse_failed": false,
+        "status": 200
+      }
+    },
+    {
+      "seq": 27,
+      "wall_time": "2026-09-22T15:59:39.912098Z",
+      "monotonic_ns": 3349557220,
+      "source": "process",
+      "event": "network_connection_closed",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 28,
+      "wall_time": "2026-09-22T15:59:42.819812Z",
+      "monotonic_ns": 6257272112,
+      "source": "proxy",
+      "event": "transport_request_started",
+      "attempt_id": "attempt-03",
+      "inference_id": "native-inference-03",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "method": "POST",
+        "protocol": "http/1.1",
+        "traffic_class": "model"
+      }
+    },
+    {
+      "seq": 29,
+      "wall_time": "2026-09-22T15:59:42.826436Z",
+      "monotonic_ns": 6263895305,
+      "source": "proxy",
+      "event": "transport_response_started",
+      "attempt_id": "attempt-03",
+      "inference_id": "native-inference-03",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "status": 200,
+        "sse": true,
+        "upstream_protocol": "http/1.0"
+      }
+    },
+    {
+      "seq": 30,
+      "wall_time": "2026-09-22T15:59:42.831869Z",
+      "monotonic_ns": 6269328411,
+      "source": "proxy",
+      "event": "response_body_chunk",
+      "attempt_id": "attempt-03",
+      "inference_id": "native-inference-03",
+      "payload_sha256": "7b1c6b643c625d767b409c4db6a5de1f7461b4378cec7d3596fa86f852edea48",
+      "payload_size": 439,
+      "payload": {
+        "captured_size": 439,
+        "chunk_sequence": 1,
+        "observed_size": 439,
+        "sha256": "sha256:7b1c6b643c625d767b409c4db6a5de1f7461b4378cec7d3596fa86f852edea48"
+      }
+    },
+    {
+      "seq": 31,
+      "wall_time": "2026-09-22T15:59:42.835252Z",
+      "monotonic_ns": 6272711263,
+      "source": "proxy",
+      "event": "request_body_chunk",
+      "attempt_id": "attempt-03",
+      "inference_id": "native-inference-03",
+      "payload_sha256": "967ab46d3bcf78914d3d63622cd9ac9ff3ac2281676f69c0bbec66e4e1cbbadd",
+      "payload_size": 105,
+      "payload": {
+        "captured_size": 105,
+        "chunk_sequence": 1,
+        "observed_size": 105,
+        "sha256": "sha256:967ab46d3bcf78914d3d63622cd9ac9ff3ac2281676f69c0bbec66e4e1cbbadd"
+      }
+    },
+    {
+      "seq": 32,
+      "wall_time": "2026-09-22T15:59:42.838715Z",
+      "monotonic_ns": 6276174184,
+      "source": "proxy",
+      "event": "sse_event",
+      "attempt_id": "attempt-03",
+      "inference_id": "native-inference-03",
+      "payload_sha256": "083c96ebed1716bc5afc4635b3c0f9d07796e85ba0967ca3789987535b48ed9b",
+      "payload_size": 191,
+      "payload": {
+        "data_sha256": "sha256:fbd8bef2a5885ab90d039f5e35f0e126e56c9e50543f8ae03ab9c23a7d49aea1",
+        "data_size": 183,
+        "event": null,
+        "event_sequence": 1,
+        "id": null,
+        "raw_sha256": "sha256:083c96ebed1716bc5afc4635b3c0f9d07796e85ba0967ca3789987535b48ed9b",
+        "raw_size": 191,
+        "retry_ms": null,
+        "valid_utf8": true
+      }
+    },
+    {
+      "seq": 33,
+      "wall_time": "2026-09-22T15:59:42.842133Z",
+      "monotonic_ns": 6279591716,
+      "source": "proxy",
+      "event": "logical_inference_request",
+      "attempt_id": "attempt-03",
+      "inference_id": "native-inference-03",
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 34,
+      "wall_time": "2026-09-22T15:59:42.846125Z",
+      "monotonic_ns": 6283584446,
+      "source": "proxy",
+      "event": "sse_event",
+      "attempt_id": "attempt-03",
+      "inference_id": "native-inference-03",
+      "payload_sha256": "638afa2cfa67edbd19e9706ca811013ff9805016167dc6f95786f3ce2c99b3cf",
+      "payload_size": 234,
+      "payload": {
+        "data_sha256": "sha256:0c66f62736fda851da8194ca932cbd492b93f0dceddc6de555e0ba19d8432aed",
+        "data_size": 226,
+        "event": null,
+        "event_sequence": 2,
+        "id": null,
+        "raw_sha256": "sha256:638afa2cfa67edbd19e9706ca811013ff9805016167dc6f95786f3ce2c99b3cf",
+        "raw_size": 234,
+        "retry_ms": null,
+        "valid_utf8": true
+      }
+    },
+    {
+      "seq": 35,
+      "wall_time": "2026-09-22T15:59:42.849407Z",
+      "monotonic_ns": 6286865838,
+      "source": "proxy",
+      "event": "request_body_finished",
+      "attempt_id": "attempt-03",
+      "inference_id": "native-inference-03",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "capture_failed": false,
+        "chunks": 1,
+        "observed_bytes": 105,
+        "reason": null
+      }
+    },
+    {
+      "seq": 36,
+      "wall_time": "2026-09-22T15:59:42.85307Z",
+      "monotonic_ns": 6290528519,
+      "source": "proxy",
+      "event": "sse_event",
+      "attempt_id": "attempt-03",
+      "inference_id": "native-inference-03",
+      "payload_sha256": "d8d37da081f11203f2af42092a92cb35508f27db75eba643058a0a580454517d",
+      "payload_size": 14,
+      "payload": {
+        "data_sha256": "sha256:7073e6d8763d986cda350de95e9d76e781824ce759283548dfaa1d2ca32e8c81",
+        "data_size": 6,
+        "event": null,
+        "event_sequence": 3,
+        "id": null,
+        "raw_sha256": "sha256:d8d37da081f11203f2af42092a92cb35508f27db75eba643058a0a580454517d",
+        "raw_size": 14,
+        "retry_ms": null,
+        "valid_utf8": true
+      }
+    },
+    {
+      "seq": 37,
+      "wall_time": "2026-09-22T15:59:42.860359Z",
+      "monotonic_ns": 6297818281,
+      "source": "proxy",
+      "event": "transport_attempt_finished",
+      "attempt_id": "attempt-03",
+      "inference_id": "native-inference-03",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "capture_failed": false,
+        "chunks": 1,
+        "incomplete_sse_bytes": 0,
+        "observed_bytes": 439,
+        "reason": null,
+        "sse_events": 3,
+        "sse_parse_failed": false,
+        "status": 200
+      }
+    },
+    {
+      "seq": 38,
+      "wall_time": "2026-09-22T15:59:45.846844Z",
+      "monotonic_ns": 9284303426,
+      "source": "process",
+      "event": "process_exited",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 39,
+      "wall_time": "2026-09-22T15:59:45.850726Z",
+      "monotonic_ns": 9288185067,
+      "source": "process",
+      "event": "process_tracker_stopped",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 40,
+      "wall_time": "2026-09-22T15:59:45.85475Z",
+      "monotonic_ns": 9292209837,
+      "source": "runner",
+      "event": "process_finished",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "exit_code": 0
+      }
+    },
+    {
+      "seq": 41,
+      "wall_time": "2026-09-22T15:59:45.858443Z",
+      "monotonic_ns": 9295902067,
+      "source": "runner",
+      "event": "proxy_stopped",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 42,
+      "wall_time": "2026-09-22T15:59:45.86199Z",
+      "monotonic_ns": 9299449539,
+      "source": "runner",
+      "event": "collector_stopped",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null
+    },
+    {
+      "seq": 43,
+      "wall_time": "2026-09-22T15:59:45.872261Z",
+      "monotonic_ns": 9309720413,
+      "source": "correlation",
+      "event": "inference_correlation_unresolved",
+      "attempt_id": null,
+      "inference_id": "native-inference-01",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "reason": "no_unique_agent_anchor",
+        "transport_sequence": 12
+      }
+    },
+    {
+      "seq": 44,
+      "wall_time": "2026-09-22T15:59:45.875658Z",
+      "monotonic_ns": 9313116995,
+      "source": "correlation",
+      "event": "inference_correlation_unresolved",
+      "attempt_id": null,
+      "inference_id": "native-inference-02",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "reason": "no_unique_agent_anchor",
+        "transport_sequence": 19
+      }
+    },
+    {
+      "seq": 45,
+      "wall_time": "2026-09-22T15:59:45.879239Z",
+      "monotonic_ns": 9316698096,
+      "source": "correlation",
+      "event": "inference_correlation_unresolved",
+      "attempt_id": null,
+      "inference_id": "native-inference-03",
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "reason": "no_unique_agent_anchor",
+        "transport_sequence": 33
+      }
+    },
+    {
+      "seq": 46,
+      "wall_time": "2026-09-22T15:59:45.882819Z",
+      "monotonic_ns": 9320277997,
+      "source": "runner",
+      "event": "correlation_finished",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "resolved": 0,
+        "skipped_existing": false,
+        "unmatched_transports": 3,
+        "unresolved": 3
+      }
+    },
+    {
+      "seq": 47,
+      "wall_time": "2026-09-22T15:59:45.886559Z",
+      "monotonic_ns": 9324017847,
+      "source": "runner",
+      "event": "run_finished",
+      "attempt_id": null,
+      "inference_id": null,
+      "payload_sha256": null,
+      "payload_size": null,
+      "payload": {
+        "exit_code": 0
+      }
+    }
+  ],
+  "body_blobs": [
+    {
+      "sha256": "0df54b8d21a12b3deefb1995d4c3e5efe8d7c29e126dc053167f5372c737c478",
+      "size": 106,
+      "media_type": "application/json",
+      "content_utf8": "{\"model\": \"iorec-smoke\", \"messages\": [{\"role\": \"user\", \"content\": \"local smoke call 0\"}], \"stream\": false}"
+    },
+    {
+      "sha256": "ff8f72307d839be58dfae8a2f012ebc3f93c49c6c488ae2e07412ce3e130a195",
+      "size": 278,
+      "media_type": "application/json",
+      "content_utf8": "{\"id\": \"smoke-completion\", \"object\": \"chat.completion\", \"model\": \"iorec-smoke\", \"choices\": [{\"index\": 0, \"message\": {\"role\": \"assistant\", \"content\": \"recorded in Kubernetes\"}, \"finish_reason\": \"stop\"}], \"usage\": {\"prompt_tokens\": 12, \"completion_tokens\": 4, \"total_tokens\": 16}}"
+    },
+    {
+      "sha256": "639d9869bac79341db095b39a46315679bda4a6b7bd06635dfedc961dd4de57c",
+      "size": 105,
+      "media_type": "application/json",
+      "content_utf8": "{\"model\": \"iorec-smoke\", \"messages\": [{\"role\": \"user\", \"content\": \"local smoke call 1\"}], \"stream\": true}"
+    },
+    {
+      "sha256": "7b1c6b643c625d767b409c4db6a5de1f7461b4378cec7d3596fa86f852edea48",
+      "size": 439,
+      "media_type": "text/event-stream",
+      "content_utf8": "data: {\"id\": \"smoke-completion\", \"object\": \"chat.completion.chunk\", \"model\": \"iorec-smoke\", \"choices\": [{\"index\": 0, \"delta\": {\"content\": \"recorded in Kubernetes\"}, \"finish_reason\": null}]}\n\ndata: {\"id\": \"smoke-completion\", \"object\": \"chat.completion.chunk\", \"model\": \"iorec-smoke\", \"choices\": [{\"index\": 0, \"delta\": {}, \"finish_reason\": \"stop\"}], \"usage\": {\"prompt_tokens\": 12, \"completion_tokens\": 4, \"total_tokens\": 16}}\n\ndata: [DONE]\n\n"
+    },
+    {
+      "sha256": "967ab46d3bcf78914d3d63622cd9ac9ff3ac2281676f69c0bbec66e4e1cbbadd",
+      "size": 105,
+      "media_type": "application/json",
+      "content_utf8": "{\"model\": \"iorec-smoke\", \"messages\": [{\"role\": \"user\", \"content\": \"local smoke call 2\"}], \"stream\": true}"
+    }
+  ]
+}

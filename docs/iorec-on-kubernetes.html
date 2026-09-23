@@ -312,16 +312,28 @@ spec:
 <p>2026 年 9 月 22 日，在 tinybox 的 Kubernetes 1.35.3+k0s / Linux amd64 上完成组合部署与录制验收：<strong>3 次模拟模型调用、2 个封存分段、47 个全局事件，5 份正文对象的下载哈希全部匹配。</strong></p>
 <p><a href="tinybox-acceptance.html">查看 tinybox 验收结果 →</a></p>
 <p>独立报告列出环境、准入测试、分段序号、正文完整性、启动重试及网页登录修复后的复验。测试使用真实 Pod 和模拟模型，没有产生付费推理；不把这次通过扩大成所有 Agent、多节点高可用或长期稳态的保证。</p>
+<p><strong>想看录下来到底是什么？</strong> 已从 Platform 读取这份既有录制，公开脱敏后的实际字段和模拟正文。例如第二次调用的字段节选：</p>
+<pre tabindex="0" aria-label="JSON 数据样例，窄屏可横向滚动"><code class="language-json">{
+  &quot;id&quot;: &quot;run-demo~attempt-02&quot;,
+  &quot;recording_id&quot;: &quot;run-demo#0000&quot;,
+  &quot;status_code&quot;: 200,
+  &quot;terminal_state&quot;: &quot;completed&quot;,
+  &quot;sse_event_count&quot;: 3,
+  &quot;response_text&quot;: &quot;recorded in Kubernetes&quot;,
+  &quot;usage&quot;: {&quot;completion_tokens&quot;: 4, &quot;prompt_tokens&quot;: 12, &quot;total_tokens&quot;: 16}
+}
+</code></pre>
+<p><a href="tinybox-acceptance.html#data-structures">查看数据结构与正文样例 →</a> · <a href="data/tinybox-recording-sample.json">下载脱敏 JSON</a></p>
+<p>样例展示分段、Pod 来源、三次调用、SSE 事件、正文哈希引用和规范化结果，也保留 <code>coverage: unknown</code> 与关联未解析等边界。ID 和集群标识已替换；这是 9 月 23 日读取的已有测试数据，不是新的实验。</p>
 </section>
 <section id="references" aria-labelledby="references-title">
 <h2 id="references-title">继续阅读与版本说明</h2>
 <ul>
 <li><a href="how-iorec-records.html">采集端工作原理</a>：模型代理、流式采集、工具执行和旁路核对分别做什么。</li>
-<li><a href="tinybox-acceptance.html">tinybox 验收结果</a>：公开的验证方法、结果与边界，不含凭据或原始录制正文。</li>
+<li><a href="tinybox-acceptance.html">tinybox 验收结果</a>：验证方法、结果、边界及实际数据结构，含脱敏字段和已审核的模拟正文，不含凭据。</li>
 <li><a href="https://github.com/newdogwang-netizen/inferenceIO">项目仓库</a>。</li>
 </ul>
-<p>版本边界：本文对应 2026-09-22 的工作区实现；五个部署镜像已经公开。本次发布设计说明与验收摘要，云原生源码、Chart 和配套运维手册不包含在这次文档提交中。文中的 YAML 用于说明这版注入器的行为，不把公开仓库旧版本当作本次实现，也不公开原始录制、集群连接信息或 Secret 内容。</p>
-
+<p>版本边界：本文对应 2026-09-22 的工作区实现；五个部署镜像已经公开。本次发布设计说明与验收摘要，云原生源码、Chart 和配套运维手册不包含在这次文档提交中。文中的 YAML 用于说明这版注入器的行为，不把公开仓库旧版本当作本次实现。仅公开经审核的模拟数据样例，不公开其他原始录制、集群连接信息或 Secret 内容。</p>
 </section>
       </article>
     </main>

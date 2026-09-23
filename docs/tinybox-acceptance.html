@@ -34,10 +34,10 @@
       <header class="comparison-header">
         <p class="eyebrow">iorec · 云原生验收</p>
         <h1>tinybox 云原生录制验收结果</h1>
-        <p class="comparison-deck">真实集群、模拟模型：验证了什么，遇到哪些问题，还有哪些边界。</p>
+        <p class="comparison-deck">真实集群、模拟模型：验收结果、实际 JSON 数据结构与录制边界。</p>
         <div class="comparison-meta"><time datetime="2026-09-22">验收：2026 年 9 月 22 日</time><span>发布：9 月 23 日</span><span>公开摘要 · 非实时状态</span></div>
       </header>
-      <nav class="comparison-toc" aria-label="报告目录"><a href="#environment">环境</a><a href="#admission">准入</a><a href="#recording">录制结果</a><a href="#issues">问题与复验</a><a href="#boundaries">边界</a></nav>
+      <nav class="comparison-toc" aria-label="报告目录"><a href="#environment">环境</a><a href="#admission">准入</a><a href="#recording">录制结果</a><a href="#data-structures">数据结构</a><a href="#issues">问题与复验</a><a href="#boundaries">边界</a></nav>
       <article class="comparison-article">
 <p><strong>结论：Controller / Platform 组合部署，以及 Pod 注入、录制、上传、解析、正文校验的完整链路通过。</strong> 测试在真实 Kubernetes Pod 中执行，但模型服务是模拟器，没有付费推理。这不是所有 Agent、生产高可用或长期稳态的认证。</p>
 <p><a href="iorec-on-kubernetes.html#acceptance">返回：把 Agent 录制带进 Kubernetes</a></p>
@@ -162,6 +162,259 @@
 <p>因此这里是 <strong>47 个全局事件，不是 27 + 47</strong>。模拟器返回的 usage 合计为 36 input / 12 output，仅用于核对字段传递，不是付费模型消耗。</p>
 <p>来源校验覆盖 cluster、namespace、Pod 名称、Pod UID、node、目标 container 和 injection version。验收程序同时核对连续封存、事件边界、调用数、JSON / SSE 事件、响应文本、正文引用，并下载原始字节重新计算哈希；不是只看页面有没有记录。</p>
 </section>
+<section id="data-structures" aria-labelledby="data-structures-title">
+<h2 id="data-structures-title">实际录制数据长什么样</h2>
+<p>下面不是手写的理想格式：<strong>2026-09-23 从 Platform 读取这份既有录制，重新下载并校验了 5 份正文。</strong> 展示的是 API 实际返回字段的节选；没有重新运行实验。运行、调用及集群标识已一致替换，模型主机替换为 <code>model.example</code>；凭据、HTTP 头、本地命令与路径等不公开。</p>
+<p><a href="data/tinybox-recording-sample.json">下载完整脱敏样例 JSON（约 38 KB）</a></p>
+<p>下载文件包含两段 recording、三次 attempt、全部 47 个事件的脱敏信封、事件计数和五份模拟正文。顶层 <code>summary / recordings / attempts / events / body_blobs</code> 是为本文整理的<strong>导出包装</strong>，不是一个新的 Platform API；事件载荷仅保留允许公开的字段，并非全部原始载荷。</p>
+<h3>先看对象之间的关系</h3>
+<div class="comparison-table-wrap" role="region" aria-label="数据对象与关联字段，窄屏可横向滚动" tabindex="0"><table class="comparison-table"><caption>数据对象与关联字段</caption>
+<thead>
+<tr>
+<th>对象</th>
+<th>本次数据</th>
+<th>用什么关联</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>recording：一次运行的录制分段</td>
+<td>2 段，同属 <code>run-demo</code></td>
+<td><code>capture_run_id</code> 串起分段；<code>id</code> 标识某一段</td>
+</tr>
+<tr>
+<td>attempt：一次模型请求</td>
+<td>3 次，均 HTTP 200 / completed</td>
+<td><code>recording_id</code> 指向分段；<code>native_id</code> 对应事件的 <code>attempt_id</code></td>
+</tr>
+<tr>
+<td>event：按序记录的事实</td>
+<td>47 个，其中 SSE 事件 6 个</td>
+<td><code>seq</code> 是运行内全局序号，事件还带时间、来源和关联 ID</td>
+</tr>
+<tr>
+<td>body part / blob：正文块与字节</td>
+<td>6 个正文引用、5 个不同对象</td>
+<td><code>sha256</code> 引用正文；<code>size</code> 表示字节数</td>
+</tr>
+<tr>
+<td>normalized：便于跨协议阅读的结果</td>
+<td>消息、文本、结束原因、usage</td>
+<td>挂在 attempt 下，是派生视图，不替代原始正文</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>三个序号不要混淆：</strong> <code>seq</code> 是全局事件序号，<code>event_sequence</code> 是一条 SSE 流内的事件编号，<code>chunk_sequence</code> 是捕获正文块的编号。它们都不是 token 数。</p>
+<h3>1. 分段摘要与 Kubernetes 来源</h3>
+<p>第一段的 API 字段节选：</p>
+<pre tabindex="0" aria-label="数据样例，窄屏可横向滚动"><code class="language-json">{
+  &quot;id&quot;: &quot;run-demo#0000&quot;,
+  &quot;capture_run_id&quot;: &quot;run-demo&quot;,
+  &quot;segment_no&quot;: 0,
+  &quot;sequence_base&quot;: 0,
+  &quot;state&quot;: &quot;sealed&quot;,
+  &quot;durable_seq&quot;: 27,
+  &quot;parsed_seq&quot;: 27,
+  &quot;final_seq&quot;: 27,
+  &quot;model_call_count&quot;: 2,
+  &quot;input_token_count&quot;: 24,
+  &quot;output_token_count&quot;: 8,
+  &quot;run_metadata&quot;: {
+    &quot;runtime&quot;: &quot;python&quot;,
+    &quot;recorder_version&quot;: &quot;0.1.0&quot;,
+    &quot;kubernetes&quot;: {
+      &quot;cluster&quot;: &quot;cluster-demo&quot;,
+      &quot;namespace&quot;: &quot;agent-demo&quot;,
+      &quot;pod_name&quot;: &quot;agent-demo-pod&quot;,
+      &quot;pod_uid&quot;: &quot;00000000-0000-4000-8000-000000000001&quot;,
+      &quot;node_name&quot;: &quot;node-demo&quot;,
+      &quot;container_name&quot;: &quot;agent&quot;,
+      &quot;injection_version&quot;: &quot;v1&quot;
+    }
+  }
+}
+</code></pre>
+<p>第二段的起始边界是 27，最终序号为 47。来源元数据回答“哪个集群、哪个 Pod、哪个容器产生了这份录制”；这里的集群、命名空间、Pod 和节点值均为别名。</p>
+<h3>2. 三次调用实际记录了什么</h3>
+<div class="comparison-table-wrap" role="region" aria-label="三次模型调用，窄屏可横向滚动" tabindex="0"><table class="comparison-table"><caption>三次模型调用</caption>
+<thead>
+<tr>
+<th>调用别名</th>
+<th>所属分段</th>
+<th>首 / 末事件序号</th>
+<th>响应形式</th>
+<th>input / output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>attempt-01</td>
+<td>#0000</td>
+<td>9 / 15</td>
+<td>JSON</td>
+<td>12 / 4</td>
+</tr>
+<tr>
+<td>attempt-02</td>
+<td>#0000</td>
+<td>16 / 26</td>
+<td>SSE（3 个事件）</td>
+<td>12 / 4</td>
+</tr>
+<tr>
+<td>attempt-03</td>
+<td>#0001</td>
+<td>28 / 37</td>
+<td>SSE（3 个事件）</td>
+<td>12 / 4</td>
+</tr>
+</tbody>
+</table></div>
+<p>三次均调用模拟模型 <code>iorec-smoke</code>。以第二次 SSE 调用为例：</p>
+<pre tabindex="0" aria-label="数据样例，窄屏可横向滚动"><code class="language-json">{
+  &quot;id&quot;: &quot;run-demo~attempt-02&quot;,
+  &quot;native_id&quot;: &quot;attempt-02&quot;,
+  &quot;recording_id&quot;: &quot;run-demo#0000&quot;,
+  &quot;source&quot;: &quot;proxy&quot;,
+  &quot;method&quot;: &quot;POST&quot;,
+  &quot;api_mode&quot;: &quot;chat_completions&quot;,
+  &quot;model&quot;: &quot;iorec-smoke&quot;,
+  &quot;url&quot;: &quot;http://model.example/v1/chat/completions&quot;,
+  &quot;status_code&quot;: 200,
+  &quot;terminal_state&quot;: &quot;completed&quot;,
+  &quot;started_at&quot;: &quot;2026-09-22T15:59:39.802424Z&quot;,
+  &quot;first_byte_at&quot;: &quot;2026-09-22T15:59:39.80984Z&quot;,
+  &quot;ended_at&quot;: &quot;2026-09-22T15:59:39.873021Z&quot;,
+  &quot;usage&quot;: {
+    &quot;completion_tokens&quot;: 4,
+    &quot;prompt_tokens&quot;: 12,
+    &quot;total_tokens&quot;: 16
+  },
+  &quot;sse_event_count&quot;: 3,
+  &quot;response_text&quot;: &quot;recorded in Kubernetes&quot;
+}
+</code></pre>
+<p>这些字段能区分请求何时开始、何时收到首字节、何时结束，以及响应状态与用量。这里的 usage 是模拟器返回的测试值，不是模型实际计费。</p>
+<h3>3. 原始正文与规范化视图</h3>
+<p>第二次调用的请求正文如下（为阅读重新排版）：</p>
+<pre tabindex="0" aria-label="数据样例，窄屏可横向滚动"><code class="language-json">{
+  &quot;model&quot;: &quot;iorec-smoke&quot;,
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;content&quot;: &quot;local smoke call 1&quot;
+    }
+  ],
+  &quot;stream&quot;: true
+}
+</code></pre>
+<p>同一次调用的规范化结果：</p>
+<pre tabindex="0" aria-label="数据样例，窄屏可横向滚动"><code class="language-json">{
+  &quot;api_mode&quot;: &quot;chat_completions&quot;,
+  &quot;model&quot;: &quot;iorec-smoke&quot;,
+  &quot;stream&quot;: true,
+  &quot;finish_reason&quot;: &quot;stop&quot;,
+  &quot;response_id&quot;: &quot;smoke-completion&quot;,
+  &quot;response_text&quot;: &quot;recorded in Kubernetes&quot;,
+  &quot;stream_terminated&quot;: true,
+  &quot;usage&quot;: {
+    &quot;completion_tokens&quot;: 4,
+    &quot;prompt_tokens&quot;: 12,
+    &quot;total_tokens&quot;: 16
+  },
+  &quot;messages&quot;: [
+    {
+      &quot;role&quot;: &quot;user&quot;,
+      &quot;text&quot;: &quot;local smoke call 1&quot;
+    }
+  ]
+}
+</code></pre>
+<p>原始请求里的 <code>content</code> 被提取为规范化消息里的 <code>text</code>；SSE 的多个增量被合成为 <code>response_text</code>。规范化字段适合列表、检索和统计，正文则保留协议层的实际内容。<strong>响应文本只是正文解析出来的一部分</strong>，不包含全部流式边界和协议字段。</p>
+<h3>4. SSE 是怎样保存的</h3>
+<p>同一次调用的响应正文确实是 SSE，而不是事后伪造的“流式效果”：</p>
+<pre tabindex="0" aria-label="数据样例，窄屏可横向滚动"><code class="language-text">data: {&quot;id&quot;: &quot;smoke-completion&quot;, &quot;object&quot;: &quot;chat.completion.chunk&quot;, &quot;model&quot;: &quot;iorec-smoke&quot;, &quot;choices&quot;: [{&quot;index&quot;: 0, &quot;delta&quot;: {&quot;content&quot;: &quot;recorded in Kubernetes&quot;}, &quot;finish_reason&quot;: null}]}
+
+data: {&quot;id&quot;: &quot;smoke-completion&quot;, &quot;object&quot;: &quot;chat.completion.chunk&quot;, &quot;model&quot;: &quot;iorec-smoke&quot;, &quot;choices&quot;: [{&quot;index&quot;: 0, &quot;delta&quot;: {}, &quot;finish_reason&quot;: &quot;stop&quot;}], &quot;usage&quot;: {&quot;prompt_tokens&quot;: 12, &quot;completion_tokens&quot;: 4, &quot;total_tokens&quot;: 16}}
+
+data: [DONE]
+</code></pre>
+<p>这段正文包含三个事件：文本增量、带 usage 的结束块、<code>[DONE]</code>。其中第一个事件的记录信封如下：</p>
+<pre tabindex="0" aria-label="数据样例，窄屏可横向滚动"><code class="language-json">{
+  &quot;seq&quot;: 23,
+  &quot;wall_time&quot;: &quot;2026-09-22T15:59:39.84699Z&quot;,
+  &quot;monotonic_ns&quot;: 3284448933,
+  &quot;source&quot;: &quot;proxy&quot;,
+  &quot;event&quot;: &quot;sse_event&quot;,
+  &quot;attempt_id&quot;: &quot;attempt-02&quot;,
+  &quot;inference_id&quot;: &quot;native-inference-02&quot;,
+  &quot;payload_sha256&quot;: &quot;083c96ebed1716bc5afc4635b3c0f9d07796e85ba0967ca3789987535b48ed9b&quot;,
+  &quot;payload_size&quot;: 191,
+  &quot;payload&quot;: {
+    &quot;data_sha256&quot;: &quot;sha256:fbd8bef2a5885ab90d039f5e35f0e126e56c9e50543f8ae03ab9c23a7d49aea1&quot;,
+    &quot;data_size&quot;: 183,
+    &quot;event&quot;: null,
+    &quot;event_sequence&quot;: 1,
+    &quot;id&quot;: null,
+    &quot;raw_sha256&quot;: &quot;sha256:083c96ebed1716bc5afc4635b3c0f9d07796e85ba0967ca3789987535b48ed9b&quot;,
+    &quot;raw_size&quot;: 191,
+    &quot;retry_ms&quot;: null,
+    &quot;valid_utf8&quot;: true
+  }
+}
+</code></pre>
+<p>外层 <code>event: &quot;sse_event&quot;</code> 是录制事件类型；内层 <code>payload.event: null</code> 只表示上游没有提供 SSE 的 <code>event:</code> 命名字段。这里 <code>payload_size</code> 是带 SSE 包装的原始字节数，<code>data_size</code> 是其中 data 内容的字节数。</p>
+<p>事件的 <code>attempt_id: &quot;attempt-02&quot;</code> 对应调用的 <code>native_id</code>，不是调用的全局 <code>id</code>。事件层的 <code>native-inference-02</code> 和平台 <code>inf:run-demo~attempt-02</code> 也不是同一标识空间，不能仅凭名字直接关联。</p>
+<h3>5. 正文引用如何落到字节</h3>
+<p>同一调用的响应正文块：</p>
+<pre tabindex="0" aria-label="数据样例，窄屏可横向滚动"><code class="language-json">{
+  &quot;chunk_sequence&quot;: 1,
+  &quot;direction&quot;: null,
+  &quot;event&quot;: &quot;response_body_chunk&quot;,
+  &quot;media_type&quot;: &quot;text/event-stream&quot;,
+  &quot;raw_truncated&quot;: false,
+  &quot;recording_id&quot;: &quot;run-demo#0000&quot;,
+  &quot;seq&quot;: 21,
+  &quot;sha256&quot;: &quot;7b1c6b643c625d767b409c4db6a5de1f7461b4378cec7d3596fa86f852edea48&quot;,
+  &quot;size&quot;: 439
+}
+</code></pre>
+<p><code>seq: 21</code> 定位正文块事件；<code>sha256</code> 对应下载样例中 <code>body_blobs[].sha256</code>，其 <code>content_utf8</code> 保存正文内容。这个例子只捕获到 <strong>1 个响应正文块，但里面有 3 个 SSE 事件</strong>，正文块不等于流事件。</p>
+<p>三次请求与响应一共有六个正文引用；两次 SSE 响应字节完全相同，因此按哈希去重后是五个对象。五份对象均重新核对了字节长度和 SHA-256。上面的请求 JSON 为阅读重新排版；<strong>校验请以下载 JSON 中 <code>content_utf8</code> 解码后的 UTF-8 原字节为准</strong>。事件信封里的其他载荷哈希不属于这五份正文对象，本文没有打包全部事件原始载荷。</p>
+<h3>6. 成功之外，数据也记录了未知与缺口</h3>
+<p>第一段的覆盖与旁路核验字段节选：</p>
+<pre tabindex="0" aria-label="数据样例，窄屏可横向滚动"><code class="language-json">{
+  &quot;coverage&quot;: {
+    &quot;claim&quot;: &quot;unknown&quot;,
+    &quot;incomplete&quot;: false,
+    &quot;capture_drops&quot;: 0,
+    &quot;missing_blobs&quot;: 0,
+    &quot;body_unavailable&quot;: 0
+  },
+  &quot;transport_proof&quot;: {
+    &quot;status&quot;: &quot;unavailable&quot;,
+    &quot;verified&quot;: false,
+    &quot;pcap_records&quot;: 0,
+    &quot;tls_key_records&quot;: 0
+  }
+}
+</code></pre>
+<p>这表示本次没有报告采集丢弃或正文缺失，<strong>不表示全流量覆盖已被证明</strong>。<code>claim: &quot;unknown&quot;</code> 保持未知；没有启用独立 pcap / TLS 核验，所以 <code>verified</code> 仍为 false。</p>
+<p>此外，三个调用都留下了关联未解析事件，下面是一条实际记录的节选：</p>
+<pre tabindex="0" aria-label="数据样例，窄屏可横向滚动"><code class="language-json">{
+  &quot;seq&quot;: 43,
+  &quot;source&quot;: &quot;correlation&quot;,
+  &quot;event&quot;: &quot;inference_correlation_unresolved&quot;,
+  &quot;inference_id&quot;: &quot;native-inference-01&quot;,
+  &quot;payload&quot;: {
+    &quot;reason&quot;: &quot;no_unique_agent_anchor&quot;,
+    &quot;transport_sequence&quot;: 12
+  }
+}
+</code></pre>
+<p><code>no_unique_agent_anchor</code> 表示找不到可唯一关联的 Agent 原生锚点，不是请求或响应正文丢失。本次运行是通用 Python 模拟任务，<code>agent_kind</code> 和 <code>agent_version</code> 为 null，未配置 Agent 原生 hook；因此<strong>没有逐工具的执行证据</strong>。进程启动、退出和网络连接事件，不能冒充每次 tool call 的运行结果。</p>
+<p>完整 JSON 还保留第二段的 <code>coverage.known_gaps</code>，包括进程轮询可能漏掉极短子进程、代理未暴露上游 HTTP/2 流标识等已知限制。这样读者看到的不只是“通过”，也能看到证据的边界。</p>
+</section>
 <section id="issues" aria-labelledby="issues-title">
 <h2 id="issues-title">遇到的问题与复验</h2>
 <p><strong>数据库首次启动出现重试。</strong> PostgreSQL 的无头 Service 最初没有就绪端点，API / Worker 分别重启 3 / 2 次，随后自动恢复，无需修改凭据或手动重启。不能把这次安装描述成“全程零错误”。</p>
@@ -171,7 +424,7 @@
 <li>已部署的 tinybox 平台通过 6 项真实浏览器检查，包含登录后访问录制详情。</li>
 <li>登录修复后重新执行完整录制验收：仍为 3 次调用、2 个封存分段、最终序号 47，5 份正文哈希全部通过。</li>
 </ul>
-<p>公开摘要不提供平台入口、登录令牌、密钥、kubeconfig 或原始请求 / 响应正文。GitHub Pages 上的这份报告无需平台登录，也不提供对私有录制的访问权限。</p>
+<p>本页只公开经过逐字节校验的模拟请求 / 响应样例，不公开其他录制、平台入口、登录令牌、密钥或 kubeconfig。GitHub Pages 上的报告和样例无需平台登录，也不提供对私有录制的访问权限。</p>
 </section>
 <section id="boundaries" aria-labelledby="boundaries-title">
 <h2 id="boundaries-title">验收边界</h2>
@@ -186,10 +439,11 @@
 </section>
 <section id="sources" aria-labelledby="sources-title">
 <h2 id="sources-title">记录来源</h2>
-<p>本文根据 2026-09-22 留存的 tinybox 部署与验收记录整理，包含后续 Web 登录修复复验，不是本次发布时重新运行实验。详细运维记录和原始录制保留在受控环境，本页仅公开结果、验证方法和边界。</p>
+<p>本文根据 2026-09-22 留存的 tinybox 部署与验收记录整理，包含后续 Web 登录修复复验。2026-09-23 03:15 UTC 从 Platform 读取既有录制，导出脱敏字段与已校验的模拟正文；不是重新运行实验。详细运维记录和其他原始录制保留在受控环境。</p>
 <p><a href="iorec-on-kubernetes.html">阅读云原生设计与部署流程</a> · <a href="how-iorec-records.html">采集端工作原理</a> · <a href="https://github.com/newdogwang-netizen/inferenceIO">项目仓库</a></p>
 
 </section>
+
       </article>
     </main>
     <footer class="site-footer"><div><strong>iorec</strong><p>统一录制，明确边界。</p></div><div class="footer-links"><a href="./">首页</a><a href="iorec-on-kubernetes.html">云原生设计</a><a href="tinybox-acceptance.md" download>下载 Markdown</a></div></footer>

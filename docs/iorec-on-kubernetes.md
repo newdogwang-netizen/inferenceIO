@@ -280,10 +280,28 @@ Controller 和 Platform 可以一起安装，也可以独立部署；两者之�
 
 独立报告列出环境、准入测试、分段序号、正文完整性、启动重试及网页登录修复后的复验。测试使用真实 Pod 和模拟模型，没有产生付费推理；不把这次通过扩大成所有 Agent、多节点高可用或长期稳态的保证。
 
+**想看录下来到底是什么？** 已从 Platform 读取这份既有录制，公开脱敏后的实际字段和模拟正文。例如第二次调用的字段节选：
+
+```json
+{
+  "id": "run-demo~attempt-02",
+  "recording_id": "run-demo#0000",
+  "status_code": 200,
+  "terminal_state": "completed",
+  "sse_event_count": 3,
+  "response_text": "recorded in Kubernetes",
+  "usage": {"completion_tokens": 4, "prompt_tokens": 12, "total_tokens": 16}
+}
+```
+
+[查看数据结构与正文样例 →](tinybox-acceptance.html#data-structures) · [下载脱敏 JSON](data/tinybox-recording-sample.json)
+
+样例展示分段、Pod 来源、三次调用、SSE 事件、正文哈希引用和规范化结果，也保留 `coverage: unknown` 与关联未解析等边界。ID 和集群标识已替换；这是 9 月 23 日读取的已有测试数据，不是新的实验。
+
 ## 继续阅读与版本说明
 
 - [采集端工作原理](how-iorec-records.html)：模型代理、流式采集、工具执行和旁路核对分别做什么。
-- [tinybox 验收结果](tinybox-acceptance.html)：公开的验证方法、结果与边界，不含凭据或原始录制正文。
+- [tinybox 验收结果](tinybox-acceptance.html)：验证方法、结果、边界及实际数据结构，含脱敏字段和已审核的模拟正文，不含凭据。
 - [项目仓库](https://github.com/newdogwang-netizen/inferenceIO)。
 
-版本边界：本文对应 2026-09-22 的工作区实现；五个部署镜像已经公开。本次发布设计说明与验收摘要，云原生源码、Chart 和配套运维手册不包含在这次文档提交中。文中的 YAML 用于说明这版注入器的行为，不把公开仓库旧版本当作本次实现，也不公开原始录制、集群连接信息或 Secret 内容。
+版本边界：本文对应 2026-09-22 的工作区实现；五个部署镜像已经公开。本次发布设计说明与验收摘要，云原生源码、Chart 和配套运维手册不包含在这次文档提交中。文中的 YAML 用于说明这版注入器的行为，不把公开仓库旧版本当作本次实现。仅公开经审核的模拟数据样例，不公开其他原始录制、集群连接信息或 Secret 内容。
