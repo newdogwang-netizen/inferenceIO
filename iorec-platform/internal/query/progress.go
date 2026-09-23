@@ -328,11 +328,10 @@ func (s *Service) GetProgress(w http.ResponseWriter, r *http.Request) {
 	defer func() { _ = tx.Rollback(context.Background()) }()
 	fail := func(err error) { httpapi.WriteError(w, r, err) }
 	var run string
-	var revision int64
 	var benchmark json.RawMessage
-	err = tx.QueryRow(ctx, `select c.id,c.analysis_revision,c.benchmark_result from recordings r
+	err = tx.QueryRow(ctx, `select c.id,c.benchmark_result from recordings r
  join capture_runs c on c.id=r.capture_run_id and c.project_id=r.project_id
- where r.id=$1 and r.project_id=$2 and c.state='active' and r.state not in ('deleting','deleted','expired','expiring')`, pathParam(r, "id"), p.ProjectID).Scan(&run, &revision, &benchmark)
+ where r.id=$1 and r.project_id=$2 and c.state='active' and r.state not in ('deleting','deleted','expired','expiring')`, pathParam(r, "id"), p.ProjectID).Scan(&run, &benchmark)
 	if err == pgx.ErrNoRows {
 		fail(httpapi.E(404, "not_found", "unknown active recording"))
 		return
@@ -355,12 +354,12 @@ func (s *Service) GetProgress(w http.ResponseWriter, r *http.Request) {
 		fail(httpapi.E(413, "progress_limit", "progress projection exceeds 5000 model calls; original evidence remains available"))
 		return
 	}
-	var rawEvents, sseEvents, wsMessages, hookEvents, eventWatermark int64
+	var rawEvents, sseEvents, wsMessages, hookEvents int64
 	err = tx.QueryRow(ctx, `select count(*),count(*) filter(where e.event='sse_event'),
- count(*) filter(where e.event='websocket_frame'),count(*) filter(where e.source like 'hook:%'),coalesce(max(e.seq),0)
+ count(*) filter(where e.event='websocket_frame'),count(*) filter(where e.source like 'hook:%')
  from recording_events e join recordings r on r.id=e.recording_id
  where r.capture_run_id=$1 and r.project_id=$2 and r.state not in ('deleting','deleted','expired','expiring')`, run, p.ProjectID).
-		Scan(&rawEvents, &sseEvents, &wsMessages, &hookEvents, &eventWatermark)
+		Scan(&rawEvents, &sseEvents, &wsMessages, &hookEvents)
 	if err != nil {
 		fail(err)
 		return
@@ -423,14 +422,23 @@ func (s *Service) GetProgress(w http.ResponseWriter, r *http.Request) {
 	if end < len(calls) {
 		next = &end
 	}
-	// Evidence-dependent key makes clients reset pagination when a live task or
-	// reprocessing changes the snapshot, instead of joining incompatible pages.
+	// Fence the paginated model evidence, not unrelated recording revisions or
+	// lifecycle traffic. Activity counters remain live without changing call order.
 	h := sha256.New()
-	_, _ = fmt.Fprintf(h, "%s/%d/%d/%d/%d/%d/%d/%d", run, revision, eventWatermark, rawEvents, attempts, hooks, connections, other)
-	_, _ = h.Write(benchmark)
+	encoder := json.NewEncoder(h)
+	if err := encoder.Encode(struct {
+		Version   int
+		Run       string
+		Benchmark json.RawMessage
+	}{2, run, benchmark}); err != nil {
+		fail(err)
+		return
+	}
 	for _, a := range inputs {
-		b, _ := json.Marshal(a)
-		_, _ = h.Write(b)
+		if err := encoder.Encode(a); err != nil {
+			fail(err)
+			return
+		}
 	}
 	snapshot := hex.EncodeToString(h.Sum(nil))
 	if want := r.URL.Query().Get("snapshot"); want != "" && !strings.EqualFold(want, snapshot) {
