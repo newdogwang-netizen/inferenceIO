@@ -196,9 +196,19 @@ func TestProgressQuerySeparatesCountsAcrossSegmentsAndFences(t *testing.T) {
 		t.Fatal("tool/segment/pagination count mismatch")
 	}
 	snapshot := body["snapshot"].(string)
+	if _, err := db.Pool.Exec(ctx, `update capture_runs set analysis_revision=analysis_revision+1 where id=$1`, run); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Pool.Exec(ctx, `insert into recording_events(recording_id,seq,monotonic_ns,wall_time,source,event,payload,batch_id)
+ values($1,100,100,now(),'runner','capability_report','{}','idle')`, rec0); err != nil {
+		t.Fatal(err)
+	}
 	w, page := get(p, "limit=1&offset=1&snapshot="+snapshot)
 	if w.Code != http.StatusOK || page["next_offset"] != nil || page["items"].([]any)[0].(map[string]any)["ordinal"] != float64(2) {
-		t.Fatal("second page missing or repeated")
+		t.Fatal("unrelated recording activity invalidated unchanged model-call pagination")
+	}
+	if page["summary"].(map[string]any)["raw_events"] != float64(5) {
+		t.Fatal("live activity summary stopped updating")
 	}
 	for _, bad := range []string{"offset=-1", "offset=no", "offset=9999999999999999999999"} {
 		if w, _ := get(p, bad); w.Code != http.StatusBadRequest {
@@ -251,6 +261,13 @@ func TestProgressQuerySeparatesCountsAcrossSegmentsAndFences(t *testing.T) {
 	if w.Code != 200 || len(second["items"].([]any)) != 17 || second["next_offset"] != nil || second["items"].([]any)[0].(map[string]any)["ordinal"] != float64(26) {
 		t.Fatal("long-run page loses or repeats steps")
 	}
+	if _, err := db.Pool.Exec(ctx, `update capture_runs set benchmark_result='{"status":"completed"}'::jsonb where id=$1`, run); err != nil {
+		t.Fatal(err)
+	}
+	if w, _ := get(p, "offset=25&snapshot="+first["snapshot"].(string)); w.Code != http.StatusConflict {
+		t.Fatal("benchmark result changed without invalidating page")
+	}
+	_, first = get(p, "")
 	if _, err := db.Pool.Exec(ctx, `update model_attempts set ended_at=now() where id=$1`, run+"~call2"); err != nil {
 		t.Fatal(err)
 	}

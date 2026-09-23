@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, ApiError, enc, fmtDur, fmtTime } from "./api";
@@ -41,6 +41,8 @@ function EvidenceLink({ value, children }: { value: Evidence; children: React.Re
 }
 
 export default function TaskProgress({ recordingID }: { recordingID: string }) {
+  const section = useRef<HTMLElement>(null);
+  const shownOffset = useRef(0);
   const [page, setPage] = useState<{ offset: number; snapshot?: string }>({ offset: 0 });
   const [history, setHistory] = useState<typeof page[]>([]);
   const q = useQuery({
@@ -51,6 +53,12 @@ export default function TaskProgress({ recordingID }: { recordingID: string }) {
     // stay bound to their snapshot. A changed snapshot requires explicit reset.
     refetchInterval: page.offset === 0 ? 10000 : false,
   });
+  useEffect(() => {
+    if (q.isSuccess && shownOffset.current !== page.offset) {
+      section.current?.scrollIntoView({ block: "start" });
+      shownOffset.current = page.offset;
+    }
+  }, [page.offset, q.isSuccess]);
   const reset = () => {
     setPage({ offset: 0 });
     setHistory([]);
@@ -61,12 +69,15 @@ export default function TaskProgress({ recordingID }: { recordingID: string }) {
   const changed = q.error instanceof ApiError && q.error.code === "progress_snapshot_changed";
   const d = q.data;
   const s = d?.summary;
-  return <section aria-label="任务进度链" aria-busy={q.isFetching} className="task-progress">
+  return <section ref={section} aria-label="任务进度链" aria-busy={q.isFetching} className="task-progress">
     <div className="row progress-heading">
       <div><h3>任务进度链</h3><p className="muted small">跨本次运行的全部可用录制分段。按证据顺序排列，不把时间先后当作因果关系。</p></div>
       <button onClick={reset}>刷新进度</button>
     </div>
-    {changed ? <div role="status" className="panel">任务证据已更新，请刷新进度重新翻页，避免混用新旧结果。</div> : <Loading q={q} />}
+    {changed ? <div role="status" className="panel">
+      <p>模型调用记录已更新，本页已过期。已有记录没有丢失，请返回第一页重新浏览。</p>
+      <button onClick={reset}>返回第一页并刷新</button>
+    </div> : <Loading q={q} />}
     {s ? <>
       <dl className="activity-metrics" aria-label="独立活动统计">
         <div><dt>模型调用</dt><dd>{number(s.model_calls)}</dd><p>实际请求；不是对话轮数，包含重试</p></div>
@@ -119,8 +130,8 @@ export default function TaskProgress({ recordingID }: { recordingID: string }) {
       </ol>
       {d.next_offset === null ? <div className="progress-outcome"><strong>任务最终判分</strong><BenchmarkResult value={d.benchmark_result} /></div> : <p className="muted small">继续翻页查看后续调用与最终判分；当前并非任务的全部步骤。</p>}
       <div className="row progress-pager"><span className="muted">{d.total ? `${page.offset + 1}–${page.offset + d.items.length}` : "0"} / {number(d.total)} 次模型调用</span>
-        <button disabled={!history.length} onClick={() => { const h = [...history]; const prev = h.pop(); if (prev) setPage(prev); setHistory(h); }}>上一页</button>
-        <button disabled={d.next_offset === null} onClick={() => { if (d.next_offset !== null) { setHistory([...history, page]); setPage({ offset: d.next_offset, snapshot: d.snapshot }); } }}>下一页</button>
+        <button disabled={!history.length || q.isFetching} onClick={() => { const h = [...history]; const prev = h.pop(); if (prev) setPage(prev); setHistory(h); }}>上一页</button>
+        <button disabled={d.next_offset === null || q.isFetching} onClick={() => { if (d.next_offset !== null) { setHistory([...history, page]); setPage({ offset: d.next_offset, snapshot: d.snapshot }); } }}>下一页</button>
       </div>
     </> : null}
   </section>;
