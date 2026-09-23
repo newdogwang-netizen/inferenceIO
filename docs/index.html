@@ -30,7 +30,7 @@
         <a class="brand" href="./" aria-label="iorec 首页" data-en-aria-label="iorec home">io<span>rec</span></a>
         <div class="home-nav-links">
           <a href="#navigate" data-en="Navigate">导航</a>
-          <a href="#evidence" data-en="Evidence">验收数据</a>
+          <a href="#cloud-native" data-en="Kubernetes">云原生</a>
           <a href="#architecture" data-en="Architecture">架构</a>
           <a href="#boundaries" data-en="Boundaries">边界</a>
           <a href="https://github.com/newdogwang-netizen/inferenceIO">GitHub</a>
@@ -90,25 +90,6 @@
         </div>
       </section>
 
-      <section id="evidence" class="home-section home-evidence" aria-labelledby="evidence-title">
-        <div class="home-section-heading">
-          <p class="eyebrow" data-en="Published evidence">已公开的录制证据</p>
-          <h2 id="evidence-title" data-en="See the data, not just a verdict.">不只看结论，也能看数据。</h2>
-          <p data-en="The September 22 tinybox run used a real Kubernetes Pod and a simulated model. Its sanitized data is available without a platform login.">9 月 22 日 tinybox 验收使用真实 Kubernetes Pod 和模拟模型。脱敏数据已公开，无需登录平台。</p>
-        </div>
-        <dl class="home-metrics">
-          <div><dt data-en="Model calls">模型调用</dt><dd>3</dd></div>
-          <div><dt data-en="Sealed segments">封存分段</dt><dd>2</dd></div>
-          <div><dt data-en="Recorded events">录制事件</dt><dd>47</dd></div>
-          <div><dt data-en="Verified body objects">正文哈希校验通过</dt><dd>5 / 5</dd></div>
-        </dl>
-        <div class="home-evidence-links">
-          <a href="tinybox-acceptance.html" hreflang="zh-CN" data-en="Acceptance report (中文) →">查看验收详情 →</a>
-          <a href="data/tinybox-recording-sample.json" download data-en="Download sanitized JSON ↓">下载脱敏 JSON ↓</a>
-        </div>
-        <p class="home-note" data-en="Includes Pod metadata, calls, SSE events, body references, and normalized results. Coverage remains unknown; this run has no independent pcap/TLS verification or per-tool execution evidence.">包含 Pod 来源、调用、SSE 事件、正文引用与规范化结果。coverage 仍为 unknown；本次未启用独立 pcap/TLS 核验，也没有逐工具执行证据。</p>
-      </section>
-
       <section id="experiments" class="home-section" aria-labelledby="experiments-title">
         <header class="home-section-heading">
           <h2 id="experiments-title" data-en="Experiments from real agent runs">真实 Agent 实验与复盘</h2>
@@ -147,7 +128,10 @@
           <h2 id="architecture-title" data-en="Capture nearby. Inspect centrally.">就近采集，集中查看。</h2>
           <p data-en="The recorder preserves local evidence; the platform handles ingestion, parsing, and inspection. Collection and interpretation stay separate.">采集端保留本地证据，平台负责接收、解析与查看。原始数据与后续解释分开保存。</p>
         </header>
-        <div class="home-architecture">
+        <section id="cloud-native" class="home-cloud-native" aria-labelledby="cloud-native-title">
+          <h3 id="cloud-native-title" data-en="Deploy alongside agents in Kubernetes">支持 Kubernetes 云原生部署</h3>
+          <p data-en="The admission controller adds recording to selected Pods. Capture runs beside the agent; a separate sidecar uploads to the central platform.">通过准入注入，为选中的 Pod 接入录制能力：采集与 Agent 就近运行，独立 sidecar 将数据上传到集中平台。</p>
+          <div class="home-architecture">
           <figure>
             <a href="iorec-on-kubernetes.html#traffic" hreflang="zh-CN">
               <img src="assets/iorec-kubernetes-traffic.svg" width="1100" height="450" loading="lazy" alt="Kubernetes 中的模型请求与录制上传路径，点击阅读详解" data-en-alt="Model request and recording upload paths in Kubernetes. Diagram labels are in Chinese; open the deployment article for details.">
@@ -158,7 +142,18 @@
             <p data-en="Model requests pass through the local proxy to the original provider. Recording data is buffered, then uploaded to the platform.">模型请求经本地代理转发到原服务；录制数据先缓冲，再上传至平台。</p>
             <p data-en="Native tool hooks and process observations provide different levels of evidence. A generated script is not proof of execution.">工具 hook 与进程观测提供不同层次的证据；生成了脚本，不代表脚本已执行。</p>
           </div>
-        </div>
+          </div>
+          <aside id="evidence" class="home-deployment-evidence" aria-labelledby="evidence-title">
+            <h4 id="evidence-title" data-en="Validated on tinybox">tinybox 部署验收</h4>
+            <p data-en="The September 22 test used a real Kubernetes Pod and a simulated model: 3 calls, 2 sealed segments, 47 events, and 5 body objects with matching hashes.">9 月 22 日在真实 Kubernetes Pod 中使用模拟模型验证：3 次调用、2 个封存分段、47 个事件，5 份正文对象的哈希全部匹配。</p>
+            <div class="home-evidence-links">
+              <a href="iorec-on-kubernetes.html" hreflang="zh-CN" data-en="Deployment guide (中文) →">部署方式与流程 →</a>
+              <a href="tinybox-acceptance.html#data-structures" hreflang="zh-CN" data-en="Acceptance details and data (中文) →">验收详情与数据结构 →</a>
+              <a href="data/tinybox-recording-sample.json" download data-en="Download sanitized JSON ↓">下载脱敏 JSON ↓</a>
+            </div>
+            <p class="home-note" data-en="This validates the deployment and recording path, not full coverage: coverage remains unknown, with no independent pcap/TLS verification or per-tool execution evidence in this run.">验证的是部署与录制链路，不是全量覆盖：coverage 仍为 unknown，本次未启用独立 pcap/TLS 核验，也没有逐工具执行证据。</p>
+          </aside>
+        </section>
         <div id="quickstart" class="home-quickstart">
           <div>
             <h3 id="quickstart-title" data-en="Record your first local run">从本地第一份录制开始</h3>

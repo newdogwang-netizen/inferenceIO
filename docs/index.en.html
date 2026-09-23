@@ -30,7 +30,7 @@
         <a class="brand" href="./" aria-label="iorec home">io<span>rec</span></a>
         <div class="home-nav-links">
           <a href="#navigate">Navigate</a>
-          <a href="#evidence">Evidence</a>
+          <a href="#cloud-native">Kubernetes</a>
           <a href="#architecture">Architecture</a>
           <a href="#boundaries">Boundaries</a>
           <a href="https://github.com/newdogwang-netizen/inferenceIO">GitHub</a>
@@ -90,25 +90,6 @@
         </div>
       </section>
 
-      <section id="evidence" class="home-section home-evidence" aria-labelledby="evidence-title">
-        <div class="home-section-heading">
-          <p class="eyebrow">Published evidence</p>
-          <h2 id="evidence-title">See the data, not just a verdict.</h2>
-          <p>The September 22 tinybox run used a real Kubernetes Pod and a simulated model. Its sanitized data is available without a platform login.</p>
-        </div>
-        <dl class="home-metrics">
-          <div><dt>Model calls</dt><dd>3</dd></div>
-          <div><dt>Sealed segments</dt><dd>2</dd></div>
-          <div><dt>Recorded events</dt><dd>47</dd></div>
-          <div><dt>Verified body objects</dt><dd>5 / 5</dd></div>
-        </dl>
-        <div class="home-evidence-links">
-          <a href="tinybox-acceptance.html" hreflang="zh-CN">Acceptance report (中文) →</a>
-          <a href="data/tinybox-recording-sample.json" download>Download sanitized JSON ↓</a>
-        </div>
-        <p class="home-note">Includes Pod metadata, calls, SSE events, body references, and normalized results. Coverage remains unknown; this run has no independent pcap/TLS verification or per-tool execution evidence.</p>
-      </section>
-
       <section id="experiments" class="home-section" aria-labelledby="experiments-title">
         <header class="home-section-heading">
           <h2 id="experiments-title">Experiments from real agent runs</h2>
@@ -147,7 +128,10 @@
           <h2 id="architecture-title">Capture nearby. Inspect centrally.</h2>
           <p>The recorder preserves local evidence; the platform handles ingestion, parsing, and inspection. Collection and interpretation stay separate.</p>
         </header>
-        <div class="home-architecture">
+        <section id="cloud-native" class="home-cloud-native" aria-labelledby="cloud-native-title">
+          <h3 id="cloud-native-title">Deploy alongside agents in Kubernetes</h3>
+          <p>The admission controller adds recording to selected Pods. Capture runs beside the agent; a separate sidecar uploads to the central platform.</p>
+          <div class="home-architecture">
           <figure>
             <a href="iorec-on-kubernetes.html#traffic" hreflang="zh-CN">
               <img src="assets/iorec-kubernetes-traffic.svg" width="1100" height="450" loading="lazy" alt="Model request and recording upload paths in Kubernetes. Diagram labels are in Chinese; open the deployment article for details.">
@@ -158,7 +142,18 @@
             <p>Model requests pass through the local proxy to the original provider. Recording data is buffered, then uploaded to the platform.</p>
             <p>Native tool hooks and process observations provide different levels of evidence. A generated script is not proof of execution.</p>
           </div>
-        </div>
+          </div>
+          <aside id="evidence" class="home-deployment-evidence" aria-labelledby="evidence-title">
+            <h4 id="evidence-title">Validated on tinybox</h4>
+            <p>The September 22 test used a real Kubernetes Pod and a simulated model: 3 calls, 2 sealed segments, 47 events, and 5 body objects with matching hashes.</p>
+            <div class="home-evidence-links">
+              <a href="iorec-on-kubernetes.html" hreflang="zh-CN">Deployment guide (中文) →</a>
+              <a href="tinybox-acceptance.html#data-structures" hreflang="zh-CN">Acceptance details and data (中文) →</a>
+              <a href="data/tinybox-recording-sample.json" download>Download sanitized JSON ↓</a>
+            </div>
+            <p class="home-note">This validates the deployment and recording path, not full coverage: coverage remains unknown, with no independent pcap/TLS verification or per-tool execution evidence in this run.</p>
+          </aside>
+        </section>
         <div id="quickstart" class="home-quickstart">
           <div>
             <h3 id="quickstart-title">Record your first local run</h3>

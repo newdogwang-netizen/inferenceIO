@@ -18,10 +18,21 @@ class Page(HTMLParser):
         super().__init__()
         self.tags = []
         self.text = []
+        self.stack = []
+        self.parents = {}
         self.feed(source)
 
     def handle_starttag(self, tag, attrs):
-        self.tags.append((tag, dict(attrs)))
+        attrs = dict(attrs)
+        self.tags.append((tag, attrs))
+        if "id" in attrs:
+            self.parents[attrs["id"]] = [a.get("id") for _, a in self.stack]
+        if tag not in {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}:
+            self.stack.append((tag, attrs))
+
+    def handle_endtag(self, tag):
+        if self.stack and self.stack[-1][0] == tag:
+            self.stack.pop()
 
     def handle_data(self, data):
         self.text.append(data)
@@ -74,6 +85,14 @@ class HomepageTests(unittest.TestCase):
         excerpt = json.loads(unescape(re.search(r'<pre[^>]*><code>(.*?)</code>', source, re.S)[1]))
         sample = json.loads((DOCS / "data/tinybox-recording-sample.json").read_text())
         self.assertTrue(any(all(a[k] == v for k, v in excerpt.items()) for a in sample["attempts"]))
+
+    def test_acceptance_is_part_of_cloud_native_deployment(self):
+        for name in ["index.html", "index.en.html"]:
+            page = Page((DOCS / name).read_text())
+            self.assertIn("cloud-native", page.parents["evidence"])
+            self.assertIn("architecture", page.parents["evidence"])
+            self.assertEqual(next(t for t, a in page.tags if a.get("id") == "evidence-title"), "h4")
+            self.assertFalse(any("home-evidence" in a.get("class", "").split() for _, a in page.tags))
 
     def test_no_decorative_dashes(self):
         for name in ["index.html", "index.en.html"]:

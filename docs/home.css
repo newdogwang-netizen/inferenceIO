@@ -39,11 +39,12 @@
 .home-guide h3 { margin: 14px 0 12px; font-size: 22px; line-height: 1.55; letter-spacing: -.025em; }
 .home-guide p { margin: 0 0 24px; color: var(--muted); font-size: 16px; line-height: 1.8; max-width: 48ch; }
 .home-read { margin-top: auto; color: var(--accent); font-size: 14px; font-weight: 600; }
-.home-evidence .eyebrow { margin-bottom: 14px; }
-.home-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin: 32px 0; padding: 28px 0; border-block: 1px solid var(--line); }
-.home-metrics dt { font-size: 14px; color: var(--muted); }
-.home-metrics dd { margin: 6px 0 0; font-family: "SFMono-Regular", Consolas, monospace; font-size: 38px; letter-spacing: -.06em; font-weight: 600; }
-.home-evidence-links { display: flex; flex-wrap: wrap; gap: 16px 32px; color: var(--accent); font-weight: 600; }
+.home-cloud-native > h3 { margin: 0 0 12px; font-size: 24px; line-height: 1.5; }
+.home-cloud-native > p { max-width: 80ch; margin: 0 0 24px; color: var(--muted); font-size: 16px; line-height: 1.8; }
+.home-deployment-evidence { margin-top: 24px; padding: 24px 28px; border-radius: var(--radius); background: var(--surface); }
+.home-deployment-evidence h4 { margin: 0; font-size: 18px; }
+.home-deployment-evidence > p:not(.home-note) { margin: 12px 0 18px; max-width: 85ch; font-size: 16px; line-height: 1.8; }
+.home-evidence-links { display: flex; flex-wrap: wrap; gap: 12px 24px; color: var(--accent); font-size: 14px; font-weight: 600; }
 .home-note { margin: 24px 0 0; max-width: 85ch; font-size: 14px; line-height: 1.8; color: var(--muted); }
 .home-experiment-list article { display: grid; grid-template-columns: 145px minmax(0, 1fr); gap: 30px; padding: 26px 0; }
 .home-experiment-list article + article { border-top: 1px solid var(--line); }
@@ -92,8 +93,7 @@
   .home-section { padding: 40px 0; }
   .home-guide-grid, .home-architecture-notes, .home-quickstart { grid-template-columns: 1fr; gap: 20px; }
   .home-guide { padding: 24px; }
-  .home-metrics { grid-template-columns: 1fr 1fr; gap: 24px 16px; }
-  .home-metrics dd { font-size: 32px; }
+  .home-deployment-evidence { padding: 20px; }
   .home-experiment-list article { grid-template-columns: 1fr; gap: 10px; padding-block: 24px; }
   .home-experiment-list h3 { font-size: 21px; }
   .home-history ul { grid-template-columns: 1fr; }
