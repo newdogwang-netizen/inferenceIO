@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#f3f2ed" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#17191b" media="(prefers-color-scheme: dark)">
+    <meta name="description" content="iorec: a unified agent recorder and platform. Explore capture methods, Kubernetes deployment, experiments, and downloadable recording evidence.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="iorec | A unified agent recorder and platform">
+    <meta property="og:description" content="Preserve model requests, streamed responses, and tool execution evidence with explicit capture boundaries.">
+    <meta property="og:url" content="https://newdogwang-netizen.github.io/inferenceIO/index.en.html">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary">
+    <link rel="canonical" href="https://newdogwang-netizen.github.io/inferenceIO/index.en.html">
+    <link rel="alternate" hreflang="zh-CN" href="https://newdogwang-netizen.github.io/inferenceIO/">
+    <link rel="alternate" hreflang="en" href="https://newdogwang-netizen.github.io/inferenceIO/index.en.html">
+    <link rel="alternate" hreflang="x-default" href="https://newdogwang-netizen.github.io/inferenceIO/">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="home.css">
+    <script src="home.js" defer></script>
+    <title>iorec | A unified agent recorder and platform</title>
+  </head>
+  <body class="home-page">
+    <a class="skip-link" href="#article">Skip to content</a>
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="Primary navigation">
+        <a class="brand" href="./" aria-label="iorec home">io<span>rec</span></a>
+        <div class="home-nav-links">
+          <a href="#navigate">Navigate</a>
+          <a href="#evidence">Evidence</a>
+          <a href="#architecture">Architecture</a>
+          <a href="#boundaries">Boundaries</a>
+          <a href="https://github.com/newdogwang-netizen/inferenceIO">GitHub</a>
+        </div>
+        <div class="language-switch" role="group" aria-label="Homepage language">
+          <a href="./?lang=zh" lang="zh-CN" hreflang="zh-CN" data-language="zh">中文</a>
+          <a href="index.en.html?lang=en" lang="en" hreflang="en" data-language="en" aria-current="page">English</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="article" class="home-main" tabindex="-1">
+      <section class="home-hero" aria-labelledby="hero-title">
+        <div class="home-intro">
+          <p class="eyebrow">Agent recorder + platform</p>
+          <h1 id="hero-title">A record of your agent’s work.</h1>
+          <p class="home-deck">Record model traffic and tool evidence. Inspect the original data, follow the execution, and see what is missing.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="how-iorec-records.html" hreflang="zh-CN">How capture works</a>
+            <a class="button button-secondary" href="#evidence">Explore the data</a>
+          </div>
+        </div>
+        <figure class="home-sample">
+          <figcaption>Inside a real recording</figcaption>
+          <p class="sample-context">tinybox acceptance · simulated model</p>
+          <pre tabindex="0" aria-label="Sanitized call excerpt, horizontally scrollable"><code>{
+  "recording_id": "run-demo#0000",
+  "model": "iorec-smoke",
+  "status_code": 200,
+  "terminal_state": "completed",
+  "sse_event_count": 3,
+  "response_text": "recorded in Kubernetes"
+}</code></pre>
+          <p class="sample-caption">Actual API fields. Identifiers are aliases. This is a saved test sample, not a live service.</p>
+          <a href="tinybox-acceptance.html#data-structures" hreflang="zh-CN">Explore the data structure (中文) →</a>
+        </figure>
+      </section>
+
+      <section id="navigate" class="home-section" aria-labelledby="directory-title">
+        <header class="home-section-heading">
+          <h2 id="directory-title">Start where you need.</h2>
+          <p>Capture, deployment, experiments, and evidence. The linked articles keep their original language.</p>
+        </header>
+        <div class="home-guide-grid">
+          <a class="home-guide" href="how-iorec-records.html" hreflang="zh-CN">
+            <span class="home-category">Capture · article in Chinese</span>
+            <h3>How iorec records an agent’s work</h3>
+            <p>Local proxies, TLS interception, streaming responses, and the distinction between tool calls and execution evidence.</p>
+            <span class="home-read">Read the guide →</span>
+          </a>
+          <a class="home-guide" href="iorec-on-kubernetes.html" hreflang="zh-CN">
+            <span class="home-category">Cloud native · article in Chinese</span>
+            <h3>Bring recording into Kubernetes</h3>
+            <p>Admission-time injection, before-and-after Pod YAML, model traffic, and sidecar upload.</p>
+            <span class="home-read">Read the deployment guide →</span>
+          </a>
+        </div>
+      </section>
+
+      <section id="evidence" class="home-section home-evidence" aria-labelledby="evidence-title">
+        <div class="home-section-heading">
+          <p class="eyebrow">Published evidence</p>
+          <h2 id="evidence-title">See the data, not just a verdict.</h2>
+          <p>The September 22 tinybox run used a real Kubernetes Pod and a simulated model. Its sanitized data is available without a platform login.</p>
+        </div>
+        <dl class="home-metrics">
+          <div><dt>Model calls</dt><dd>3</dd></div>
+          <div><dt>Sealed segments</dt><dd>2</dd></div>
+          <div><dt>Recorded events</dt><dd>47</dd></div>
+          <div><dt>Verified body objects</dt><dd>5 / 5</dd></div>
+        </dl>
+        <div class="home-evidence-links">
+          <a href="tinybox-acceptance.html" hreflang="zh-CN">Acceptance report (中文) →</a>
+          <a href="data/tinybox-recording-sample.json" download>Download sanitized JSON ↓</a>
+        </div>
+        <p class="home-note">Includes Pod metadata, calls, SSE events, body references, and normalized results. Coverage remains unknown; this run has no independent pcap/TLS verification or per-tool execution evidence.</p>
+      </section>
+
+      <section id="experiments" class="home-section" aria-labelledby="experiments-title">
+        <header class="home-section-heading">
+          <h2 id="experiments-title">Experiments from real agent runs</h2>
+          <p>Keep task success, token usage, and recording completeness as separate measurements.</p>
+        </header>
+        <div class="home-experiment-list">
+          <article id="tb4-experiment">
+            <time datetime="2026-09-22">2026-09-22</time>
+            <div>
+              <h3><a href="tb4-sourcemap-experiment.html" hreflang="zh-CN">One hard task, three agents, one model</a></h3>
+              <p>Terminal-Bench 4.0 source-map repair: Codex, Pi, and Hermes use GPT-5.6-Sol. Compare verdicts, usage, and independent transport checks.</p>
+              <span class="home-reading-language">Article in Chinese</span>
+            </div>
+          </article>
+          <article id="agent-comparison">
+            <time datetime="2026-09-21">2026-09-21</time>
+            <div>
+              <h3><a href="agent-token-comparison.html" hreflang="zh-CN">How much comes from the agent, and how much from the model?</a></h3>
+              <p>Repeat the same task with GPT-5.6-Sol. Trace differences in calls, tokens, duration, and final correctness.</p>
+              <span class="home-reading-language">Article in Chinese</span>
+            </div>
+          </article>
+          <article id="long-trial">
+            <span class="home-report-label">Long-horizon report</span>
+            <div>
+              <h3><a href="long-horizon-evidence.html" hreflang="en">Follow the model and tool execution chain</a></h3>
+              <p>A qualified 27-call Codex trajectory and a 61-call Hermes diagnostic trace. Task rewards do not erase capture gaps.</p>
+              <span class="home-reading-language">Article in English</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="architecture" class="home-section" aria-labelledby="architecture-title">
+        <header class="home-section-heading">
+          <h2 id="architecture-title">Capture nearby. Inspect centrally.</h2>
+          <p>The recorder preserves local evidence; the platform handles ingestion, parsing, and inspection. Collection and interpretation stay separate.</p>
+        </header>
+        <div class="home-architecture">
+          <figure>
+            <a href="iorec-on-kubernetes.html#traffic" hreflang="zh-CN">
+              <img src="assets/iorec-kubernetes-traffic.svg" width="1100" height="450" loading="lazy" alt="Model request and recording upload paths in Kubernetes. Diagram labels are in Chinese; open the deployment article for details.">
+            </a>
+            <figcaption>Kubernetes: model traffic and recording upload take separate paths. Diagram and article in Chinese.</figcaption>
+          </figure>
+          <div class="home-architecture-notes">
+            <p>Model requests pass through the local proxy to the original provider. Recording data is buffered, then uploaded to the platform.</p>
+            <p>Native tool hooks and process observations provide different levels of evidence. A generated script is not proof of execution.</p>
+          </div>
+        </div>
+        <div id="quickstart" class="home-quickstart">
+          <div>
+            <h3 id="quickstart-title">Record your first local run</h3>
+            <p>Build iorec first, then choose the upstream and adapter for your agent. The example records encrypted data by default.</p>
+            <a href="https://github.com/newdogwang-netizen/inferenceIO#readme">Build and usage instructions →</a>
+          </div>
+          <pre tabindex="0" aria-label="Local recording command example, horizontally scrollable"><code>iorec keygen --output ./iorec.key
+
+iorec run \
+  --key-file ./iorec.key \
+  --upstream https://api.openai.com \
+  --provider openai \
+  -- your-agent-command</code></pre>
+        </div>
+      </section>
+
+      <section id="boundaries" class="home-section home-boundaries" aria-labelledby="boundary-title">
+        <h2 id="boundary-title">The limits belong in the record.</h2>
+        <p>A successful task is not proof of a complete capture. The default claim is best-effort; stronger transport claims require a separate successful audit within a defined scope.</p>
+        <p>Real-agent experiments, Kubernetes acceptance, and historical soak tests cover different environments. None is a blanket production certification.</p>
+        <div class="home-resource-links">
+          <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/SUPPORT.md">Support matrix</a>
+          <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/SECURITY.md">Security</a>
+          <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/PRODUCTION_READINESS.md">Production audit</a>
+          <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/PERFORMANCE.md">Performance</a>
+        </div>
+        <details class="home-history">
+          <summary>Historical acceptance and diagnostic reports</summary>
+          <p>These reports are tied to their original dates and artifacts. They are not live platform status.</p>
+          <ul>
+            <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/m3-acceptance.md">M1-M3 technical acceptance</a></li>
+            <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-19-m3-final-connected-5h-linux-x86_64.json">Final connected five-hour qualification</a></li>
+            <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/benchmarks/2026-09-19-m3-completed-experiments-linux-x86_64.json">Completed experiment results</a></li>
+            <li><a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/hermes-http-framing-diagnostic.md">Hermes HTTP framing diagnosis</a></li>
+          </ul>
+        </details>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <div><strong>iorec</strong><p>One recorder. Inspectable evidence.</p></div>
+      <div class="footer-links">
+        <a href="https://github.com/newdogwang-netizen/inferenceIO">GitHub</a>
+        <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/LICENSE-MIT">License</a>
+      </div>
+    </footer>
+  </body>
+</html>
