@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <meta name="description" content="tinybox 云原生录制验收公开摘要：准入、3 次调用、2 个封存分段、47 个事件与 5 份正文哈希验证。">
+    <meta property="og:type" content="article">
+    <meta property="og:title" content="tinybox 云原生录制验收结果">
+    <meta property="og:description" content="真实 Kubernetes Pod 中的注入、录制、上传和正文完整性验收，不包含付费模型或生产高可用认证。">
+    <meta property="og:url" content="https://newdogwang-netizen.github.io/inferenceIO/tinybox-acceptance.html">
+    <meta name="twitter:card" content="summary">
+    <link rel="canonical" href="https://newdogwang-netizen.github.io/inferenceIO/tinybox-acceptance.html">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="agent-token-comparison.css">
+    <link rel="stylesheet" href="how-iorec-records.css">
+    <link rel="stylesheet" href="iorec-on-kubernetes.css">
+    <title>tinybox 云原生录制验收结果 | iorec</title>
+  </head>
+  <body class="comparison-blog recorder-blog cloudnative-blog">
+    <a class="skip-link" href="#article">跳到正文</a>
+    <header class="site-header">
+      <nav class="nav-shell" aria-label="主导航">
+        <a class="brand" href="./" aria-label="iorec 首页">io<span>rec</span></a>
+        <div class="nav-links">
+          <a href="iorec-on-kubernetes.html">云原生设计</a>
+          <a href="tinybox-acceptance.md" download>下载原文</a>
+          <a class="nav-source" href="https://github.com/newdogwang-netizen/inferenceIO">GitHub</a>
+        </div>
+      </nav>
+    </header>
+    <main id="article" class="comparison-main" tabindex="-1">
+      <header class="comparison-header">
+        <p class="eyebrow">iorec · 云原生验收</p>
+        <h1>tinybox 云原生录制验收结果</h1>
+        <p class="comparison-deck">真实集群、模拟模型：验证了什么，遇到哪些问题，还有哪些边界。</p>
+        <div class="comparison-meta"><time datetime="2026-09-22">验收：2026 年 9 月 22 日</time><span>发布：9 月 23 日</span><span>公开摘要 · 非实时状态</span></div>
+      </header>
+      <nav class="comparison-toc" aria-label="报告目录"><a href="#environment">环境</a><a href="#admission">准入</a><a href="#recording">录制结果</a><a href="#issues">问题与复验</a><a href="#boundaries">边界</a></nav>
+      <article class="comparison-article">
+<p><strong>结论：Controller / Platform 组合部署，以及 Pod 注入、录制、上传、解析、正文校验的完整链路通过。</strong> 测试在真实 Kubernetes Pod 中执行，但模型服务是模拟器，没有付费推理。这不是所有 Agent、生产高可用或长期稳态的认证。</p>
+<p><a href="iorec-on-kubernetes.html#acceptance">返回：把 Agent 录制带进 Kubernetes</a></p>
+<section id="environment" aria-labelledby="environment-title">
+<h2 id="environment-title">环境与部署范围</h2>
+<ul>
+<li>单节点 tinybox，Kubernetes <strong>1.35.3+k0s / Linux amd64</strong>。</li>
+<li>两副本 Controller；API、Worker、Web 和 PostgreSQL 各一个实例。全部运行在同一节点，两副本 Controller 不代表跨节点容灾。</li>
+<li>PostgreSQL、正文对象和 Agent spool 使用三块持久卷，均完成绑定。存储为本地 hostpath，不能抵御节点或磁盘丢失。</li>
+<li>五个 iorec 镜像均固定 digest，并通过匿名拉取校验。公开的是镜像，不是平台或录制数据。</li>
+<li>仅对明确选中的 Namespace / Pod 注入，使用独立凭据和数据库；未修改已有业务工作负载。</li>
+<li>初次安装于 2026-09-22 15:56:50 UTC 完成；16:34:12 UTC 的第二版部署只更新 Web 登录功能。</li>
+</ul>
+<p>这里记录的是当次验收快照，不是集群的实时健康状态。</p>
+</section>
+<section id="admission" aria-labelledby="admission-title">
+<h2 id="admission-title">准入行为</h2>
+<div class="comparison-table-wrap" role="region" aria-label="准入测试结果，窄屏可横向滚动" tabindex="0"><table class="comparison-table"><caption>准入测试结果</caption>
+<thead>
+<tr>
+<th>检查项</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>选中 Namespace 内、带接入标签的 Pod</td>
+<td>注入录制包装、安装容器和上传 sidecar</td>
+</tr>
+<tr>
+<td>同一 Namespace 内、不带接入标签的 Pod</td>
+<td>不注入</td>
+</tr>
+<tr>
+<td>选择范围之外的 Pod</td>
+<td>不注入</td>
+</tr>
+<tr>
+<td>选中但缺少显式数字非 root UID 的 Pod</td>
+<td>拒绝创建，避免无效注入</td>
+</tr>
+<tr>
+<td>与已有准入组件共存</td>
+<td>未停用已有 Webhook，实际注入任务完成</td>
+</tr>
+</tbody>
+</table></div>
+<p>准入检查使用目标集群的服务端 dry-run；随后执行真实测试 Job，验证的不只是生成清单。</p>
+</section>
+<section id="recording" aria-labelledby="recording-title">
+<h2 id="recording-title">录制与交付结果</h2>
+<div class="comparison-table-wrap" role="region" aria-label="录制与交付结果，窄屏可横向滚动" tabindex="0"><table class="comparison-table"><caption>录制与交付结果</caption>
+<thead>
+<tr>
+<th>验收项</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>模型调用</td>
+<td><strong>3 次</strong>：1 次 JSON、2 次 SSE</td>
+</tr>
+<tr>
+<td>录制分段</td>
+<td><strong>2 个</strong>，均已封存（sealed）</td>
+</tr>
+<tr>
+<td>全局最终事件序号</td>
+<td><strong>47</strong></td>
+</tr>
+<tr>
+<td>原始正文完整性</td>
+<td><strong>5 份不同正文对象</strong>，下载后 SHA-256 全部匹配</td>
+</tr>
+<tr>
+<td>初始化容器 / Agent / 上传器退出码</td>
+<td><strong>0 / 0 / 0</strong></td>
+</tr>
+<tr>
+<td>上传器重启</td>
+<td><strong>0 次</strong>，结束时补传完成</td>
+</tr>
+<tr>
+<td>Kubernetes 来源关联</td>
+<td><strong>7 个字段</strong>与实际 Pod 一致</td>
+</tr>
+<tr>
+<td>解析与完整性检查</td>
+<td>无缺失正文引用、完整性告警或失败 / 活跃解析任务</td>
+</tr>
+</tbody>
+</table></div>
+<p>分段的事件序号是连续的全局边界，不是各段长度：</p>
+<div class="comparison-table-wrap" role="region" aria-label="录制分段与事件序号，窄屏可横向滚动" tabindex="0"><table class="comparison-table"><caption>录制分段与事件序号</caption>
+<thead>
+<tr>
+<th>分段</th>
+<th style="text-align:right">调用数</th>
+<th style="text-align:right">起始边界</th>
+<th>durable / parsed / final</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>#0000</td>
+<td style="text-align:right">2</td>
+<td style="text-align:right">0</td>
+<td>27 / 27 / 27</td>
+<td>sealed</td>
+</tr>
+<tr>
+<td>#0001</td>
+<td style="text-align:right">1</td>
+<td style="text-align:right">27</td>
+<td>47 / 47 / 47</td>
+<td>sealed</td>
+</tr>
+</tbody>
+</table></div>
+<p>因此这里是 <strong>47 个全局事件，不是 27 + 47</strong>。模拟器返回的 usage 合计为 36 input / 12 output，仅用于核对字段传递，不是付费模型消耗。</p>
+<p>来源校验覆盖 cluster、namespace、Pod 名称、Pod UID、node、目标 container 和 injection version。验收程序同时核对连续封存、事件边界、调用数、JSON / SSE 事件、响应文本、正文引用，并下载原始字节重新计算哈希；不是只看页面有没有记录。</p>
+</section>
+<section id="issues" aria-labelledby="issues-title">
+<h2 id="issues-title">遇到的问题与复验</h2>
+<p><strong>数据库首次启动出现重试。</strong> PostgreSQL 的无头 Service 最初没有就绪端点，API / Worker 分别重启 3 / 2 次，随后自动恢复，无需修改凭据或手动重启。不能把这次安装描述成“全程零错误”。</p>
+<p><strong>首次网页登录流程不完整。</strong> 当时 HTTP 和带认证 API 校验通过，但新浏览器缺少可用的登录表单，显示凭据无效。修复后只更新 Web 镜像，认证和录制数据保持不变。</p>
+<ul>
+<li>登录功能通过 13 项隔离浏览器检查。</li>
+<li>已部署的 tinybox 平台通过 6 项真实浏览器检查，包含登录后访问录制详情。</li>
+<li>登录修复后重新执行完整录制验收：仍为 3 次调用、2 个封存分段、最终序号 47，5 份正文哈希全部通过。</li>
+</ul>
+<p>公开摘要不提供平台入口、登录令牌、密钥、kubeconfig 或原始请求 / 响应正文。GitHub Pages 上的这份报告无需平台登录，也不提供对私有录制的访问权限。</p>
+</section>
+<section id="boundaries" aria-labelledby="boundaries-title">
+<h2 id="boundaries-title">验收边界</h2>
+<p><strong>已验证的是：真实集群中的部署与统一录制链路。</strong> 尚未由这次 tinybox 验收证明的项目包括：</p>
+<ul>
+<li>真实 Agent 镜像与付费模型的兼容性，以及所有工具执行记录的覆盖。</li>
+<li>多节点故障切换、托管 PostgreSQL / S3 兼容性与备份恢复。</li>
+<li>新的 5 小时稳态或长时间负载测试。</li>
+<li>公网入口、SSO 和完整的生产身份管理。</li>
+</ul>
+<p>平台中断、上传器重启、Pod 删除后 PVC 保留等故障测试另在隔离 kind 集群进行；没有将它们冒充为 tinybox 上的故障验收。默认路径也未启用 pcap / TLS 独立旁路校验。</p>
+</section>
+<section id="sources" aria-labelledby="sources-title">
+<h2 id="sources-title">记录来源</h2>
+<p>本文根据 2026-09-22 留存的 tinybox 部署与验收记录整理，包含后续 Web 登录修复复验，不是本次发布时重新运行实验。详细运维记录和原始录制保留在受控环境，本页仅公开结果、验证方法和边界。</p>
+<p><a href="iorec-on-kubernetes.html">阅读云原生设计与部署流程</a> · <a href="how-iorec-records.html">采集端工作原理</a> · <a href="https://github.com/newdogwang-netizen/inferenceIO">项目仓库</a></p>
+
+</section>
+      </article>
+    </main>
+    <footer class="site-footer"><div><strong>iorec</strong><p>统一录制，明确边界。</p></div><div class="footer-links"><a href="./">首页</a><a href="iorec-on-kubernetes.html">云原生设计</a><a href="tinybox-acceptance.md" download>下载 Markdown</a></div></footer>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+.cloudnative-blog .comparison-main { max-width: 840px; }
+.cloudnative-blog .comparison-header h1 { max-width: 19ch; }
+.cloudnative-blog .comparison-article h2 { text-wrap: balance; }
+.cloudnative-blog .comparison-article pre { line-height: 1.75; tab-size: 2; white-space: pre; overflow-x: auto; }
+.cloudnative-blog .comparison-article pre:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.cloudnative-blog .traffic-figure { margin: 28px 0; width: min(1040px, calc(100vw - 48px)); position: relative; left: 50%; transform: translateX(-50%); }
+.cloudnative-blog .traffic-figure a { display: block; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.cloudnative-blog .traffic-figure img { display: block; width: 100%; height: auto; }
+.cloudnative-blog .traffic-figure a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.cloudnative-blog .comparison-table { min-width: 580px; }
+.cloudnative-blog .comparison-table th { min-width: 120px; }
+.cloudnative-blog .comparison-table td { overflow-wrap: anywhere; }
+.cloudnative-blog #references { border-top: 1px solid var(--line); padding-top: 32px; }
+.cloudnative-blog #references p, .cloudnative-blog #references li { font-size: 14px; color: var(--muted); }
+@media (max-width: 640px) {
+  .cloudnative-blog .site-header { position: static; }
+  .cloudnative-blog .comparison-article section { scroll-margin-top: 20px; }
+  .cloudnative-blog .comparison-article pre { padding: 16px; }
+}
+@media print {
+  .cloudnative-blog .comparison-table-wrap { overflow: visible; border-color: #777; }
+  .cloudnative-blog .comparison-table { min-width: 0; }
+}

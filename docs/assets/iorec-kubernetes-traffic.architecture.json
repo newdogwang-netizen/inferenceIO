@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "模型通信与录制上传，两条独立路径",
+    "animation": "none",
+    "quality_profile": "showcase",
+    "viewBox": [1100, 450],
+    "legend": { "mode": "hidden" }
+  },
+  "components": [
+    { "id": "loopback-recorder", "type": "backend", "label": "Agent + 本地代理", "sublabel": "同一容器 · HTTP 回环", "pos": [180, 60], "size": [200, 90] },
+    { "id": "original-upstream", "type": "external", "label": "原模型服务", "sublabel": "也可经过已有模型网关", "pos": [720, 60], "size": [200, 90] },
+    { "id": "local-evidence", "type": "database", "label": "本地 spool", "sublabel": "共享卷 · 加密录制", "pos": [180, 270], "size": [200, 90] },
+    { "id": "upload-companion", "type": "backend", "label": "上传 sidecar", "sublabel": "独立容器 · 可重试", "pos": [450, 270], "size": [200, 90] },
+    { "id": "recording-platform", "type": "cloud", "label": "Platform API", "sublabel": "持久化 · 异步解析 · 查询", "pos": [720, 270], "size": [200, 90] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "一个被选中的 Agent Pod", "wraps": ["loopback-recorder", "local-evidence", "upload-companion"], "pad": 24 }
+  ],
+  "connections": [
+    { "id": "upstream-request", "from": "loopback-recorder", "to": "original-upstream", "label": "HTTPS · 模型请求", "variant": "emphasis" },
+    { "id": "capture-evidence", "from": "loopback-recorder", "to": "local-evidence", "label": "事件与正文", "variant": "dashed", "labelAt": [280, 210] },
+    { "id": "read-evidence", "from": "local-evidence", "to": "upload-companion", "label": "读取待传数据", "variant": "dashed" },
+    { "id": "deliver-evidence", "from": "upload-companion", "to": "recording-platform", "label": "上传与确认", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "模型路径", "items": ["箭头表示请求方向；JSON / SSE 响应沿同一连接反向返回 Agent。", "模型流量不经过 Controller 或 Platform。"] },
+    { "dot": "emerald", "title": "证据路径", "items": ["录制先落本地，sidecar 独立上传；远端确认不在模型响应路径上。", "跨信任边界使用 HTTPS；临时离线受本地容量和终止时限约束。"] }
+  ]
+}

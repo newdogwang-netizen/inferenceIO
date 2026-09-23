@@ -109,6 +109,7 @@ iorec run --key-file ./iorec.key \
         </section>
         <section id="references" class="comparison-sources" aria-labelledby="references-title">
           <h2 id="references-title">继续了解</h2>
+          <p>Agent 运行在 Pod 中时，见 <a href="iorec-on-kubernetes.html">把 Agent 录制带进 Kubernetes</a>：从按需注入到部署、补传和正文校验。</p>
           <p><a href="https://github.com/newdogwang-netizen/inferenceIO">项目与启动说明</a> · <a href="https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/harbor-terminal-bench-audit.md">Harbor 录制手册</a> · <a href="tool-execution-evidence.md">工具执行证据与复现</a></p>
           <p class="note">对应实现：<code>src/runner.rs</code> / <code>src/adapter.rs</code> 负责启动和配置注入，<code>src/proxy.rs</code> 负责流式转发，<code>src/transparent.rs</code> / <code>src/task_netns.rs</code> 负责临时证书和网络边界，<code>tools/tool_exec.py</code> 负责进程观测。本文描述当前工作树能力，不把单项实验验证扩展成所有环境的生产保证。</p>
         </section>

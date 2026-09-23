@@ -111,6 +111,8 @@ HTTP/SSE 采集队列满时会等待容量，形成背压，因此不能承诺�
 
 ## 继续了解
 
+Agent 运行在 Pod 中时，见 [把 Agent 录制带进 Kubernetes](iorec-on-kubernetes.html)：从按需注入到部署、补传和正文校验。
+
 - [项目与启动说明](https://github.com/newdogwang-netizen/inferenceIO)
 - [Harbor 录制手册](https://github.com/newdogwang-netizen/inferenceIO/blob/main/docs/harbor-terminal-bench-audit.md)
 - [工具执行证据与复现](tool-execution-evidence.md)
